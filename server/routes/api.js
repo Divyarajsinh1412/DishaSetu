@@ -1,5 +1,5 @@
 import express from 'express';
-import { getCampusOverview, getAllFeatures } from '../controllers/campusController.js';
+import { getCampusOverview, getAllFeatures, getDynamicCampusBounds } from '../controllers/campusController.js';
 import {
   getLocations,
   createLocation,
@@ -48,6 +48,22 @@ import {
   updatePanoramaHotspot,
   deletePanoramaHotspot
 } from '../controllers/panoramaController.js';
+import {
+  getFloors,
+  getFloorById,
+  createFloor,
+  updateFloor,
+  deleteFloor,
+  getIndoorGraph,
+  calculateIndoorRoute
+} from '../controllers/indoorController.js';
+import {
+  getSurveyChecklist,
+  captureGpsSurvey,
+  verifySurveyRecord,
+  publishSurveyRecord,
+  exportSurveyChecklist
+} from '../controllers/surveyController.js';
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
 import { getDbStatus } from '../config/db.js';
 import syncService from '../services/syncService.js';
@@ -81,6 +97,7 @@ router.get('/health', (req, res) => {
 
 // Campus Metadata & Overview
 router.get('/campus', getCampusOverview);
+router.get('/campus/bounds', getDynamicCampusBounds);
 
 // Geographic Features (Polygons, Corridors, Divider, Parking, Spans)
 router.get('/features', getAllFeatures);
@@ -144,6 +161,27 @@ router.get('/panorama/hotspots', getPanoramaHotspots);
 router.post('/panorama/hotspots', requireAuth, requireRole(['super_admin', 'building_manager']), createPanoramaHotspot);
 router.put('/panorama/hotspots/:id', requireAuth, requireRole(['super_admin', 'building_manager']), updatePanoramaHotspot);
 router.delete('/panorama/hotspots/:id', requireAuth, requireRole(['super_admin']), deletePanoramaHotspot);
+
+// ==========================================
+// PHASE 6, 7 & 8: Indoor Building, Floor & Graph Navigation APIs
+// ==========================================
+router.get('/indoor/floors', getFloors);
+router.get('/indoor/floors/:id', getFloorById);
+router.post('/indoor/floors', requireAuth, createFloor);
+router.put('/indoor/floors/:id', requireAuth, updateFloor);
+router.delete('/indoor/floors/:id', requireAuth, deleteFloor);
+
+router.get('/indoor/graph', getIndoorGraph);
+router.post('/indoor/route', calculateIndoorRoute);
+
+// ==========================================
+// PHASE 4 & 15: Tomorrow's GPS Survey Management & Checklist APIs
+// ==========================================
+router.get('/survey/checklist', getSurveyChecklist);
+router.post('/survey/capture', captureGpsSurvey);
+router.post('/survey/verify/:id', requireAuth, verifySurveyRecord);
+router.post('/survey/publish/:id', requireAuth, publishSurveyRecord);
+router.get('/survey/export', exportSurveyChecklist);
 
 // Emergency Directory & SOS
 router.get('/emergency/directory', (req, res) => {

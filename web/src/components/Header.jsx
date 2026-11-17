@@ -15,7 +15,8 @@ import {
   BookOpen,
   Trophy,
   Globe,
-  Map
+  Map,
+  Crosshair
 } from 'lucide-react';
 
 export default function Header({
@@ -25,6 +26,8 @@ export default function Header({
   onCategorySelect,
   onOpenSOS,
   onOpenAdmin,
+  onOpenSurvey,
+  onOpenIndoor,
   locations = [],
   viewMode = 'immersive',
   onViewModeChange
@@ -106,6 +109,17 @@ export default function Header({
             <span className="hidden sm:inline">2D GPS Map</span>
           </button>
         </div>
+
+        {/* SECTION 15: Dedicated START CAMPUS SURVEY Trigger */}
+        <button
+          onClick={onOpenSurvey}
+          className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 hover:to-emerald-400 text-slate-950 text-xs font-extrabold rounded-xl shadow-lg shadow-amber-500/20 border border-amber-300 transition-all hover:scale-105 active:scale-95 shrink-0"
+          title="Open Guided GPS Field Survey Checklist"
+        >
+          <Crosshair className="w-3.5 h-3.5 text-slate-950 animate-spin" style={{ animationDuration: '6s' }} />
+          <span className="hidden xl:inline">START CAMPUS SURVEY</span>
+          <span className="xl:hidden">SURVEY</span>
+        </button>
 
         {/* Action Buttons: SOS & Admin Portal */}
         <div className="flex items-center gap-2.5 shrink-0">

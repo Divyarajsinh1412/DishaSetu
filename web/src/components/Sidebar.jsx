@@ -36,6 +36,7 @@ export default function Sidebar({
   onSelectLocation,
   onStartNavigation,
   onCalculateRoute,
+  onOpenIndoor,
   userLocation,
   catalog = [],
   activeTab: controlledTab,
@@ -425,12 +426,21 @@ export default function Sidebar({
                         <span className="text-amber-400/80">Pending Survey</span>
                       )}
                     </span>
-                    <button
-                      onClick={() => onStartNavigation && onStartNavigation(bld)}
-                      className="text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1 transition-colors"
-                    >
-                      Navigate <ChevronRight className="w-3 h-3" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => onOpenIndoor && onOpenIndoor(bld)}
+                        className="text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1 transition-colors"
+                        title="Explore Indoor Floor Plan"
+                      >
+                        <Layers className="w-3 h-3" /> Floors
+                      </button>
+                      <button
+                        onClick={() => onStartNavigation && onStartNavigation(bld)}
+                        className="text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1 transition-colors"
+                      >
+                        Navigate <ChevronRight className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );

@@ -246,7 +246,8 @@ export default function CampusMap({
   activeRoute,
   isPickingCoordinates,
   onCoordinatePicked,
-  pickedCoordinates
+  pickedCoordinates,
+  onOpenIndoor
 }) {
   const [mapType, setMapType] = useState('street');
   const [focusMainGateTrigger, setFocusMainGateTrigger] = useState(0);
@@ -254,6 +255,7 @@ export default function CampusMap({
   const [userLocation, setUserLocation] = useState(null);
   const [locationError, setLocationError] = useState(null);
   const [layerVisibility, setLayerVisibility] = useState({
+    campusMask: true,
     corridor: true,
     garden: true,
     parking: true,
@@ -264,6 +266,71 @@ export default function CampusMap({
     walkingNetwork: false
   });
   const [showLayerMenu, setShowLayerMenu] = useState(false);
+
+  // Official Presidency University Campus Boundary Polygon (Perimeter)
+  const officialCampusBoundary = useMemo(() => [
+    [13.172050, 77.535300], // North-West perimeter
+    [13.172150, 77.536190], // North perimeter (Main Gate road)
+    [13.172080, 77.536650], // North-East perimeter
+    [13.171200, 77.536900], // East perimeter (Academic zone)
+    [13.170100, 77.537100], // East perimeter (SOM & Law)
+    [13.169120, 77.537050], // South-East (Gate 2 & Bus Bays)
+    [13.168700, 77.536850], // South perimeter (Sports Grounds)
+    [13.168600, 77.535800], // South-West perimeter
+    [13.168900, 77.534800], // South-West perimeter (Hostel/Garden)
+    [13.169800, 77.534700], // West perimeter (Fountain & Lawns)
+    [13.170800, 77.534900], // West perimeter (Parking zone)
+    [13.171800, 77.535100], // West perimeter near Two-Wheeler Gate
+    [13.172050, 77.535300]  // Return to start
+  ], []);
+
+  // Outer world polygon for inverted mask
+  const worldMaskPolygon = useMemo(() => [
+    [-85, -180],
+    [-85, 180],
+    [85, 180],
+    [85, -180]
+  ], []);
+
+  // PHASE 2: Automatic Map Expansion
+  // Dynamically computes geographic bounds across all published features, surveyed buildings and locations
+  const dynamicCampusBounds = useMemo(() => {
+    let minLat = 13.1686, maxLat = 13.17215;
+    let minLng = 77.5347, maxLng = 77.5371;
+
+    locations.forEach(loc => {
+      if (loc.coordinates?.lat && loc.coordinates?.lng) {
+        minLat = Math.min(minLat, loc.coordinates.lat);
+        maxLat = Math.max(maxLat, loc.coordinates.lat);
+        minLng = Math.min(minLng, loc.coordinates.lng);
+        maxLng = Math.max(maxLng, loc.coordinates.lng);
+      }
+    });
+
+    features.forEach(feat => {
+      if (feat.coordinates && Array.isArray(feat.coordinates)) {
+        const flatten = (arr) => {
+          if (arr.length === 2 && typeof arr[0] === 'number') {
+            minLat = Math.min(minLat, arr[0]);
+            maxLat = Math.max(maxLat, arr[0]);
+            minLng = Math.min(minLng, arr[1]);
+            maxLng = Math.max(maxLng, arr[1]);
+          } else {
+            arr.forEach(i => Array.isArray(i) && flatten(i));
+          }
+        };
+        flatten(feat.coordinates);
+      }
+    });
+
+    const latBuf = (maxLat - minLat) * 0.06 || 0.0003;
+    const lngBuf = (maxLng - minLng) * 0.06 || 0.0003;
+
+    return {
+      southWest: [minLat - latBuf, minLng - lngBuf],
+      northEast: [maxLat + latBuf, maxLng + lngBuf]
+    };
+  }, [locations, features]);
 
   const defaultCoords = campus?.defaultLocation?.coordinates || {
     lat: 13.1717995,
@@ -356,6 +423,8 @@ export default function CampusMap({
         zoom={defaultCoords.zoom || 18}
         minZoom={15}
         maxZoom={22}
+        maxBounds={[ [13.164, 77.530], [13.176, 77.542] ]}
+        maxBoundsViscosity={0.85}
         zoomControl={false}
         className="w-full h-full"
       >
@@ -364,7 +433,7 @@ export default function CampusMap({
           fitCampusTrigger={fitCampusTrigger}
           userLocation={userLocation}
           defaultLocation={defaultCoords}
-          bounds={campusBounds}
+          bounds={dynamicCampusBounds}
           activeRoute={activeRoute}
         />
 
@@ -387,6 +456,37 @@ export default function CampusMap({
             maxZoom={20}
           />
         )}
+
+        {/* 0. PHASE 1: Campus-Only Geographic Boundary Mask (Suppresses Outside Clutter) */}
+        {layerVisibility.campusMask && (
+          <Polygon
+            positions={[worldMaskPolygon, officialCampusBoundary]}
+            pathOptions={{
+              stroke: false,
+              fillColor: '#0b132b',
+              fillOpacity: 0.65,
+              interactive: false
+            }}
+          />
+        )}
+
+        {/* Official Campus Boundary Perimeter Stroke */}
+        <Polygon
+          positions={officialCampusBoundary}
+          pathOptions={{
+            color: '#10b981',
+            weight: 3,
+            opacity: 0.95,
+            fillColor: '#10b981',
+            fillOpacity: 0.02,
+            dashArray: '6, 6'
+          }}
+        >
+          <Tooltip sticky>
+            <div className="font-bold text-emerald-400">Presidency University Official Campus Boundary</div>
+            <div className="text-[10px] text-slate-300">Authorized Academic Precinct · Bengaluru</div>
+          </Tooltip>
+        </Polygon>
 
         {/* 1. Main Walking Avenue Corridor */}
         {layerVisibility.corridor && featureGroups.corridor && (
@@ -669,8 +769,17 @@ export default function CampusMap({
                     onClick={() => onSelectLocation && onSelectLocation(loc)}
                     className="w-full py-1.5 px-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors"
                   >
-                    <Navigation className="w-3.5 h-3.5" /> Start Navigation
+                    <Navigation className="w-3.5 h-3.5" /> Start Walking Navigation
                   </button>
+
+                  {(loc.category === 'Academic' || loc.category === 'Building' || loc.category === 'Library') && (
+                    <button
+                      onClick={() => onOpenIndoor && onOpenIndoor(loc)}
+                      className="w-full mt-1.5 py-1.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <Layers className="w-3.5 h-3.5" /> Explore Indoor Floors & Rooms
+                    </button>
+                  )}
                 </div>
               </Popup>
             </Marker>

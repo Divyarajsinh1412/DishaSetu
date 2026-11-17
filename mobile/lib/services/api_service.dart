@@ -139,4 +139,69 @@ class ApiService {
       ],
     );
   }
+
+  /// Tomorrow's Field GPS Survey Mobile Capture API
+  Future<bool> captureGpsSurvey({
+    required String locationId,
+    required double lat,
+    required double lng,
+    double? gpsAccuracy,
+    String surveyorName = 'Field Mobile Surveyor',
+    String surveyNotes = '',
+  }) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/survey/capture'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({
+              'locationId': locationId,
+              'lat': lat,
+              'lng': lng,
+              'gpsAccuracy': gpsAccuracy,
+              'surveyorName': surveyorName,
+              'surveyNotes': surveyNotes,
+              'surveyMethod': 'mobile_gps',
+            }),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Multi-Floor Indoor Navigation Route API
+  Future<Map<String, dynamic>?> calculateIndoorRoute({
+    required String buildingId,
+    String? startNodeId,
+    String? destRoomId,
+    bool accessibleOnly = false,
+  }) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/indoor/route'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({
+              'buildingId': buildingId,
+              'startNodeId': startNodeId,
+              'destRoomId': destRoomId,
+              'accessibleOnly': accessibleOnly,
+            }),
+          )
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          return data['data'] as Map<String, dynamic>;
+        }
+      }
+    } catch (_) {
+      // Handled gracefully
+    }
+    return null;
+  }
 }

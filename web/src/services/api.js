@@ -773,3 +773,196 @@ export const deletePanoramaHotspotApi = async (id, token) => {
   });
   return await res.json();
 };
+
+// ==========================================
+// PHASE 2 & 4: DYNAMIC CAMPUS BOUNDS & AUTO-EXPANSION
+// ==========================================
+
+export const fetchDynamicCampusBounds = async () => {
+  try {
+    const res = await fetch('/api/campus/bounds');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.data) return data.data;
+    }
+  } catch (e) {
+    console.warn('API /campus/bounds fallback:', e.message);
+  }
+  return {
+    bounds: {
+      southWest: [13.169044795226714, 77.53496327115832],
+      northEast: [13.171866, 77.53670086988951]
+    },
+    center: [13.1717995, 77.5361915]
+  };
+};
+
+// ==========================================
+// PHASE 6, 7 & 8: INDOOR FLOORS, ROOMS & GRAPH NAVIGATION
+// ==========================================
+
+export const fetchIndoorFloors = async (buildingId = null) => {
+  try {
+    const url = buildingId ? `/api/indoor/floors?buildingId=${buildingId}` : '/api/indoor/floors';
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.data) return data.data;
+    }
+  } catch (e) {
+    console.warn('API /indoor/floors fallback:', e.message);
+  }
+  return [];
+};
+
+export const fetchIndoorFloorById = async (floorId) => {
+  try {
+    const res = await fetch(`/api/indoor/floors/${floorId}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.data) return data.data;
+    }
+  } catch (e) {
+    console.warn('API /indoor/floors/:id fallback:', e.message);
+  }
+  return null;
+};
+
+export const createIndoorFloorApi = async (floorData, token) => {
+  const res = await fetch('/api/indoor/floors', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(floorData)
+  });
+  return await res.json();
+};
+
+export const updateIndoorFloorApi = async (floorId, updates, token) => {
+  const res = await fetch(`/api/indoor/floors/${floorId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(updates)
+  });
+  return await res.json();
+};
+
+export const deleteIndoorFloorApi = async (floorId, token) => {
+  const res = await fetch(`/api/indoor/floors/${floorId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  return await res.json();
+};
+
+export const fetchIndoorGraph = async (buildingId, floorNumber) => {
+  try {
+    const query = new URLSearchParams();
+    if (buildingId) query.set('buildingId', buildingId);
+    if (floorNumber !== undefined) query.set('floorNumber', floorNumber);
+    const res = await fetch(`/api/indoor/graph?${query.toString()}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.data) return data.data;
+    }
+  } catch (e) {
+    console.warn('API /indoor/graph fallback:', e.message);
+  }
+  return { nodes: [], paths: [] };
+};
+
+export const calculateIndoorRouteApi = async (routeParams) => {
+  try {
+    const res = await fetch('/api/indoor/route', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(routeParams)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.data) return data.data;
+    }
+  } catch (e) {
+    console.warn('API /indoor/route fallback:', e.message);
+  }
+  return null;
+};
+
+// ==========================================
+// PHASE 4 & 15: TOMORROW'S GPS SURVEY MANAGEMENT & CHECKLIST
+// ==========================================
+
+export const fetchSurveyChecklist = async ({ status = 'all', category = 'all', search = '' } = {}) => {
+  try {
+    const query = new URLSearchParams();
+    if (status && status !== 'all') query.set('status', status);
+    if (category && category !== 'all') query.set('category', category);
+    if (search) query.set('search', search);
+
+    const res = await fetch(`/api/survey/checklist?${query.toString()}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) return data;
+    }
+  } catch (e) {
+    console.warn('API /survey/checklist fallback:', e.message);
+  }
+  const { COMPLETE_CAMPUS_CATALOG } = await import('./campusCatalog.js');
+  return {
+    success: true,
+    stats: {
+      total: COMPLETE_CAMPUS_CATALOG.length,
+      published: COMPLETE_CAMPUS_CATALOG.filter(c => c.verificationStatus === 'Published').length,
+      verified: COMPLETE_CAMPUS_CATALOG.filter(c => c.verificationStatus === 'Verified').length,
+      gpsCaptured: COMPLETE_CAMPUS_CATALOG.filter(c => c.verificationStatus === 'GPS Captured').length,
+      pending: COMPLETE_CAMPUS_CATALOG.filter(c => !c.coordinates || c.verificationStatus === 'Awaiting Survey' || c.verificationStatus === 'Not Surveyed').length,
+      percentComplete: Math.round((COMPLETE_CAMPUS_CATALOG.filter(c => c.coordinates).length / COMPLETE_CAMPUS_CATALOG.length) * 100)
+    },
+    data: COMPLETE_CAMPUS_CATALOG
+  };
+};
+
+export const captureGpsSurveyApi = async (surveyData, token) => {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch('/api/survey/capture', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(surveyData)
+  });
+  return await res.json();
+};
+
+export const verifySurveyRecordApi = async (id, verifiedBy, token) => {
+  const res = await fetch(`/api/survey/verify/${id}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ verifiedBy })
+  });
+  return await res.json();
+};
+
+export const publishSurveyRecordApi = async (id, token) => {
+  const res = await fetch(`/api/survey/publish/${id}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  return await res.json();
+};
+
+export const exportSurveyChecklistUrl = (format = 'csv') => {
+  return `/api/survey/export?format=${format}`;
+};

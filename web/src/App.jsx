@@ -3,6 +3,8 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import CampusMap from './maps/CampusMap';
 import ImmersiveViewer from './components/immersive/ImmersiveViewer';
+import SurveyChecklistModal from './components/survey/SurveyChecklistModal';
+import IndoorNavigationModal from './components/indoor/IndoorNavigationModal';
 import NavigationPanel from './components/NavigationPanel';
 import NavigationGuidanceBar from './components/NavigationGuidanceBar';
 import LocationDetailsModal from './components/LocationDetailsModal';
@@ -58,6 +60,9 @@ export default function App() {
   const [isSOSOpen, setIsSOSOpen] = useState(false);
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
+  const [isSurveyModalOpen, setIsSurveyModalOpen] = useState(false);
+  const [isIndoorModalOpen, setIsIndoorModalOpen] = useState(false);
+  const [targetIndoorBuilding, setTargetIndoorBuilding] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Map Coordinate Picker State for GPS Survey
@@ -252,6 +257,11 @@ export default function App() {
         onCategorySelect={setActiveCategory}
         onOpenSOS={() => setIsSOSOpen(true)}
         onOpenAdmin={() => setIsAdminDashboardOpen(true)}
+        onOpenSurvey={() => setIsSurveyModalOpen(true)}
+        onOpenIndoor={(bld) => {
+          setTargetIndoorBuilding(bld || buildings[0]);
+          setIsIndoorModalOpen(true);
+        }}
         locations={filteredLocations}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
@@ -296,6 +306,10 @@ export default function App() {
             onSelectLocation={(loc) => setSelectedLocation(loc)}
             onStartNavigation={handleStartNavigation}
             onCalculateRoute={handleCalculateRoute}
+            onOpenIndoor={(bld) => {
+              setTargetIndoorBuilding(bld);
+              setIsIndoorModalOpen(true);
+            }}
             userLocation={userLocation}
             catalog={catalog}
             activeTab={sidebarTab}
@@ -317,6 +331,10 @@ export default function App() {
               isPickingCoordinates={isPickingCoordinates}
               onCoordinatePicked={handleCoordinatePicked}
               pickedCoordinates={pickedCoordinates}
+              onOpenIndoor={(bld) => {
+                setTargetIndoorBuilding(bld);
+                setIsIndoorModalOpen(true);
+              }}
             />
 
             {/* Phase 3A: Live Outdoor Walking Guidance Bar */}
@@ -375,6 +393,24 @@ export default function App() {
         pickedCoordinates={pickedCoordinates}
       />
 
+      {/* PHASE 4 & 15: Tomorrow's Guided GPS Field Survey Checklist Modal */}
+      <SurveyChecklistModal
+        isOpen={isSurveyModalOpen}
+        onClose={() => setIsSurveyModalOpen(false)}
+        onStartMapPick={handleStartMapPick}
+        pickedCoordinates={pickedCoordinates}
+        onSelectDestination={handleStartNavigation}
+      />
+
+      {/* PHASE 6, 7, 8 & 10: Multi-Floor Indoor Navigation & Floor Plan Modal */}
+      <IndoorNavigationModal
+        isOpen={isIndoorModalOpen}
+        onClose={() => setIsIndoorModalOpen(false)}
+        initialBuilding={targetIndoorBuilding}
+        buildings={buildings}
+        onStartOutdoorNavigation={handleStartNavigation}
+      />
+
       {/* Mobile Bottom Navigation Bar (Visible on mobile/tablet screens < 768px) */}
       <nav className="md:hidden h-14 bg-[#0f172a]/95 backdrop-blur-xl border-t border-slate-800 flex items-center justify-around px-2 z-30 shrink-0 shadow-2xl">
         <button
@@ -429,6 +465,15 @@ export default function App() {
         >
           <Navigation className="w-4 h-4" />
           <span className="text-[10px]">Route</span>
+        </button>
+
+        <button
+          onClick={() => setIsSurveyModalOpen(true)}
+          className="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl text-amber-400 hover:text-amber-300 transition-all font-semibold"
+          title="Open Campus GPS Field Survey"
+        >
+          <Crosshair className="w-4 h-4 text-amber-400" />
+          <span className="text-[10px]">Survey</span>
         </button>
 
         <button
