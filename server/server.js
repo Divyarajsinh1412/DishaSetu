@@ -1,13 +1,17 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import apiRoutes from './routes/api.js';
 import connectDB, { getDbStatus } from './config/db.js';
 import NavigationNode from './models/NavigationNode.js';
 import WalkingPath from './models/WalkingPath.js';
 import routingServiceInstance from './services/routingService.js';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
 const DEFAULT_PORT = parseInt(process.env.PORT, 10) || 5000;

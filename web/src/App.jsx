@@ -44,7 +44,8 @@ export default function App() {
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [activeRoute, setActiveRoute] = useState(null);
   const [showDetailedSteps, setShowDetailedSteps] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
+  const [sidebarTab, setSidebarTab] = useState('places');
   const [isSOSOpen, setIsSOSOpen] = useState(false);
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
@@ -265,6 +266,8 @@ export default function App() {
           onCalculateRoute={handleCalculateRoute}
           userLocation={userLocation}
           catalog={catalog}
+          activeTab={sidebarTab}
+          onTabChange={setSidebarTab}
         />
 
         {/* Interactive Leaflet Campus Map */}
@@ -338,6 +341,53 @@ export default function App() {
         onStartMapPick={handleStartMapPick}
         pickedCoordinates={pickedCoordinates}
       />
+
+      {/* Mobile Bottom Navigation Bar (Visible on mobile/tablet screens < 768px) */}
+      <nav className="md:hidden h-14 bg-[#0f172a]/95 backdrop-blur-xl border-t border-slate-800 flex items-center justify-around px-2 z-30 shrink-0 shadow-2xl">
+        <button
+          onClick={() => setIsSidebarOpen(false)}
+          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition-all ${
+            !isSidebarOpen ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Compass className="w-4 h-4" />
+          <span className="text-[10px]">Campus Map</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setSidebarTab('places');
+            setIsSidebarOpen(true);
+          }}
+          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition-all ${
+            isSidebarOpen && sidebarTab === 'places' ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Menu className="w-4 h-4" />
+          <span className="text-[10px]">Directory</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setSidebarTab('directions');
+            setIsSidebarOpen(true);
+          }}
+          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition-all ${
+            isSidebarOpen && sidebarTab === 'directions' ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Navigation className="w-4 h-4" />
+          <span className="text-[10px]">Route</span>
+        </button>
+
+        <button
+          onClick={() => setIsSOSOpen(true)}
+          className="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl text-rose-400 hover:text-rose-300 transition-all font-semibold"
+        >
+          <Shield className="w-4 h-4" />
+          <span className="text-[10px]">SOS</span>
+        </button>
+      </nav>
     </div>
   );
 }

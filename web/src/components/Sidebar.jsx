@@ -37,9 +37,13 @@ export default function Sidebar({
   onStartNavigation,
   onCalculateRoute,
   userLocation,
-  catalog = []
+  catalog = [],
+  activeTab: controlledTab,
+  onTabChange
 }) {
-  const [activeTab, setActiveTab] = useState('places'); // 'places' | 'buildings' | 'departments' | 'directions' | 'saved'
+  const [internalTab, setInternalTab] = useState('places');
+  const activeTab = controlledTab || internalTab;
+  const setActiveTab = onTabChange || setInternalTab;
   const [savedPlaces, setSavedPlaces] = useState(() => {
     try {
       const stored = localStorage.getItem('dishasetu_saved_places');
@@ -102,11 +106,20 @@ export default function Sidebar({
   };
 
   return (
-    <aside
-      className={`relative z-20 flex flex-col bg-[#0f172a]/95 backdrop-blur-xl border-r border-slate-800 transition-all duration-300 ease-in-out ${
-        isOpen ? 'w-80 sm:w-96' : 'w-0'
-      } overflow-hidden shrink-0`}
-    >
+    <>
+      {/* Mobile Backdrop Overlay when sidebar is open */}
+      {isOpen && (
+        <div
+          onClick={onToggle}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden animate-in fade-in duration-200"
+        />
+      )}
+
+      <aside
+        className={`fixed md:relative top-0 bottom-0 left-0 z-40 md:z-20 flex flex-col bg-[#0f172a]/95 backdrop-blur-xl border-r border-slate-800 transition-all duration-300 ease-in-out ${
+          isOpen ? 'w-[88vw] sm:w-96 md:w-80 lg:w-96 shadow-2xl md:shadow-none' : 'w-0 pointer-events-none md:pointer-events-auto'
+        } overflow-hidden shrink-0 h-full`}
+      >
       {/* Sidebar Header */}
       <div className="p-4 border-b border-slate-800 flex items-center justify-between">
         <div>
@@ -553,5 +566,6 @@ export default function Sidebar({
         <span>Presidency Univ &copy; 2026</span>
       </div>
     </aside>
+    </>
   );
 }
