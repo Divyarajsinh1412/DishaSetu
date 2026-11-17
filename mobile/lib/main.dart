@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'services/api_service.dart';
 import 'models/campus_location.dart';
 import 'screens/map_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() {
   runApp(const DishaSetuApp());
@@ -17,16 +18,16 @@ class DishaSetuApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0B132B),
-        primaryColor: const Color(0xFF2563EB),
+        scaffoldBackgroundColor: const Color(0xFF071B32),
+        primaryColor: const Color(0xFF00A878),
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF38BDF8),
-          secondary: Color(0xFF10B981),
-          surface: Color(0xFF1E293B),
+          primary: Color(0xFF00A878),
+          secondary: Color(0xFFB8D5E8),
+          surface: Color(0xFF0B2447),
         ),
         useMaterial3: true,
       ),
-      home: const MainNavigationShell(),
+      home: const SplashScreen(),
     );
   }
 }

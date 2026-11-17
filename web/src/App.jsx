@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import SplashScreen from './components/SplashScreen';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import CampusMap from './maps/CampusMap';
@@ -45,6 +46,7 @@ export default function App() {
 
   // View Mode: 'immersive' (default 360° aerial virtual campus) or 'map' (2D Leaflet GPS map)
   const [viewMode, setViewMode] = useState('immersive');
+  const [showSplash, setShowSplash] = useState(true);
   const [panoramaScenes, setPanoramaScenes] = useState([]);
   const [panoramaHotspots, setPanoramaHotspots] = useState([]);
   const [currentSceneId, setCurrentSceneId] = useState('scene_central_campus_aerial');
@@ -249,6 +251,14 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#0b132b]">
+      {/* Premium Professional Splash Screen */}
+      {showSplash && (
+        <SplashScreen
+          isLoading={isLoading}
+          onFinish={() => setShowSplash(false)}
+        />
+      )}
+
       {/* Top Header */}
       <Header
         searchQuery={searchQuery}
