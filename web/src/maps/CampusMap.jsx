@@ -88,6 +88,51 @@ const createEntranceIcon = (isAccessible = true, isPrimary = false) => createDiv
   </div>
 `, 'entrance-pin', [32, 32]);
 
+// Academic Block Icon (Indigo)
+const academicIcon = createDivIcon(`
+  <div style="background:#6366f1; border:2px solid #ffffff; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(99,102,241,0.8);">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 22h16M2 11h20M12 2l10 9H2l10-9zM6 11v8M10 11v8M14 11v8M18 11v8"/>
+    </svg>
+  </div>
+`, 'academic-pin', [36, 36]);
+
+// Cafe / Food Court Icon (Amber)
+const cafeIcon = createDivIcon(`
+  <div style="background:#d97706; border:2px solid #ffffff; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(217,119,6,0.8);">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3"/>
+    </svg>
+  </div>
+`, 'cafe-pin', [36, 36]);
+
+// Medical Centre Icon (Rose)
+const medicalIcon = createDivIcon(`
+  <div style="background:#e11d48; border:2px solid #ffffff; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(225,29,72,0.8);">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  </div>
+`, 'medical-pin', [36, 36]);
+
+// Library Icon (Cyan/Blue)
+const libraryIcon = createDivIcon(`
+  <div style="background:#0284c7; border:2px solid #ffffff; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(2,132,199,0.8);">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15z"/>
+    </svg>
+  </div>
+`, 'library-pin', [36, 36]);
+
+// Sports Icon (Yellow/Amber)
+const sportsIcon = createDivIcon(`
+  <div style="background:#eab308; border:2px solid #ffffff; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(234,179,8,0.8);">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.45 1-1 1H7v2h10v-2h-2c-.55 0-1-.45-1-1v-2.34M6 4h12v7a6 6 0 0 1-12 0V4z"/>
+    </svg>
+  </div>
+`, 'sports-pin', [36, 36]);
+
 // Temporary Pick Pin Icon
 const pickPinIcon = createDivIcon(`
   <div style="background:#ef4444; border:3px solid #ffffff; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 15px rgba(239,68,68,1); animation:pulse-ring 1.5s infinite;">
@@ -586,10 +631,17 @@ export default function CampusMap({
 
         {/* 10. Markers / POIs */}
         {layerVisibility.landmarks && locations.map(loc => {
+          if (!loc.coordinates || loc.coordinates.lat == null || loc.coordinates.lng == null) return null;
+
           let icon = gateIcon;
           if (loc.category === 'Landmark') icon = fountainIcon;
           else if (loc.category === 'Parking') icon = parkingIcon;
           else if (loc.category === 'Garden') icon = gardenIcon;
+          else if (loc.category === 'Academic' || loc.category === 'Building') icon = academicIcon;
+          else if (loc.category === 'Cafe') icon = cafeIcon;
+          else if (loc.category === 'Medical') icon = medicalIcon;
+          else if (loc.category === 'Library') icon = libraryIcon;
+          else if (loc.category === 'Sports') icon = sportsIcon;
 
           return (
             <Marker

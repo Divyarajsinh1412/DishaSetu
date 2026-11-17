@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   X,
   MapPin,
@@ -7,7 +7,8 @@ import {
   CheckCircle2,
   Clock,
   Share2,
-  Layers
+  Layers,
+  Star
 } from 'lucide-react';
 
 export default function LocationDetailsModal({
@@ -16,6 +17,31 @@ export default function LocationDetailsModal({
   onStartNavigation
 }) {
   if (!location) return null;
+
+  const locId = location.locationId || location._id || location.shortCode;
+  const [isSaved, setIsSaved] = useState(() => {
+    try {
+      const stored = localStorage.getItem('dishasetu_saved_places');
+      return stored ? JSON.parse(stored).includes(locId) : false;
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleSave = () => {
+    try {
+      const stored = localStorage.getItem('dishasetu_saved_places');
+      let arr = stored ? JSON.parse(stored) : [];
+      if (arr.includes(locId)) {
+        arr = arr.filter(id => id !== locId);
+        setIsSaved(false);
+      } else {
+        arr.push(locId);
+        setIsSaved(true);
+      }
+      localStorage.setItem('dishasetu_saved_places', JSON.stringify(arr));
+    } catch {}
+  };
 
   return (
     <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -33,12 +59,21 @@ export default function LocationDetailsModal({
               <h2 className="font-bold text-base text-white mt-1 leading-snug">{location.name}</h2>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={toggleSave}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-slate-800 transition-colors"
+              title={isSaved ? 'Bookmarked' : 'Bookmark this location'}
+            >
+              <Star className={`w-5 h-5 ${isSaved ? 'text-amber-400 fill-amber-400' : 'text-slate-400'}`} />
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Modal Body */}

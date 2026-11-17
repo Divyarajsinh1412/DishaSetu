@@ -53,7 +53,7 @@ export const validateCoordinates = (lat, lng) => {
 };
 
 // Initial in-memory departments catalog
-const INITIAL_DEPARTMENTS = [
+export const INITIAL_DEPARTMENTS = [
   {
     _id: 'dept_cse',
     code: 'CSE',
@@ -846,6 +846,31 @@ export const CampusService = {
   // PHASE 3A: CAMPUS CATALOG & GPS SURVEY METHODS
   // ========================================================
   async getCampusCatalog(filter = {}) {
+    const dbStatus = getDbStatus();
+    if (dbStatus.connected) {
+      try {
+        let query = {};
+        if (filter.category && filter.category !== 'all') {
+          query.category = { $regex: new RegExp(`^${filter.category}$`, 'i') };
+        }
+        if (filter.status && filter.status !== 'all') {
+          query.verificationStatus = { $regex: new RegExp(`^${filter.status}$`, 'i') };
+        }
+        if (filter.search) {
+          const q = filter.search;
+          query.$or = [
+            { name: { $regex: q, $options: 'i' } },
+            { shortCode: { $regex: q, $options: 'i' } },
+            { description: { $regex: q, $options: 'i' } }
+          ];
+        }
+        const dbItems = await Location.find(query);
+        if (dbItems && dbItems.length > 0) return dbItems;
+      } catch (err) {
+        console.warn('[CampusService] Catalog DB fallback:', err.message);
+      }
+    }
+
     let list = [...memoryStore.catalog];
     if (filter.category && filter.category !== 'all') {
       list = list.filter(item => item.category?.toLowerCase() === filter.category.toLowerCase());
@@ -914,6 +939,37 @@ export const CampusService = {
     item.surveyDate = new Date().toISOString().split('T')[0];
     item.surveyedBy = adminUser.name || adminUser.email;
 
+    const dbStatus = getDbStatus();
+    if (dbStatus.connected) {
+      try {
+        const updateDoc = {
+          verificationStatus: item.verificationStatus,
+          coordinates: item.coordinates,
+          entranceCoordinates: item.entranceCoordinates,
+          entrances: item.entrances,
+          coordinateSource: item.coordinateSource,
+          gpsAccuracy: item.gpsAccuracy,
+          surveyDate: item.surveyDate,
+          surveyedBy: item.surveyedBy,
+          status: item.verificationStatus === 'Published' ? 'published' : 'pending'
+        };
+        if (item.coordinates && item.coordinates.lat && item.coordinates.lng) {
+          updateDoc.geometry = {
+            type: 'Point',
+            coordinates: [item.coordinates.lng, item.coordinates.lat]
+          };
+          updateDoc.verified = true;
+        }
+        await Location.findOneAndUpdate(
+          { $or: [{ locationId }, { shortCode: locationId }] },
+          { $set: updateDoc },
+          { new: true }
+        );
+      } catch (err) {
+        console.warn('[CampusService] Location survey DB update warning:', err.message);
+      }
+    }
+
     this.logAudit(
       'gps_survey_update',
       adminUser.email,
@@ -936,10 +992,28 @@ export const CampusService = {
   // PHASE 3A: PEDESTRIAN GRAPH & ROUTING METHODS
   // ========================================================
   async getNavigationNodes() {
+    const dbStatus = getDbStatus();
+    if (dbStatus.connected) {
+      try {
+        const nodes = await NavigationNode.find({ isActive: true });
+        if (nodes && nodes.length > 0) return nodes;
+      } catch (err) {
+        console.warn('[CampusService] Nodes DB fallback:', err.message);
+      }
+    }
     return routingServiceInstance.getNodes();
   },
 
   async getWalkingPaths() {
+    const dbStatus = getDbStatus();
+    if (dbStatus.connected) {
+      try {
+        const paths = await WalkingPath.find({ status: 'active' });
+        if (paths && paths.length > 0) return paths;
+      } catch (err) {
+        console.warn('[CampusService] Paths DB fallback:', err.message);
+      }
+    }
     return routingServiceInstance.getPaths();
   },
 
@@ -961,6 +1035,15 @@ export const CampusService = {
       verificationStatus: 'Verified',
       createdAt: new Date()
     };
+
+    const dbStatus = getDbStatus();
+    if (dbStatus.connected) {
+      try {
+        await WalkingPath.create(newPath);
+      } catch (err) {
+        console.warn('[CampusService] Create WalkingPath DB error:', err.message);
+      }
+    }
 
     memoryStore.walkingPaths.push(newPath);
     routingServiceInstance.updateGraph(null, memoryStore.walkingPaths);
@@ -989,6 +1072,15 @@ export const CampusService = {
     if (updates.name) path.name = updates.name;
     if (updates.distanceMeters != null) path.distanceMeters = Number(updates.distanceMeters);
 
+    const dbStatus = getDbStatus();
+    if (dbStatus.connected) {
+      try {
+        await WalkingPath.findOneAndUpdate({ pathId }, { $set: updates }, { new: true });
+      } catch (err) {
+        console.warn('[CampusService] Update WalkingPath DB error:', err.message);
+      }
+    }
+
     routingServiceInstance.updateGraph(null, memoryStore.walkingPaths);
 
     this.logAudit(
@@ -1011,6 +1103,16 @@ export const CampusService = {
     }
 
     const removed = memoryStore.walkingPaths.splice(idx, 1)[0];
+
+    const dbStatus = getDbStatus();
+    if (dbStatus.connected) {
+      try {
+        await WalkingPath.findOneAndDelete({ pathId });
+      } catch (err) {
+        console.warn('[CampusService] Delete WalkingPath DB error:', err.message);
+      }
+    }
+
     routingServiceInstance.updateGraph(null, memoryStore.walkingPaths);
 
     this.logAudit(

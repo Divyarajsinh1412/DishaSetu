@@ -15,6 +15,9 @@ import Location from '../models/Location.js';
 import Building from '../models/Building.js';
 import Route from '../models/Route.js';
 import AdminUser from '../models/AdminUser.js';
+import Department from '../models/Department.js';
+import NavigationNode from '../models/NavigationNode.js';
+import WalkingPath from '../models/WalkingPath.js';
 import { hashPassword } from '../utils/auth.js';
 import {
   VERIFIED_CAMPUS_DATA,
@@ -22,6 +25,9 @@ import {
   getWalkingAvenueCorridorPolygon
 } from '../data/verifiedCoordinates.js';
 import { PRESIDENCY_BUILDINGS_CATALOG } from '../data/presidencyCampusDataset.js';
+import { COMPLETE_CAMPUS_CATALOG } from '../data/campusCatalog.js';
+import { NAVIGATION_NODES, WALKING_PATHS } from '../data/pedestrianGraphData.js';
+import { INITIAL_DEPARTMENTS } from '../services/campusService.js';
 
 export const seedDatabase = async () => {
   console.log('========================================================');
@@ -328,10 +334,93 @@ export const seedDatabase = async () => {
         { upsert: true, new: true }
       );
     }
-    console.log(`  -> ${locations.length} verified locations seeded.`);
 
-    // 4. Seed Verified Walking Route (Main Gate -> Central Fountain)
-    console.log('[4/6] Seeding verified pedestrian walking route...');
+    // Seed Complete Campus Catalog into Locations
+    for (const item of COMPLETE_CAMPUS_CATALOG) {
+      const hasCoords = item.coordinates && item.coordinates.lat != null && item.coordinates.lng != null;
+      const geoCoords = hasCoords ? [item.coordinates.lng, item.coordinates.lat] : undefined;
+      const locationDoc = {
+        name: item.name,
+        shortCode: item.shortCode,
+        locationId: item.locationId,
+        category: item.category,
+        description: item.description,
+        coordinates: item.coordinates || null,
+        entranceCoordinates: item.entranceCoordinates || null,
+        entrances: item.entrances || [],
+        coordinateSource: item.coordinateSource || 'GPS Survey',
+        gpsAccuracy: item.gpsAccuracy || null,
+        surveyDate: item.surveyDate || null,
+        surveyedBy: item.surveyedBy || null,
+        verificationStatus: item.verificationStatus || 'Awaiting Survey',
+        approvalStatus: item.approvalStatus || 'Approved',
+        active: item.active !== false,
+        verified: item.verificationStatus === 'Published' || item.verificationStatus === 'Verified',
+        status: item.verificationStatus === 'Published' ? 'published' : 'pending'
+      };
+      if (geoCoords) {
+        locationDoc.geometry = {
+          type: 'Point',
+          coordinates: geoCoords
+        };
+      }
+      await Location.findOneAndUpdate(
+        { $or: [{ locationId: item.locationId }, { shortCode: item.shortCode }] },
+        locationDoc,
+        { upsert: true, new: true }
+      );
+    }
+    console.log(`  -> ${locations.length + COMPLETE_CAMPUS_CATALOG.length} campus locations & catalog seeded.`);
+
+    // 4. Seed Navigation Graph Nodes & Walking Paths
+    console.log('[4/8] Seeding pedestrian navigation nodes...');
+    for (const node of NAVIGATION_NODES) {
+      await NavigationNode.findOneAndUpdate(
+        { nodeId: node.nodeId },
+        {
+          nodeId: node.nodeId,
+          name: node.name,
+          coordinates: { lat: node.coordinates[0], lng: node.coordinates[1] },
+          geometry: {
+            type: 'Point',
+            coordinates: [node.coordinates[1], node.coordinates[0]] // [lng, lat]
+          },
+          nodeType: node.nodeType || 'junction',
+          associatedLocationId: node.associatedLocationId || null,
+          isAccessible: node.isAccessible !== false
+        },
+        { upsert: true, new: true }
+      );
+    }
+    console.log(`  -> ${NAVIGATION_NODES.length} navigation nodes seeded.`);
+
+    console.log('[5/8] Seeding pedestrian walking paths network...');
+    for (const path of WALKING_PATHS) {
+      await WalkingPath.findOneAndUpdate(
+        { pathId: path.pathId },
+        {
+          pathId: path.pathId,
+          name: path.name,
+          geometry: path.geometry,
+          startNode: path.startNode,
+          endNode: path.endNode,
+          distanceMeters: path.distanceMeters,
+          accessibility: path.accessibility !== false,
+          hasStairs: path.hasStairs || false,
+          hasRamp: path.hasRamp !== false,
+          pathType: path.pathType || 'secondary_walkway',
+          status: path.status || 'active',
+          verificationStatus: path.verificationStatus || 'Verified',
+          surfaceType: path.surfaceType || 'Paved Tiles',
+          notes: path.notes || ''
+        },
+        { upsert: true, new: true }
+      );
+    }
+    console.log(`  -> ${WALKING_PATHS.length} walking paths seeded.`);
+
+    // 6. Seed Verified Walking Route (Main Gate -> Central Fountain)
+    console.log('[6/8] Seeding verified pedestrian walking route...');
     const mainAvenueRoute = {
       name: 'Main Gate to Central Fountain Walkway',
       routeId: 'route_main_gate_to_fountain',
@@ -408,8 +497,8 @@ export const seedDatabase = async () => {
     );
     console.log('  -> Verified walking route seeded.');
 
-    // 5. Seed Presidency University Buildings Catalog
-    console.log('[5/6] Seeding Presidency University buildings catalog...');
+    // 7. Seed Presidency University Buildings Catalog
+    console.log('[7/9] Seeding Presidency University buildings catalog...');
     for (const b of PRESIDENCY_BUILDINGS_CATALOG) {
       await Building.findOneAndUpdate(
         { shortCode: b.code },
@@ -428,8 +517,30 @@ export const seedDatabase = async () => {
     }
     console.log(`  -> ${PRESIDENCY_BUILDINGS_CATALOG.length} official buildings registered.`);
 
-    // 6. Seed Super Admin User
-    console.log('[6/6] Seeding Super Admin account...');
+    // 8. Seed Academic & Administrative Departments
+    console.log('[8/9] Seeding academic & administrative departments...');
+    for (const dept of INITIAL_DEPARTMENTS) {
+      await Department.findOneAndUpdate(
+        { code: dept.code },
+        {
+          name: dept.name,
+          code: dept.code,
+          faculty: dept.faculty,
+          buildingShortCode: dept.buildingShortCode,
+          floorNumber: dept.floorNumber,
+          headOfDepartment: dept.headOfDepartment,
+          contactEmail: dept.contactEmail,
+          contactPhone: dept.contactPhone,
+          description: dept.description,
+          status: dept.status || 'active'
+        },
+        { upsert: true, new: true }
+      );
+    }
+    console.log(`  -> ${INITIAL_DEPARTMENTS.length} official departments registered.`);
+
+    // 9. Seed Super Admin User
+    console.log('[9/9] Seeding Super Admin account...');
     const adminEmail = 'admin@presidency.ac.in';
     const existingAdmin = await AdminUser.findOne({ email: adminEmail });
     if (!existingAdmin) {

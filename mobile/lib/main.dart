@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'services/api_service.dart';
 import 'models/campus_location.dart';
+import 'screens/map_screen.dart';
 
 void main() {
   runApp(const DishaSetuApp());
@@ -25,7 +26,50 @@ class DishaSetuApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const CampusHomeScreen(),
+      home: const MainNavigationShell(),
+    );
+  }
+}
+
+class MainNavigationShell extends StatefulWidget {
+  const MainNavigationShell({super.key});
+
+  @override
+  State<MainNavigationShell> createState() => _MainNavigationShellState();
+}
+
+class _MainNavigationShellState extends State<MainNavigationShell> {
+  int _currentIndex = 0;
+
+  final List<Widget> _screens = const [
+    CampusMapScreen(),
+    CampusHomeScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: _screens[_currentIndex],
+      bottomNavigationBar: NavigationBar(
+        backgroundColor: const Color(0xFF0F172A),
+        indicatorColor: const Color(0xFF2563EB).withOpacity(0.3),
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (index) {
+          setState(() => _currentIndex = index);
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.map_outlined, color: Colors.grey),
+            selectedIcon: Icon(Icons.map, color: Color(0xFF38BDF8)),
+            label: 'Campus Map',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.list_alt_outlined, color: Colors.grey),
+            selectedIcon: Icon(Icons.list_alt, color: Color(0xFF38BDF8)),
+            label: 'Directory',
+          ),
+        ],
+      ),
     );
   }
 }

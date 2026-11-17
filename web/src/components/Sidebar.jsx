@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Compass,
   MapPin,
@@ -14,12 +14,15 @@ import {
   Sparkles,
   BookOpen,
   Coffee,
+  HeartPulse,
+  Trophy,
   HelpCircle,
   Accessibility,
   ArrowRight,
   Footprints,
   RotateCcw,
-  Zap
+  Zap,
+  Star
 } from 'lucide-react';
 
 export default function Sidebar({
@@ -36,7 +39,41 @@ export default function Sidebar({
   userLocation,
   catalog = []
 }) {
-  const [activeTab, setActiveTab] = useState('places'); // 'places' | 'buildings' | 'departments' | 'directions'
+  const [activeTab, setActiveTab] = useState('places'); // 'places' | 'buildings' | 'departments' | 'directions' | 'saved'
+  const [savedPlaces, setSavedPlaces] = useState(() => {
+    try {
+      const stored = localStorage.getItem('dishasetu_saved_places');
+      return stored ? JSON.parse(stored) : ['loc_main_gate', 'loc_library', 'loc_cafeteria'];
+    } catch {
+      return ['loc_main_gate'];
+    }
+  });
+
+  const toggleSavePlace = (placeId) => {
+    setSavedPlaces(prev => {
+      const next = prev.includes(placeId) ? prev.filter(id => id !== placeId) : [...prev, placeId];
+      try {
+        localStorage.setItem('dishasetu_saved_places', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Helper to map category to icon & color
+  const getCategoryIcon = (category) => {
+    switch (category) {
+      case 'Gate': return { Icon: Compass, color: 'text-emerald-400', bg: 'bg-emerald-500/10' };
+      case 'Academic': return { Icon: Building2, color: 'text-indigo-400', bg: 'bg-indigo-500/10' };
+      case 'Cafe': return { Icon: Coffee, color: 'text-amber-400', bg: 'bg-amber-500/10' };
+      case 'Medical': return { Icon: HeartPulse, color: 'text-rose-400', bg: 'bg-rose-500/10' };
+      case 'Library': return { Icon: BookOpen, color: 'text-blue-400', bg: 'bg-blue-500/10' };
+      case 'Sports': return { Icon: Trophy, color: 'text-yellow-400', bg: 'bg-yellow-500/10' };
+      case 'Parking': return { Icon: Car, color: 'text-orange-400', bg: 'bg-orange-500/10' };
+      case 'Garden': return { Icon: Trees, color: 'text-green-400', bg: 'bg-green-500/10' };
+      case 'Landmark': return { Icon: Droplets, color: 'text-sky-400', bg: 'bg-sky-500/10' };
+      default: return { Icon: MapPin, color: 'text-sky-400', bg: 'bg-sky-500/10' };
+    }
+  };
 
   // Directions Form State
   const [startPoint, setStartPoint] = useState('node_main_gate'); // 'current_location' | 'node_main_gate' | 'node_parking_entry' | ...
@@ -88,7 +125,7 @@ export default function Sidebar({
       </div>
 
       {/* Tabs */}
-      <div className="p-2 border-b border-slate-800/80 grid grid-cols-4 gap-1 bg-[#0b132b]">
+      <div className="p-2 border-b border-slate-800/80 grid grid-cols-5 gap-1 bg-[#0b132b]">
         <button
           onClick={() => setActiveTab('places')}
           className={`py-1.5 text-[11px] font-semibold rounded-lg transition-all ${
@@ -128,6 +165,16 @@ export default function Sidebar({
           }`}
         >
           <Navigation className="w-3 h-3" /> Route
+        </button>
+        <button
+          onClick={() => setActiveTab('saved')}
+          className={`py-1.5 text-[11px] font-semibold rounded-lg transition-all flex items-center justify-center gap-1 ${
+            activeTab === 'saved'
+              ? 'bg-amber-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Star className="w-3 h-3" /> Saved
         </button>
       </div>
 
@@ -255,21 +302,9 @@ export default function Sidebar({
             </div>
 
             {locations.map((loc) => {
-              let Icon = MapPin;
-              let iconColor = 'text-sky-400';
-              if (loc.category === 'Gate') {
-                Icon = MapPin;
-                iconColor = 'text-emerald-400';
-              } else if (loc.category === 'Landmark') {
-                Icon = Droplets;
-                iconColor = 'text-blue-400';
-              } else if (loc.category === 'Parking') {
-                Icon = Car;
-                iconColor = 'text-orange-400';
-              } else if (loc.category === 'Garden') {
-                Icon = Trees;
-                iconColor = 'text-green-400';
-              }
+              const { Icon, color: iconColor, bg: iconBg } = getCategoryIcon(loc.category);
+              const locId = loc.locationId || loc._id || loc.shortCode;
+              const isSaved = savedPlaces.includes(locId);
 
               return (
                 <div
@@ -283,7 +318,7 @@ export default function Sidebar({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-[#0b132b] flex items-center justify-center shrink-0 mt-0.5">
+                      <div className={`w-7 h-7 rounded-lg ${iconBg} flex items-center justify-center shrink-0 mt-0.5`}>
                         <Icon className={`w-4 h-4 ${iconColor}`} />
                       </div>
                       <div>
@@ -295,6 +330,16 @@ export default function Sidebar({
                         </div>
                       </div>
                     </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSavePlace(locId);
+                      }}
+                      className="p-1 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-amber-400 transition-colors"
+                      title={isSaved ? 'Remove from Saved' : 'Save this location'}
+                    >
+                      <Star className={`w-3.5 h-3.5 ${isSaved ? 'text-amber-400 fill-amber-400' : 'text-slate-500'}`} />
+                    </button>
                   </div>
 
                   <p className="text-xs text-slate-300 leading-relaxed mt-2 line-clamp-2">
@@ -423,6 +468,79 @@ export default function Sidebar({
                 </div>
               </div>
             ))}
+          </>
+        )}
+
+        {/* TAB 5: SAVED LOCATIONS */}
+        {activeTab === 'saved' && (
+          <>
+            <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1 pt-1 flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-amber-400">
+                <Star className="w-3.5 h-3.5 fill-amber-400" /> Bookmarked Campus Places
+              </span>
+              <span className="text-[10px] text-slate-400">
+                {locations.filter(l => savedPlaces.includes(l.locationId || l._id || l.shortCode)).length} Saved
+              </span>
+            </div>
+
+            {locations.filter(l => savedPlaces.includes(l.locationId || l._id || l.shortCode)).length === 0 ? (
+              <div className="p-8 text-center bg-[#1e293b]/30 rounded-2xl border border-slate-800 text-slate-400 space-y-2 mt-2">
+                <Star className="w-8 h-8 text-slate-600 mx-auto" />
+                <div className="text-xs font-semibold text-slate-300">No Saved Places Yet</div>
+                <p className="text-[11px] leading-relaxed">
+                  Click the star icon on any building, classroom, cafeteria or facility to bookmark it for one-tap navigation.
+                </p>
+              </div>
+            ) : (
+              locations
+                .filter(l => savedPlaces.includes(l.locationId || l._id || l.shortCode))
+                .map((loc) => {
+                  const { Icon, color: iconColor, bg: iconBg } = getCategoryIcon(loc.category);
+                  const locId = loc.locationId || loc._id || loc.shortCode;
+
+                  return (
+                    <div
+                      key={loc._id || loc.shortCode}
+                      className="p-3 rounded-xl bg-[#1e293b]/70 border border-amber-500/30 hover:border-amber-500/60 transition-all space-y-2 shadow-md"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2.5">
+                          <div className={`w-7 h-7 rounded-lg ${iconBg} flex items-center justify-center shrink-0 mt-0.5`}>
+                            <Icon className={`w-4 h-4 ${iconColor}`} />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-xs text-white">{loc.name}</h4>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <span className="text-[10px] text-slate-400 font-mono">{loc.shortCode}</span>
+                              <span className="text-[10px] text-slate-400">&bull;</span>
+                              <span className="text-[10px] text-amber-400 font-medium">{loc.category}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => toggleSavePlace(locId)}
+                          className="p-1 rounded-lg hover:bg-slate-700 text-amber-400 transition-colors"
+                          title="Remove bookmark"
+                        >
+                          <Star className="w-3.5 h-3.5 fill-amber-400" />
+                        </button>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[11px]">
+                        <span className="text-slate-400 text-[10px]">
+                          {loc.coordinates ? `${loc.coordinates.lat?.toFixed(5)}, ${loc.coordinates.lng?.toFixed(5)}` : 'Awaiting Survey'}
+                        </span>
+                        <button
+                          onClick={() => onStartNavigation && onStartNavigation(loc)}
+                          className="px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-semibold flex items-center gap-1 transition-colors text-[11px]"
+                        >
+                          <Navigation className="w-3 h-3" /> Navigate
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+            )}
           </>
         )}
       </div>
