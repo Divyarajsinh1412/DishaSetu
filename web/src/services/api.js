@@ -2,6 +2,7 @@
  * DishaSetu Web API Client
  * Integrated with Presidency University Bengaluru Campus Backend
  */
+import { INITIAL_PANORAMA_SCENES, INITIAL_PANORAMA_HOTSPOTS } from '../data/panoramaData.js';
 
 // Fallback verified campus dataset (matches server/data/verifiedCoordinates.js)
 const FALLBACK_CAMPUS_DATA = {
@@ -650,6 +651,121 @@ export const updateWalkingPathApi = async (pathId, updates, token) => {
 
 export const deleteWalkingPathApi = async (pathId, token) => {
   const res = await fetch(`/api/admin/paths/${pathId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  return await res.json();
+};
+
+// ==========================================
+// 360° IMMERSIVE AERIAL PANORAMA APIS
+// ==========================================
+
+export const fetchPanoramaScenes = async () => {
+  try {
+    const res = await fetch('/api/panorama/scenes');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.data && data.data.length > 0) return data.data;
+    }
+  } catch (e) {
+    console.warn('API /panorama/scenes fallback:', e.message);
+  }
+  return INITIAL_PANORAMA_SCENES;
+};
+
+export const fetchPanoramaSceneById = async (sceneId) => {
+  try {
+    const res = await fetch(`/api/panorama/scenes/${sceneId}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.data) return data.data;
+    }
+  } catch (e) {
+    console.warn('API /panorama/scenes/:id fallback:', e.message);
+  }
+  return INITIAL_PANORAMA_SCENES.find(s => s.sceneId === sceneId) || INITIAL_PANORAMA_SCENES[0];
+};
+
+export const fetchPanoramaHotspots = async (sceneId = null) => {
+  try {
+    const url = sceneId ? `/api/panorama/hotspots?sceneId=${sceneId}` : '/api/panorama/hotspots';
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.data && data.data.length > 0) return data.data;
+    }
+  } catch (e) {
+    console.warn('API /panorama/hotspots fallback:', e.message);
+  }
+  if (sceneId) {
+    return INITIAL_PANORAMA_HOTSPOTS.filter(h => h.sceneId === sceneId);
+  }
+  return INITIAL_PANORAMA_HOTSPOTS;
+};
+
+export const createPanoramaSceneApi = async (sceneData, token) => {
+  const res = await fetch('/api/panorama/scenes', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(sceneData)
+  });
+  return await res.json();
+};
+
+export const updatePanoramaSceneApi = async (id, updates, token) => {
+  const res = await fetch(`/api/panorama/scenes/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(updates)
+  });
+  return await res.json();
+};
+
+export const deletePanoramaSceneApi = async (id, token) => {
+  const res = await fetch(`/api/panorama/scenes/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  return await res.json();
+};
+
+export const createPanoramaHotspotApi = async (hotspotData, token) => {
+  const res = await fetch('/api/panorama/hotspots', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(hotspotData)
+  });
+  return await res.json();
+};
+
+export const updatePanoramaHotspotApi = async (id, updates, token) => {
+  const res = await fetch(`/api/panorama/hotspots/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(updates)
+  });
+  return await res.json();
+};
+
+export const deletePanoramaHotspotApi = async (id, token) => {
+  const res = await fetch(`/api/panorama/hotspots/${id}`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`

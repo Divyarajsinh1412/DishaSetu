@@ -37,6 +37,17 @@ import {
   getAuditLogs
 } from '../controllers/approvalController.js';
 import { adminLogin, getAdminProfile } from '../controllers/adminController.js';
+import {
+  getPanoramaScenes,
+  getPanoramaSceneById,
+  createPanoramaScene,
+  updatePanoramaScene,
+  deletePanoramaScene,
+  getPanoramaHotspots,
+  createPanoramaHotspot,
+  updatePanoramaHotspot,
+  deletePanoramaHotspot
+} from '../controllers/panoramaController.js';
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
 import { getDbStatus } from '../config/db.js';
 import syncService from '../services/syncService.js';
@@ -121,6 +132,18 @@ router.get('/audit-logs', requireAuth, requireRole(['super_admin']), getAuditLog
 // Administrative Auth
 router.post('/admin/login', adminLogin);
 router.get('/admin/profile', requireAuth, getAdminProfile);
+
+// PHASE 3B: Immersive 360° Panorama Scenes & Hotspots
+router.get('/panorama/scenes', getPanoramaScenes);
+router.get('/panorama/scenes/:id', getPanoramaSceneById);
+router.post('/panorama/scenes', requireAuth, requireRole(['super_admin', 'building_manager']), createPanoramaScene);
+router.put('/panorama/scenes/:id', requireAuth, requireRole(['super_admin', 'building_manager']), updatePanoramaScene);
+router.delete('/panorama/scenes/:id', requireAuth, requireRole(['super_admin']), deletePanoramaScene);
+
+router.get('/panorama/hotspots', getPanoramaHotspots);
+router.post('/panorama/hotspots', requireAuth, requireRole(['super_admin', 'building_manager']), createPanoramaHotspot);
+router.put('/panorama/hotspots/:id', requireAuth, requireRole(['super_admin', 'building_manager']), updatePanoramaHotspot);
+router.delete('/panorama/hotspots/:id', requireAuth, requireRole(['super_admin']), deletePanoramaHotspot);
 
 // Emergency Directory & SOS
 router.get('/emergency/directory', (req, res) => {

@@ -13,7 +13,9 @@ import {
   Coffee,
   HeartPulse,
   BookOpen,
-  Trophy
+  Trophy,
+  Globe,
+  Map
 } from 'lucide-react';
 
 export default function Header({
@@ -23,7 +25,9 @@ export default function Header({
   onCategorySelect,
   onOpenSOS,
   onOpenAdmin,
-  locations = []
+  locations = [],
+  viewMode = 'immersive',
+  onViewModeChange
 }) {
   const categories = [
     { id: 'all', label: 'All', icon: MapPin },
@@ -73,6 +77,34 @@ export default function Header({
               className="w-full pl-10 pr-4 py-2 bg-[#1e293b]/90 border border-slate-700/80 rounded-xl text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
             />
           </div>
+        </div>
+
+        {/* View Mode Switcher Pill */}
+        <div className="flex items-center p-1 bg-[#1e293b]/90 border border-slate-700/80 rounded-xl shadow-inner shrink-0">
+          <button
+            type="button"
+            onClick={() => onViewModeChange('immersive')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              viewMode === 'immersive'
+                ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5 text-amber-300" />
+            <span className="hidden sm:inline">360° Aerial</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onViewModeChange('map')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              viewMode === 'map'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Map className="w-3.5 h-3.5 text-emerald-300" />
+            <span className="hidden sm:inline">2D GPS Map</span>
+          </button>
         </div>
 
         {/* Action Buttons: SOS & Admin Portal */}

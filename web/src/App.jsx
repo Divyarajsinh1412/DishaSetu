@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import CampusMap from './maps/CampusMap';
+import ImmersiveViewer from './components/immersive/ImmersiveViewer';
 import NavigationPanel from './components/NavigationPanel';
 import NavigationGuidanceBar from './components/NavigationGuidanceBar';
 import LocationDetailsModal from './components/LocationDetailsModal';
@@ -19,11 +20,13 @@ import {
   fetchAuditLogs,
   fetchCampusCatalog,
   fetchWalkingPaths,
+  fetchPanoramaScenes,
+  fetchPanoramaHotspots,
   calculateRouteApi,
   connectSyncStream
 } from './services/api';
 import { clientRoutingEngine } from './services/routingEngine';
-import { Menu, Navigation, Compass, Shield } from 'lucide-react';
+import { Menu, Navigation, Compass, Shield, Globe, Map } from 'lucide-react';
 
 export default function App() {
   const [campus, setCampus] = useState(null);
@@ -37,6 +40,12 @@ export default function App() {
   const [catalog, setCatalog] = useState([]);
   const [walkingPaths, setWalkingPaths] = useState([]);
   const [userLocation, setUserLocation] = useState(null);
+
+  // View Mode: 'immersive' (default 360° aerial virtual campus) or 'map' (2D Leaflet GPS map)
+  const [viewMode, setViewMode] = useState('immersive');
+  const [panoramaScenes, setPanoramaScenes] = useState([]);
+  const [panoramaHotspots, setPanoramaHotspots] = useState([]);
+  const [currentSceneId, setCurrentSceneId] = useState('scene_central_campus_aerial');
 
   // UI States
   const [searchQuery, setSearchQuery] = useState('');
@@ -60,7 +69,7 @@ export default function App() {
   const loadData = useCallback(async () => {
     try {
       const token = localStorage.getItem('dishasetu_admin_token');
-      const [c, f, l, r, b, d, app, aud, cat, paths] = await Promise.all([
+      const [c, f, l, r, b, d, app, aud, cat, paths, scenes, spots] = await Promise.all([
         fetchCampusData(),
         fetchCampusFeatures(),
         fetchCampusLocations(),
@@ -70,7 +79,9 @@ export default function App() {
         token ? fetchApprovals(token) : Promise.resolve([]),
         token ? fetchAuditLogs(50, token) : Promise.resolve([]),
         fetchCampusCatalog(),
-        fetchWalkingPaths()
+        fetchWalkingPaths(),
+        fetchPanoramaScenes(),
+        fetchPanoramaHotspots()
       ]);
       setCampus(c);
       setFeatures(f);
@@ -82,6 +93,11 @@ export default function App() {
       setAuditLogs(aud);
       setCatalog(cat);
       setWalkingPaths(paths);
+      setPanoramaScenes(scenes);
+      setPanoramaHotspots(spots);
+      if (scenes && scenes.length > 0) {
+        setCurrentSceneId(prev => prev || scenes[0].sceneId);
+      }
     } catch (err) {
       console.error('Failed to load initial campus data:', err);
     } finally {
@@ -237,74 +253,91 @@ export default function App() {
         onOpenSOS={() => setIsSOSOpen(true)}
         onOpenAdmin={() => setIsAdminDashboardOpen(true)}
         locations={filteredLocations}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
       />
 
-      {/* Main Workspace: Sidebar + Map */}
-      <div className="flex-1 flex relative overflow-hidden">
-        {/* Toggle Sidebar Floating Trigger (when collapsed) */}
-        {!isSidebarOpen && (
-          <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="absolute top-4 left-4 z-[400] p-2.5 bg-[#1e293b]/95 backdrop-blur-md border border-slate-700/80 rounded-xl text-slate-200 shadow-xl hover:bg-[#334155] transition-all"
-            title="Open Campus Directory"
-          >
-            <Menu className="w-5 h-5 text-sky-400" />
-          </button>
-        )}
+      {/* Main Workspace Viewport: 360° Immersive Aerial vs 2D Ground Map */}
+      {viewMode === 'immersive' ? (
+        <div className="flex-1 relative w-full h-full overflow-hidden">
+          <ImmersiveViewer
+            scenes={panoramaScenes}
+            hotspots={panoramaHotspots}
+            currentSceneId={currentSceneId}
+            onSceneChange={setCurrentSceneId}
+            onStartNavigation={handleStartNavigation}
+            onSwitchToMap={() => setViewMode('map')}
+            activeRoute={activeRoute}
+            onClearRoute={() => setActiveRoute(null)}
+          />
+        </div>
+      ) : (
+        <div className="flex-1 flex relative overflow-hidden">
+          {/* Toggle Sidebar Floating Trigger (when collapsed) */}
+          {!isSidebarOpen && (
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="absolute top-4 left-4 z-[400] p-2.5 bg-[#1e293b]/95 backdrop-blur-md border border-slate-700/80 rounded-xl text-slate-200 shadow-xl hover:bg-[#334155] transition-all"
+              title="Open Campus Directory"
+            >
+              <Menu className="w-5 h-5 text-sky-400" />
+            </button>
+          )}
 
-        {/* Collapsible Campus Directory Sidebar */}
-        <Sidebar
-          isOpen={isSidebarOpen}
-          onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-          locations={filteredLocations}
-          buildings={filteredBuildings}
-          departments={filteredDepartments}
-          features={features}
-          selectedLocation={selectedLocation}
-          onSelectLocation={(loc) => setSelectedLocation(loc)}
-          onStartNavigation={handleStartNavigation}
-          onCalculateRoute={handleCalculateRoute}
-          userLocation={userLocation}
-          catalog={catalog}
-          activeTab={sidebarTab}
-          onTabChange={setSidebarTab}
-        />
-
-        {/* Interactive Leaflet Campus Map */}
-        <main className="flex-1 relative h-full w-full">
-          <CampusMap
-            campus={campus}
-            features={features}
+          {/* Collapsible Campus Directory Sidebar */}
+          <Sidebar
+            isOpen={isSidebarOpen}
+            onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
             locations={filteredLocations}
-            routes={routes}
-            buildings={buildings}
-            walkingPaths={walkingPaths}
+            buildings={filteredBuildings}
+            departments={filteredDepartments}
+            features={features}
             selectedLocation={selectedLocation}
             onSelectLocation={(loc) => setSelectedLocation(loc)}
-            activeRoute={activeRoute}
-            isPickingCoordinates={isPickingCoordinates}
-            onCoordinatePicked={handleCoordinatePicked}
-            pickedCoordinates={pickedCoordinates}
+            onStartNavigation={handleStartNavigation}
+            onCalculateRoute={handleCalculateRoute}
+            userLocation={userLocation}
+            catalog={catalog}
+            activeTab={sidebarTab}
+            onTabChange={setSidebarTab}
           />
 
-          {/* Phase 3A: Live Outdoor Walking Guidance Bar */}
-          {activeRoute && (
-            <NavigationGuidanceBar
-              route={activeRoute}
-              onClose={() => setActiveRoute(null)}
-              userLocation={userLocation}
+          {/* Interactive Leaflet Campus Map */}
+          <main className="flex-1 relative h-full w-full">
+            <CampusMap
+              campus={campus}
+              features={features}
+              locations={filteredLocations}
+              routes={routes}
+              buildings={buildings}
+              walkingPaths={walkingPaths}
+              selectedLocation={selectedLocation}
+              onSelectLocation={(loc) => setSelectedLocation(loc)}
+              activeRoute={activeRoute}
+              isPickingCoordinates={isPickingCoordinates}
+              onCoordinatePicked={handleCoordinatePicked}
+              pickedCoordinates={pickedCoordinates}
             />
-          )}
 
-          {/* Turn-by-Turn Walking Navigation Panel (Sidebar summary) */}
-          {activeRoute && (
-            <NavigationPanel
-              route={activeRoute}
-              onClose={() => setActiveRoute(null)}
-            />
-          )}
-        </main>
-      </div>
+            {/* Phase 3A: Live Outdoor Walking Guidance Bar */}
+            {activeRoute && (
+              <NavigationGuidanceBar
+                route={activeRoute}
+                onClose={() => setActiveRoute(null)}
+                userLocation={userLocation}
+              />
+            )}
+
+            {/* Turn-by-Turn Walking Navigation Panel (Sidebar summary) */}
+            {activeRoute && (
+              <NavigationPanel
+                route={activeRoute}
+                onClose={() => setActiveRoute(null)}
+              />
+            )}
+          </main>
+        </div>
+      )}
 
       {/* Selected Location Details Modal */}
       {selectedLocation && (
@@ -345,17 +378,34 @@ export default function App() {
       {/* Mobile Bottom Navigation Bar (Visible on mobile/tablet screens < 768px) */}
       <nav className="md:hidden h-14 bg-[#0f172a]/95 backdrop-blur-xl border-t border-slate-800 flex items-center justify-around px-2 z-30 shrink-0 shadow-2xl">
         <button
-          onClick={() => setIsSidebarOpen(false)}
+          onClick={() => {
+            setViewMode('immersive');
+            setIsSidebarOpen(false);
+          }}
           className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition-all ${
-            !isSidebarOpen ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+            viewMode === 'immersive' ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Compass className="w-4 h-4" />
-          <span className="text-[10px]">Campus Map</span>
+          <Globe className="w-4 h-4 text-amber-400" />
+          <span className="text-[10px]">360° Aerial</span>
         </button>
 
         <button
           onClick={() => {
+            setViewMode('map');
+            setIsSidebarOpen(false);
+          }}
+          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition-all ${
+            viewMode === 'map' && !isSidebarOpen ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Compass className="w-4 h-4 text-emerald-400" />
+          <span className="text-[10px]">2D Map</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setViewMode('map');
             setSidebarTab('places');
             setIsSidebarOpen(true);
           }}
@@ -369,6 +419,7 @@ export default function App() {
 
         <button
           onClick={() => {
+            setViewMode('map');
             setSidebarTab('directions');
             setIsSidebarOpen(true);
           }}

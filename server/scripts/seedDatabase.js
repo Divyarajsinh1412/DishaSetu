@@ -18,6 +18,8 @@ import AdminUser from '../models/AdminUser.js';
 import Department from '../models/Department.js';
 import NavigationNode from '../models/NavigationNode.js';
 import WalkingPath from '../models/WalkingPath.js';
+import PanoramaScene from '../models/PanoramaScene.js';
+import PanoramaHotspot from '../models/PanoramaHotspot.js';
 import { hashPassword } from '../utils/auth.js';
 import {
   VERIFIED_CAMPUS_DATA,
@@ -28,6 +30,7 @@ import { PRESIDENCY_BUILDINGS_CATALOG } from '../data/presidencyCampusDataset.js
 import { COMPLETE_CAMPUS_CATALOG } from '../data/campusCatalog.js';
 import { NAVIGATION_NODES, WALKING_PATHS } from '../data/pedestrianGraphData.js';
 import { INITIAL_DEPARTMENTS } from '../services/campusService.js';
+import { INITIAL_PANORAMA_SCENES, INITIAL_PANORAMA_HOTSPOTS } from '../data/panoramaDataset.js';
 
 export const seedDatabase = async () => {
   console.log('========================================================');
@@ -540,7 +543,7 @@ export const seedDatabase = async () => {
     console.log(`  -> ${INITIAL_DEPARTMENTS.length} official departments registered.`);
 
     // 9. Seed Super Admin User
-    console.log('[9/9] Seeding Super Admin account...');
+    console.log('[9/11] Seeding Super Admin account...');
     const adminEmail = 'admin@presidency.ac.in';
     const existingAdmin = await AdminUser.findOne({ email: adminEmail });
     if (!existingAdmin) {
@@ -555,6 +558,28 @@ export const seedDatabase = async () => {
     } else {
       console.log(`  -> Super Admin already exists: ${adminEmail}`);
     }
+
+    // 10. Seed 360° Aerial Panorama Scenes
+    console.log('[10/11] Seeding 360° aerial panorama scenes...');
+    for (const sc of INITIAL_PANORAMA_SCENES) {
+      await PanoramaScene.findOneAndUpdate(
+        { sceneId: sc.sceneId },
+        sc,
+        { upsert: true, new: true }
+      );
+    }
+    console.log(`  -> ${INITIAL_PANORAMA_SCENES.length} panorama scenes seeded.`);
+
+    // 11. Seed Calibrated Panorama Hotspots
+    console.log('[11/11] Seeding calibrated panorama hotspots...');
+    for (const hs of INITIAL_PANORAMA_HOTSPOTS) {
+      await PanoramaHotspot.findOneAndUpdate(
+        { hotspotId: hs.hotspotId },
+        hs,
+        { upsert: true, new: true }
+      );
+    }
+    console.log(`  -> ${INITIAL_PANORAMA_HOTSPOTS.length} panorama hotspots seeded.`);
 
     console.log('\n========================================================');
     console.log('   DATABASE SEEDING COMPLETED SUCCESSFULLY!             ');
