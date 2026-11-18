@@ -16,7 +16,8 @@ import {
   Trophy,
   Globe,
   Map,
-  Crosshair
+  Crosshair,
+  Box
 } from 'lucide-react';
 
 export default function Header({
@@ -84,6 +85,18 @@ export default function Header({
 
         {/* View Mode Switcher Pill */}
         <div className="flex items-center p-1 bg-[#1e293b]/90 border border-slate-700/80 rounded-xl shadow-inner shrink-0">
+          <button
+            type="button"
+            onClick={() => onViewModeChange('3d')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              viewMode === '3d'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <Box className="w-3.5 h-3.5 text-emerald-300" />
+            <span className="hidden sm:inline">3D Campus</span>
+          </button>
           <button
             type="button"
             onClick={() => onViewModeChange('immersive')}

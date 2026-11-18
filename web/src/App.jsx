@@ -3,6 +3,7 @@ import SplashScreen from './components/SplashScreen';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import CampusMap from './maps/CampusMap';
+import CampusDigitalTwin3D from './components/twin3d/CampusDigitalTwin3D';
 import ImmersiveViewer from './components/immersive/ImmersiveViewer';
 import SurveyChecklistModal from './components/survey/SurveyChecklistModal';
 import IndoorNavigationModal from './components/indoor/IndoorNavigationModal';
@@ -29,7 +30,7 @@ import {
   connectSyncStream
 } from './services/api';
 import { clientRoutingEngine } from './services/routingEngine';
-import { Menu, Navigation, Compass, Shield, Globe, Map, Crosshair } from 'lucide-react';
+import { Menu, Navigation, Compass, Shield, Globe, Map, Crosshair, Box } from 'lucide-react';
 
 export default function App() {
   const [campus, setCampus] = useState(null);
@@ -44,8 +45,8 @@ export default function App() {
   const [walkingPaths, setWalkingPaths] = useState([]);
   const [userLocation, setUserLocation] = useState(null);
 
-  // View Mode: 'immersive' (default 360° aerial virtual campus) or 'map' (2D Leaflet GPS map)
-  const [viewMode, setViewMode] = useState('immersive');
+  // View Mode: '3d' (default realistic 3D campus digital twin), 'immersive' (360° aerial virtual campus) or 'map' (2D Leaflet GPS map)
+  const [viewMode, setViewMode] = useState('3d');
   const [showSplash, setShowSplash] = useState(true);
   const [panoramaScenes, setPanoramaScenes] = useState([]);
   const [panoramaHotspots, setPanoramaHotspots] = useState([]);
@@ -281,8 +282,29 @@ export default function App() {
         onViewModeChange={setViewMode}
       />
 
-      {/* Main Workspace Viewport: 360° Immersive Aerial vs 2D Ground Map */}
-      {viewMode === 'immersive' ? (
+      {/* Main Workspace Viewport: 3D Campus Digital Twin vs 360° Immersive Aerial vs 2D Ground Map */}
+      {viewMode === '3d' ? (
+        <div className="flex-1 relative w-full h-full overflow-hidden">
+          <CampusDigitalTwin3D
+            buildings={buildings}
+            locations={filteredLocations}
+            features={features}
+            walkingPaths={walkingPaths}
+            selectedLocation={selectedLocation}
+            onSelectLocation={(loc) => setSelectedLocation(loc)}
+            activeRoute={activeRoute}
+            onClearRoute={() => setActiveRoute(null)}
+            onStartNavigation={handleStartNavigation}
+            onOpenIndoor={(bld) => {
+              setTargetIndoorBuilding(bld || buildings[0]);
+              setIsIndoorModalOpen(true);
+            }}
+            onSwitchToImmersive={() => setViewMode('immersive')}
+            onSwitchToMap={() => setViewMode('map')}
+            userLocation={userLocation}
+          />
+        </div>
+      ) : viewMode === 'immersive' ? (
         <div className="flex-1 relative w-full h-full overflow-hidden">
           <ImmersiveViewer
             scenes={panoramaScenes}
@@ -427,6 +449,19 @@ export default function App() {
 
       {/* Mobile Bottom Navigation Bar (Visible on mobile/tablet screens < 768px) */}
       <nav className="md:hidden h-14 bg-[#0f172a]/95 backdrop-blur-xl border-t border-slate-800 flex items-center justify-around px-2 z-30 shrink-0 shadow-2xl">
+        <button
+          onClick={() => {
+            setViewMode('3d');
+            setIsSidebarOpen(false);
+          }}
+          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition-all ${
+            viewMode === '3d' ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Box className="w-4 h-4 text-emerald-400" />
+          <span className="text-[10px]">3D Campus</span>
+        </button>
+
         <button
           onClick={() => {
             setViewMode('immersive');

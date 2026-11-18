@@ -59,7 +59,7 @@ export default class ErrorBoundary extends React.Component {
             </button>
           </div>
 
-          {process.env.NODE_ENV !== 'production' && this.state.error && (
+          {import.meta.env.DEV && this.state.error && (
             <div className="mt-8 p-4 bg-slate-950/80 rounded-xl border border-red-500/30 text-left max-w-xl w-full overflow-auto text-xs font-mono text-red-400">
               <div className="font-bold mb-1">{this.state.error.toString()}</div>
               <div className="text-slate-500 text-[10px] whitespace-pre-wrap">
