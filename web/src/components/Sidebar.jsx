@@ -22,7 +22,8 @@ import {
   Footprints,
   RotateCcw,
   Zap,
-  Star
+  Star,
+  Layers
 } from 'lucide-react';
 
 export default function Sidebar({

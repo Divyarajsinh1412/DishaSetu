@@ -29,7 +29,7 @@ import {
   connectSyncStream
 } from './services/api';
 import { clientRoutingEngine } from './services/routingEngine';
-import { Menu, Navigation, Compass, Shield, Globe, Map } from 'lucide-react';
+import { Menu, Navigation, Compass, Shield, Globe, Map, Crosshair } from 'lucide-react';
 
 export default function App() {
   const [campus, setCampus] = useState(null);
@@ -249,13 +249,17 @@ export default function App() {
     setIsAdminDashboardOpen(true);
   };
 
+  const handleSplashFinish = useCallback(() => {
+    setShowSplash(false);
+  }, []);
+
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#0b132b]">
       {/* Premium Professional Splash Screen */}
       {showSplash && (
         <SplashScreen
           isLoading={isLoading}
-          onFinish={() => setShowSplash(false)}
+          onFinish={handleSplashFinish}
         />
       )}
 
