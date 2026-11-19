@@ -90,8 +90,20 @@ export default function App() {
 
   // Open Wayfinding / Route Planning Modal
   const handleOpenRoutePlanning = useCallback((start = null, dest = null) => {
-    if (start) setRoutePlanningStart(start);
-    if (dest) setRoutePlanningDest(dest);
+    // Defend against raw event objects
+    const validStart = (typeof start === 'string' && start.length > 0)
+      ? start
+      : (start && typeof start === 'object' && !start._reactName && !start.nativeEvent
+          ? (start.id || start.shortCode || start.buildingId || null)
+          : null);
+    const validDest = (typeof dest === 'string' && dest.length > 0)
+      ? dest
+      : (dest && typeof dest === 'object' && !dest._reactName && !dest.nativeEvent
+          ? (dest.id || dest.shortCode || dest.buildingId || null)
+          : null);
+
+    if (validStart) setRoutePlanningStart(validStart);
+    if (validDest) setRoutePlanningDest(validDest);
     setIsRoutePlanningOpen(true);
   }, []);
 
@@ -361,6 +373,7 @@ export default function App() {
         onOpenIssueReport={() => setIsIssueReportOpen(true)}
         onOpenMapEditor={() => setIsMapEditorOpen(true)}
         onOpenRoutePlanning={handleOpenRoutePlanning}
+        onSelectLocation={(loc) => setSelectedLocation(loc)}
         locations={filteredLocations}
         viewMode={viewMode}
         onViewModeChange={setViewMode}

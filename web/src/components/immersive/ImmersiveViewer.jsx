@@ -86,6 +86,7 @@ export default function ImmersiveViewer({
   const [projectedHotspots, setProjectedHotspots] = useState([]);
   const [showSceneDrawer, setShowSceneDrawer] = useState(false);
   const [isSceneLoading, setIsSceneLoading] = useState(true);
+  const [panoramaLoadError, setPanoramaLoadError] = useState(false);
 
   // Web Audio Context & Node Refs for Ambiance Synthesis
   const audioCtxRef = useRef(null);
@@ -196,6 +197,7 @@ export default function ImmersiveViewer({
     if (!activeScene || !threeRef.current.sphereMesh) return;
 
     setIsSceneLoading(true);
+    setPanoramaLoadError(false);
     const texturePath = activeScene.panoramaImage;
 
     threeRef.current.textureLoader.load(
@@ -220,11 +222,13 @@ export default function ImmersiveViewer({
         }
 
         setIsSceneLoading(false);
+        setPanoramaLoadError(false);
       },
       undefined,
       (err) => {
         console.warn('Failed to load panorama texture:', texturePath, err);
         setIsSceneLoading(false);
+        setPanoramaLoadError(true);
       }
     );
   }, [activeScene]);
@@ -736,6 +740,35 @@ export default function ImmersiveViewer({
               <span>View Route on Map</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Fallback Placeholder when 360° Panorama Image is Not Available */}
+      {panoramaLoadError && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center p-6 bg-slate-950/90 backdrop-blur-md text-center">
+          <div className="w-16 h-16 rounded-3xl bg-blue-950/70 border border-blue-500/40 flex items-center justify-center mb-4 text-blue-400 shadow-xl">
+            <Camera className="w-8 h-8" />
+          </div>
+          <h3 className="text-xl font-black text-white mb-2 tracking-tight">360° Panorama Not Available</h3>
+          <p className="text-xs sm:text-sm text-slate-400 max-w-md mb-6 leading-relaxed">
+            High-altitude aerial photography for this specific campus quadrant is currently scheduled for calibration.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button
+              onClick={() => onSwitchToMap ? onSwitchToMap() : null}
+              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg transition-all"
+            >
+              Return to Official Map
+            </button>
+            {scenes && scenes.length > 0 && (
+              <button
+                onClick={() => onSceneChange && onSceneChange(scenes[0].sceneId)}
+                className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-bold text-xs transition-all"
+              >
+                View Central Campus 360°
+              </button>
+            )}
           </div>
         </div>
       )}

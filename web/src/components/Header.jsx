@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Compass,
   Search,
@@ -13,16 +13,25 @@ import {
   BookOpen,
   Trophy,
   Globe,
-  Map,
+  Map as MapIcon,
   Crosshair,
   Box,
   Utensils,
   HelpCircle,
   Languages,
   DoorOpen,
-  Navigation
+  Navigation,
+  X,
+  ChevronDown,
+  Layers,
+  ArrowRight,
+  Sparkles,
+  MoreVertical,
+  Check
 } from 'lucide-react';
 import { getTranslation } from '../services/localization';
+import { COMPLETE_CAMPUS_CATALOG } from '../services/campusCatalog';
+import { MASTER_CAMPUS_FEATURES } from '../data/masterMapFeatures';
 
 export default function Header({
   searchQuery,
@@ -38,116 +47,273 @@ export default function Header({
   onOpenIssueReport,
   onOpenMapEditor,
   onOpenRoutePlanning,
+  onSelectLocation,
   locations = [],
-  viewMode = 'immersive',
+  viewMode = 'master',
   onViewModeChange,
   language = 'en',
   onLanguageChange
 }) {
   const t = (key) => getTranslation(language, key);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const searchContainerRef = useRef(null);
+  const moreMenuRef = useRef(null);
 
+  // Close search suggestions and more menu on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setIsSearchFocused(false);
+      }
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target)) {
+        setIsMoreMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, []);
+
+  // Official Institutional Campus Categories
   const categories = [
-    { id: 'all', label: t('overview') || 'All', icon: MapPin },
+    { id: 'all', label: 'Campus Overview', icon: MapPin },
     { id: 'Gate', label: 'Gates', icon: Compass },
-    { id: 'Academic', label: t('buildings') || 'Academic', icon: Building2 },
-    { id: 'Cafe', label: t('foodDining') || 'Food & Dining', icon: Coffee },
-    { id: 'Medical', label: t('medicalCare') || 'Medical', icon: HeartPulse },
-    { id: 'Library', label: t('library') || 'Library', icon: BookOpen },
-    { id: 'Parking', label: t('parking') || 'Parking', icon: Car },
-    { id: 'Sports', label: t('sportsArena') || 'Sports', icon: Trophy },
-    { id: 'Garden', label: t('gardens') || 'Gardens', icon: Trees },
-    { id: 'Landmark', label: t('landmarks') || 'Landmarks', icon: Compass }
+    { id: 'Academic', label: 'Academic Buildings', icon: Building2 },
+    { id: 'Department', label: 'Departments', icon: Building2 },
+    { id: 'Library', label: 'Libraries', icon: BookOpen },
+    { id: 'Cafe', label: 'Food & Dining', icon: Coffee },
+    { id: 'Medical', label: 'Medical Care', icon: HeartPulse },
+    { id: 'Parking', label: 'Parking', icon: Car },
+    { id: 'Sports', label: 'Sports', icon: Trophy },
+    { id: 'Garden', label: 'Gardens & Quads', icon: Trees },
+    { id: 'Facility', label: 'Facilities', icon: Layers },
+    { id: 'Landmark', label: 'Landmarks', icon: Compass }
   ];
 
+  // Comprehensive Instant Search Engine
+  const searchResults = useMemo(() => {
+    const q = (searchQuery || '').trim().toLowerCase();
+    if (!q || q.length < 2) return [];
+
+    const hits = [];
+    const seenIds = new Set();
+
+    // 1. Search Catalog (Buildings, Labs, Rooms, Cafes, Gates)
+    COMPLETE_CAMPUS_CATALOG.forEach(item => {
+      const matchName = item.name && item.name.toLowerCase().includes(q);
+      const matchCode = item.shortCode && item.shortCode.toLowerCase().includes(q);
+      const matchCat = item.category && item.category.toLowerCase().includes(q);
+      const matchDesc = item.description && item.description.toLowerCase().includes(q);
+
+      if (matchName || matchCode || matchCat || matchDesc) {
+        if (!seenIds.has(item.locationId)) {
+          seenIds.add(item.locationId);
+          hits.push({
+            id: item.locationId,
+            name: item.name,
+            code: item.shortCode,
+            category: item.category,
+            description: item.description,
+            raw: item
+          });
+        }
+      }
+    });
+
+    // 2. Search Master Features
+    MASTER_CAMPUS_FEATURES.forEach(feat => {
+      const matchName = feat.featureName && feat.featureName.toLowerCase().includes(q);
+      const matchCode = feat.code && feat.code.toLowerCase().includes(q);
+      if (matchName || matchCode) {
+        if (!seenIds.has(feat.featureId)) {
+          seenIds.add(feat.featureId);
+          hits.push({
+            id: feat.featureId,
+            name: feat.featureName,
+            code: feat.code,
+            category: feat.category,
+            description: feat.description,
+            raw: feat
+          });
+        }
+      }
+    });
+
+    return hits.slice(0, 10);
+  }, [searchQuery]);
+
+  const handleSelectSearchResult = (hit) => {
+    setIsSearchFocused(false);
+    if (onSelectLocation) {
+      onSelectLocation(hit.raw || hit);
+    }
+  };
+
+  const handleDirectNavigate = (hit, e) => {
+    e.stopPropagation();
+    setIsSearchFocused(false);
+    if (onOpenRoutePlanning) {
+      onOpenRoutePlanning(null, hit.id || hit.code);
+    }
+  };
+
   return (
-    <header className="bg-[#0f172a]/95 backdrop-blur-md border-b border-slate-800 z-30 shrink-0 shadow-lg">
-      <div className="h-16 px-3 sm:px-4 flex items-center justify-between gap-2 sm:gap-3">
+    <header className="bg-[#0b1a30]/95 backdrop-blur-md border-b border-[#1b3152] z-40 shrink-0 shadow-lg text-slate-100">
+      {/* Primary Top Bar */}
+      <div className="h-16 px-3 sm:px-4 lg:px-6 flex items-center justify-between gap-2 sm:gap-4">
         
-        {/* Brand & University Identifier */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-400 p-0.5 shadow-lg shadow-blue-500/20 flex items-center justify-center">
-            <div className="w-full h-full bg-[#0b132b] rounded-[10px] flex items-center justify-center">
-              <Compass className="w-4 h-4 sm:w-5 sm:h-5 text-sky-400" />
+        {/* University Brand Header */}
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#1d4ed8] via-[#0f3460] to-[#b48c26] p-0.5 shadow-md flex items-center justify-center">
+            <div className="w-full h-full bg-[#08172c] rounded-[10px] flex items-center justify-center">
+              <Compass className="w-4 h-4 sm:w-5 sm:h-5 text-[#d4af37]" />
             </div>
           </div>
-          <div className="hidden sm:block">
-            <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-sm sm:text-base tracking-tight text-white">
-                {t('appName')}
+          <div>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="font-black text-sm sm:text-base tracking-tight text-white">
+                DishaSetu
               </span>
-              <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-blue-500/20 text-sky-400 border border-blue-500/30">
+              <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-[#1e3a8a]/40 text-[#93c5fd] border border-[#2563eb]/40 font-mono">
                 Presidency GIS
               </span>
             </div>
-            <div className="text-[10px] text-slate-400 font-medium truncate max-w-[170px] lg:max-w-none">
-              {t('universityName')}
+            <div className="text-[10.5px] text-slate-300 font-medium truncate max-w-[170px] sm:max-w-none">
+              Presidency University Bengaluru
             </div>
           </div>
         </div>
 
-        {/* Central Search Bar */}
-        <div className="flex-1 max-w-md lg:max-w-xl relative min-w-0">
+        {/* Central Search Bar with Instant Results Dropdown */}
+        <div ref={searchContainerRef} className="flex-1 max-w-md lg:max-w-xl relative min-w-0">
           <div className="relative">
-            <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder={t('searchPlaceholder')}
-              className="w-full pl-9 pr-3 py-1.5 sm:py-2 bg-[#1e293b]/90 border border-slate-700/80 rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all shadow-inner"
+              onFocus={() => setIsSearchFocused(true)}
+              placeholder="Search buildings, rooms (DG01), departments, cafes, gates..."
+              className="w-full pl-9 pr-8 py-2 bg-[#081528] border border-[#1e385c] rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37]/50 transition-all shadow-inner"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => onSearchChange('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-white"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
+
+          {/* Instant Search Suggestions Dropdown */}
+          {isSearchFocused && searchResults.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-[#081528]/98 backdrop-blur-2xl border border-[#23426e] rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+              <div className="p-2.5 border-b border-[#1b3152] flex items-center justify-between text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                <span>Campus Directory Matches ({searchResults.length})</span>
+                <span className="text-[10px] text-slate-500 font-normal">Press Esc to close</span>
+              </div>
+              <div className="max-h-72 overflow-y-auto p-1.5 space-y-1 custom-scrollbar">
+                {searchResults.map((hit) => (
+                  <div
+                    key={hit.id}
+                    onClick={() => handleSelectSearchResult(hit)}
+                    className="w-full p-2.5 rounded-xl text-left flex items-center justify-between hover:bg-[#132847] transition-all cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-3 truncate">
+                      <div className="w-8 h-8 rounded-lg bg-[#0e213d] border border-[#23426e] flex items-center justify-center shrink-0 text-[#93c5fd] group-hover:text-[#d4af37] group-hover:border-[#d4af37]/40 transition-colors">
+                        {hit.category === 'Academic' ? <Building2 className="w-4 h-4" /> :
+                         hit.category === 'Cafe' ? <Coffee className="w-4 h-4" /> :
+                         hit.category === 'Gate' ? <Compass className="w-4 h-4" /> :
+                         hit.category === 'Library' ? <BookOpen className="w-4 h-4" /> :
+                         hit.category === 'Medical' ? <HeartPulse className="w-4 h-4" /> :
+                         <MapPin className="w-4 h-4" />}
+                      </div>
+                      <div className="truncate">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-white group-hover:text-[#93c5fd] truncate">
+                            {hit.name}
+                          </span>
+                          {hit.code && (
+                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#0b1b33] text-slate-300 border border-[#1b3152]">
+                              {hit.code}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-slate-400 truncate">
+                          {hit.category} · {hit.description || 'Presidency University Campus'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                      <button
+                        type="button"
+                        onClick={(e) => handleDirectNavigate(hit, e)}
+                        className="px-2.5 py-1 rounded-lg bg-[#1e3a8a]/70 hover:bg-[#2563eb] text-white text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all"
+                        title="Navigate here"
+                      >
+                        <Navigation className="w-3 h-3 text-sky-200" />
+                        <span>Navigate</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* View Mode Switcher Pill */}
-        <div className="hidden md:flex items-center p-1 bg-[#1e293b]/90 border border-slate-700/80 rounded-xl shadow-inner shrink-0">
+        {/* View Mode Switcher Toolbar */}
+        <div className="hidden lg:flex items-center p-1 bg-[#081528] border border-[#1b3152] rounded-xl shadow-inner shrink-0">
           <button
             type="button"
             onClick={() => onViewModeChange('master')}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'master'
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md'
+                ? 'bg-[#1e3a8a] text-white shadow-md border border-[#3b82f6]/40'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Map className="w-3.5 h-3.5 text-emerald-300" />
-            <span className="hidden xl:inline">Official Map</span>
+            <MapIcon className="w-3.5 h-3.5 text-sky-300" />
+            <span>Official Map</span>
           </button>
           <button
             type="button"
             onClick={() => onViewModeChange('3d')}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
               viewMode === '3d'
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md'
+                ? 'bg-[#1e3a8a] text-white shadow-md border border-[#3b82f6]/40'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Box className="w-3.5 h-3.5 text-emerald-300" />
-            <span className="hidden xl:inline">{t('view3D')}</span>
+            <Box className="w-3.5 h-3.5 text-sky-300" />
+            <span>3D Campus</span>
           </button>
           <button
             type="button"
             onClick={() => onViewModeChange('immersive')}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'immersive'
-                ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white shadow-md'
+                ? 'bg-[#1e3a8a] text-white shadow-md border border-[#3b82f6]/40'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Globe className="w-3.5 h-3.5 text-amber-300" />
-            <span className="hidden xl:inline">{t('viewAerial')}</span>
+            <Globe className="w-3.5 h-3.5 text-[#d4af37]" />
+            <span>360° Aerial</span>
           </button>
           <button
             type="button"
             onClick={() => onViewModeChange('map')}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'map'
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md'
+                ? 'bg-[#1e3a8a] text-white shadow-md border border-[#3b82f6]/40'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Compass className="w-3.5 h-3.5 text-emerald-300" />
-            <span className="hidden xl:inline">{t('view2D')}</span>
+            <Compass className="w-3.5 h-3.5 text-sky-300" />
+            <span>2D GPS Map</span>
           </button>
           <button
             type="button"
@@ -155,136 +321,155 @@ export default function Header({
               if (onViewModeChange) onViewModeChange('indoor');
               if (onOpenIndoor) onOpenIndoor();
             }}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
               viewMode === 'indoor'
-                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-emerald-300 hover:bg-slate-800/60'
+                ? 'bg-[#1e3a8a] text-white shadow-md border border-[#3b82f6]/40'
+                : 'text-slate-400 hover:text-emerald-300'
             }`}
-            title="Open D Block & Academic Indoor Navigation"
           >
             <DoorOpen className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden xl:inline">Indoor Plan</span>
+            <span>Indoor Navigation</span>
           </button>
         </div>
 
-        {/* Directions / Route Planning Button */}
-        <button
-          onClick={onOpenRoutePlanning}
-          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-gradient-to-r from-sky-600 via-indigo-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white text-xs font-black rounded-xl shadow-md border border-sky-400/50 transition-all hover:scale-105 active:scale-95 shrink-0"
-          title="Campus Wayfinding: Navigate from one place to another place"
-        >
-          <Navigation className="w-3.5 h-3.5 text-sky-200" />
-          <span className="hidden sm:inline">Directions</span>
-        </button>
-
-        {/* Campus Survey Trigger */}
-        <button
-          onClick={onOpenSurvey}
-          className="hidden sm:flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-gradient-to-r from-amber-500 to-emerald-500 hover:from-amber-400 hover:to-emerald-400 text-slate-950 text-xs font-extrabold rounded-xl shadow-md border border-amber-300 transition-all hover:scale-105 active:scale-95 shrink-0"
-          title="Open Guided GPS Field Survey Checklist"
-        >
-          <Crosshair className="w-3.5 h-3.5 text-slate-950 animate-spin" style={{ animationDuration: '6s' }} />
-          <span className="hidden xl:inline">{t('startSurvey')}</span>
-          <span className="xl:hidden">SURVEY</span>
-        </button>
-
-        {/* Feature Action Buttons: Dining, Partner Portal, Helpdesk */}
+        {/* Primary Action Buttons: Directions, Dining, Survey, More */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           
-          {/* Cafes & Dining Button (Rule 3) */}
+          {/* Directions / Wayfinding Route Planner */}
           <button
+            type="button"
+            onClick={() => onOpenRoutePlanning && onOpenRoutePlanning()}
+            className="flex items-center gap-1.5 px-3 py-1.5 sm:py-2 bg-gradient-to-r from-[#1d4ed8] to-[#1e40af] hover:from-[#2563eb] hover:to-[#1d4ed8] text-white text-xs font-black rounded-xl shadow-md border border-[#3b82f6]/50 transition-all hover:scale-105 active:scale-95 shrink-0"
+            title="Campus Wayfinding: Navigate from one place to another place"
+          >
+            <Navigation className="w-3.5 h-3.5 text-sky-200" />
+            <span className="hidden sm:inline">Directions</span>
+          </button>
+
+          {/* Food & Dining Modal Trigger */}
+          <button
+            type="button"
             onClick={onOpenCafes}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#1e293b] hover:bg-amber-600/20 hover:border-amber-500/50 text-slate-200 hover:text-amber-400 text-xs font-semibold rounded-xl border border-slate-700 shadow-sm transition-all"
-            title="View Campus Cafes & Daily Menus"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-[#0e223d] hover:bg-[#15345d] text-slate-200 hover:text-[#d4af37] text-xs font-semibold rounded-xl border border-[#1b365c] shadow-sm transition-all"
+            title="Campus Cafeteria, Hatti Kappi & Menus"
           >
-            <Coffee className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden lg:inline">{t('foodDining')}</span>
+            <Coffee className="w-3.5 h-3.5 text-[#d4af37]" />
+            <span className="hidden md:inline">Food & Dining</span>
           </button>
 
-          {/* Cafe Owner Dashboard Button (Rule 2) */}
+          {/* Campus Field Survey Trigger */}
           <button
-            onClick={onOpenCafeOwner}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#1e293b] hover:bg-orange-600/20 hover:border-orange-500/50 text-slate-200 hover:text-orange-400 text-xs font-semibold rounded-xl border border-slate-700 shadow-sm transition-all"
-            title="Cafe Partner Menu Management Portal (Rule 2)"
-          >
-            <Utensils className="w-3.5 h-3.5 text-orange-400" />
-            <span className="hidden 2xl:inline">Dining Partner</span>
-          </button>
-
-          {/* Helpdesk Issue Report Button (Rule 3) */}
-          <button
-            onClick={onOpenIssueReport}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#1e293b] hover:bg-sky-600/20 hover:border-sky-500/50 text-slate-200 hover:text-sky-300 text-xs font-semibold rounded-xl border border-slate-700 shadow-sm transition-all"
-            title="Report Campus Navigation Issue or Obstacle"
-          >
-            <HelpCircle className="w-3.5 h-3.5 text-sky-400" />
-            <span className="hidden 2xl:inline">{t('reportIssue')}</span>
-          </button>
-
-          {/* Emergency SOS Button */}
-          <button
-            onClick={onOpenSOS}
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-rose-600/90 hover:bg-rose-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-rose-900/30 border border-rose-500/30 transition-all hover:scale-105 active:scale-95 animate-pulse"
-          >
-            <AlertTriangle className="w-3.5 h-3.5 text-white" />
-            <span className="hidden md:inline">SOS</span>
-          </button>
-
-          {/* Trilingual Language Selector */}
-          <div className="flex items-center bg-[#1e293b] border border-slate-700 rounded-xl p-0.5 text-xs font-bold text-slate-300">
-            <button
-              onClick={() => onLanguageChange('en')}
-              className={`px-1.5 py-1 rounded-lg transition-all ${
-                language === 'en' ? 'bg-sky-600 text-white shadow-sm' : 'hover:text-white'
-              }`}
-              title="English"
-            >
-              EN
-            </button>
-            <button
-              onClick={() => onLanguageChange('kn')}
-              className={`px-1.5 py-1 rounded-lg transition-all ${
-                language === 'kn' ? 'bg-sky-600 text-white shadow-sm' : 'hover:text-white'
-              }`}
-              title="ಕನ್ನಡ (Kannada)"
-            >
-              ಕನ್ನ
-            </button>
-            <button
-              onClick={() => onLanguageChange('hi')}
-              className={`px-1.5 py-1 rounded-lg transition-all ${
-                language === 'hi' ? 'bg-sky-600 text-white shadow-sm' : 'hover:text-white'
-              }`}
-              title="हिंदी (Hindi)"
-            >
-              हिं
-            </button>
-          </div>
-
-          {/* Admin Map Editor Trigger (Task 5) */}
-          <button
-            onClick={onOpenMapEditor}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#1e293b] hover:bg-emerald-600/20 hover:border-emerald-500/50 text-slate-200 hover:text-emerald-400 text-xs font-semibold rounded-xl border border-slate-700 shadow-sm transition-all"
-            title="Edit Map Markers on Official Campus Map (Rule 1)"
+            type="button"
+            onClick={onOpenSurvey}
+            className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 sm:py-2 bg-[#0e223d] hover:bg-[#15345d] text-slate-200 hover:text-emerald-300 text-xs font-semibold rounded-xl border border-[#1b365c] shadow-sm transition-all"
+            title="Campus GPS Field Survey Checklist"
           >
             <Crosshair className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden 2xl:inline">Map Editor</span>
+            <span>Campus Survey</span>
           </button>
 
-          {/* Admin Portal Button (Rule 1) */}
-          <button
-            onClick={onOpenAdmin}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1e293b] hover:bg-[#334155] text-slate-200 hover:text-white text-xs font-semibold rounded-xl border border-slate-700 shadow-md transition-all hover:scale-105 active:scale-95"
-            title="University GIS Administrator Portal (Rule 1)"
-          >
-            <Shield className="w-3.5 h-3.5 text-sky-400" />
-            <span className="hidden xl:inline">Admin</span>
-          </button>
+          {/* More Options / Institutional Tools Dropdown */}
+          <div ref={moreMenuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
+              className="p-2 rounded-xl bg-[#0e223d] hover:bg-[#15345d] border border-[#1b365c] text-slate-300 hover:text-white transition-all shadow-sm"
+              title="More University Services & Settings"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
+
+            {isMoreMenuOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-[#081528]/98 backdrop-blur-2xl border border-[#23426e] rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1">
+                <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Institutional Tools
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => { onOpenAdmin(); setIsMoreMenuOpen(false); }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-semibold text-slate-200 hover:bg-[#132847] flex items-center gap-2.5 transition-colors"
+                >
+                  <Shield className="w-4 h-4 text-sky-400" />
+                  <span>Admin GIS Portal</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { onOpenMapEditor(); setIsMoreMenuOpen(false); }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-semibold text-slate-200 hover:bg-[#132847] flex items-center gap-2.5 transition-colors"
+                >
+                  <Crosshair className="w-4 h-4 text-emerald-400" />
+                  <span>Map Marker Editor</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { onOpenCafeOwner(); setIsMoreMenuOpen(false); }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-semibold text-slate-200 hover:bg-[#132847] flex items-center gap-2.5 transition-colors"
+                >
+                  <Utensils className="w-4 h-4 text-amber-400" />
+                  <span>Dining Partner Portal</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { onOpenIssueReport(); setIsMoreMenuOpen(false); }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-semibold text-slate-200 hover:bg-[#132847] flex items-center gap-2.5 transition-colors"
+                >
+                  <HelpCircle className="w-4 h-4 text-sky-400" />
+                  <span>Report Obstacle / Issue</span>
+                </button>
+
+                <div className="h-px bg-[#1b3152] my-1" />
+
+                {/* Language Switcher */}
+                <div className="px-2.5 py-1.5">
+                  <div className="text-[10px] font-bold text-slate-400 mb-1 flex items-center gap-1">
+                    <Languages className="w-3 h-3 text-[#d4af37]" />
+                    <span>Language</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {[
+                      { code: 'en', label: 'English' },
+                      { code: 'kn', label: 'ಕನ್ನಡ' },
+                      { code: 'hi', label: 'हिंदी' }
+                    ].map(lang => (
+                      <button
+                        key={lang.code}
+                        type="button"
+                        onClick={() => onLanguageChange(lang.code)}
+                        className={`flex-1 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                          language === lang.code
+                            ? 'bg-[#1e3a8a] text-white shadow-sm'
+                            : 'bg-[#0e223d] text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {lang.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="h-px bg-[#1b3152] my-1" />
+
+                {/* Emergency SOS */}
+                <button
+                  type="button"
+                  onClick={() => { onOpenSOS(); setIsMoreMenuOpen(false); }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-bold text-rose-300 hover:bg-rose-950/60 flex items-center gap-2.5 transition-colors"
+                >
+                  <AlertTriangle className="w-4 h-4 text-rose-400" />
+                  <span>Emergency Directory (SOS)</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Quick Category Chips Bar */}
-      <div className="px-4 py-1.5 bg-[#0b132b]/80 border-t border-slate-800/60 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+      {/* Secondary Campus Category Pills Bar */}
+      <div className="px-3 sm:px-4 py-1.5 bg-[#081528]/90 border-t border-[#162a45] flex items-center gap-1.5 overflow-x-auto no-scrollbar">
         {categories.map((cat) => {
           const Icon = cat.icon;
           const isActive = activeCategory === cat.id;
@@ -292,13 +477,13 @@ export default function Header({
             <button
               key={cat.id}
               onClick={() => onCategorySelect(cat.id)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap flex items-center gap-1.5 transition-all ${
+              className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all ${
                 isActive
-                  ? 'bg-sky-500/20 text-sky-300 border border-sky-500/50 shadow-sm'
-                  : 'bg-[#1e293b]/60 text-slate-400 hover:text-slate-200 hover:bg-[#1e293b] border border-transparent'
+                  ? 'bg-[#1e3a8a] text-[#d4af37] border border-[#3b82f6]/50 shadow-sm'
+                  : 'bg-[#0d1f38]/70 text-slate-300 hover:text-white hover:bg-[#132c4f] border border-transparent'
               }`}
             >
-              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-sky-400' : 'text-slate-400'}`} />
+              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#d4af37]' : 'text-slate-400'}`} />
               <span>{cat.label}</span>
             </button>
           );

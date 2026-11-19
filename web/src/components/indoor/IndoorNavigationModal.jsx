@@ -400,8 +400,14 @@ export default function IndoorNavigationModal({
               <h2 className="font-extrabold text-base tracking-tight text-white">
                 {currentBuilding.name} – Indoor Navigation
               </h2>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                Design preview
+              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                selectedBuildingId === 'PU-D-BLOCK' || selectedBuildingId === 'bld_d_block'
+                  ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                  : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+              }`}>
+                {selectedBuildingId === 'PU-D-BLOCK' || selectedBuildingId === 'bld_d_block'
+                  ? 'Verified Architectural Layout'
+                  : 'Illustrative Layout · Survey Pending'}
               </span>
               {isAdminMode && (
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
@@ -417,9 +423,14 @@ export default function IndoorNavigationModal({
                 onChange={e => setSelectedBuildingId(e.target.value)}
                 className="bg-[#181c25] text-sky-300 text-xs font-semibold rounded-lg px-2 py-0.5 border border-slate-700 focus:outline-none focus:border-emerald-500 cursor-pointer"
               >
-                <option value="PU-D-BLOCK">D Block (6 Floors Live)</option>
+                <option value="PU-D-BLOCK">D Block (6 Floors Verified)</option>
+                <option value="PU-E-BLOCK">E Block – School of CSE &amp; AI (Survey Pending)</option>
+                <option value="PU-F-BLOCK">F Block – Information Science (Survey Pending)</option>
+                <option value="PU-L-BLOCK">L Block – Electronics &amp; Robotics (Survey Pending)</option>
+                <option value="PU-H-BLOCK">H Block – Admissions &amp; Admin (Survey Pending)</option>
+                <option value="PU-MBA-SOM">MBA / SOM Block (Survey Pending)</option>
                 {buildings && buildings.map(b => (
-                  b.shortCode !== 'PU-D-BLOCK' && (
+                  !['PU-D-BLOCK', 'PU-E-BLOCK', 'PU-F-BLOCK', 'PU-L-BLOCK', 'PU-H-BLOCK', 'PU-MBA-SOM'].includes(b.shortCode) && (
                     <option key={b._id || b.shortCode} value={b.shortCode || b.buildingId || b._id}>
                       {b.name} ({b.shortCode})
                     </option>

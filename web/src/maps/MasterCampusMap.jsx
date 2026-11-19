@@ -449,6 +449,14 @@ export default function MasterCampusMap({
     setPosition({ x: targetX, y: targetY });
   }, [activeRoute, mapRoutePoints]);
 
+  // Initial Map Focus: Center on Main Gate upon mounting
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleFocusMainGate();
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [handleFocusMainGate]);
+
   // Handle Feature Selection & Auto-Focus
   const handleSelectFeature = useCallback((feature) => {
     setLocalSelectedFeature(feature);
@@ -585,29 +593,54 @@ export default function MasterCampusMap({
     setRotation(0);
   };
 
-  // 6. Fit Entire Campus (Overview)
+  // 6. Focus Main Gate (Initial View & Quick Access)
+  const handleFocusMainGate = useCallback(() => {
+    if (!containerRef.current) {
+      setScale(1.5);
+      setPosition({ x: -35, y: 155 });
+      setRotation(0);
+      return;
+    }
+    const containerW = containerRef.current.clientWidth;
+    const containerH = containerRef.current.clientHeight;
+    const targetScale = 1.55;
+    setScale(targetScale);
+    // Main gate is at normalizedX = 0.5695, normalizedY = 0.2449
+    const targetX = -(0.5695 - 0.5) * (containerW * 0.72) * targetScale;
+    const targetY = -(0.2449 - 0.5) * (containerH * 0.90) * targetScale;
+    setPosition({ x: targetX, y: targetY });
+    setRotation(0);
+  }, []);
+
+  // 7. Fit Entire Campus (Overview with comfortable padding)
   const handleFitCampus = useCallback(() => {
-    setScale(1.0);
+    if (!containerRef.current) {
+      setScale(1.1);
+      setPosition({ x: 0, y: 0 });
+      setRotation(0);
+      return;
+    }
+    const containerW = containerRef.current.clientWidth;
+    const isMobile = containerW < 768;
+    setScale(isMobile ? 1.05 : 1.15);
     setPosition({ x: 0, y: 0 });
     setRotation(0);
   }, []);
 
-  // 7. Fit Width (Wide View - Eliminates side black dead space)
+  // 8. Focus My Current GPS Location
+  const handleFocusMyLocation = useCallback(() => {
+    if (userLocation && userLocation.latitude && userLocation.longitude) {
+      setScale(1.8);
+      setPosition({ x: -35, y: 140 });
+    } else {
+      handleFocusMainGate();
+    }
+  }, [userLocation, handleFocusMainGate]);
+
+  // 9. Fit Width (Wide View - Eliminates side dead space)
   const handleFitWidth = useCallback(() => {
     setScale(1.6);
     setPosition({ x: 0, y: 0 });
-  }, []);
-
-  // 8. Fill Entire Screen Viewport
-  const handleFillViewport = useCallback(() => {
-    setScale(1.9);
-    setPosition({ x: 0, y: 0 });
-  }, []);
-
-  // 9. Focus Academic Quad (D, E, F, L, H, J, K blocks)
-  const handleFocusQuad = useCallback(() => {
-    setScale(2.2);
-    setPosition({ x: 220, y: -150 });
   }, []);
 
   // 10. Focus Selected Building
@@ -624,9 +657,7 @@ export default function MasterCampusMap({
 
   // 11. Reset All (Default Clean View)
   const handleResetView = () => {
-    setScale(1.35);
-    setPosition({ x: 0, y: 0 });
-    setRotation(0);
+    handleFocusMainGate();
   };
 
   // 12. Fullscreen toggle
@@ -1425,7 +1456,16 @@ export default function MasterCampusMap({
 
         <div className="h-px w-8 bg-slate-800" />
 
-        {/* 3. Fit Entire Campus Overview */}
+        {/* 3. Focus Main Gate (Entrance Focus) */}
+        <button
+          onClick={handleFocusMainGate}
+          className="p-2.5 rounded-xl text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 transition-all hover:scale-110 active:scale-95 font-bold"
+          title="Focus Main Gate (University Entrance Portal)"
+        >
+          <DoorOpen className="w-4 h-4" />
+        </button>
+
+        {/* 4. Fit Entire Campus Overview */}
         <button
           onClick={handleFitCampus}
           className="p-2.5 rounded-xl text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/20 transition-all hover:scale-110 active:scale-95 font-bold"
@@ -1434,7 +1474,16 @@ export default function MasterCampusMap({
           <Compass className="w-4 h-4" />
         </button>
 
-        {/* 4. Fit Width / Wide View */}
+        {/* 5. My Location (GPS Position) */}
+        <button
+          onClick={handleFocusMyLocation}
+          className="p-2.5 rounded-xl text-sky-400 hover:text-sky-300 hover:bg-sky-500/20 transition-all hover:scale-110 active:scale-95 font-bold"
+          title="My Location (GPS Campus Position)"
+        >
+          <LocateFixed className="w-4 h-4" />
+        </button>
+
+        {/* 6. Fit Width / Wide View */}
         <button
           onClick={handleFitWidth}
           className="p-2.5 rounded-xl text-teal-400 hover:text-teal-300 hover:bg-teal-500/20 transition-all hover:scale-110 active:scale-95 font-bold"

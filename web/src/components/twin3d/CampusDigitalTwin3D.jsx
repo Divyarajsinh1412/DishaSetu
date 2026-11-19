@@ -83,6 +83,7 @@ export default function CampusDigitalTwin3D({
 }) {
   const mountRef = useRef(null);
   const canvasRef = useRef(null);
+  const lastLabelUpdateRef = useRef(0);
 
   // Three.js State Container in ref to prevent recreation on render
   const threeRef = useRef({
@@ -312,43 +313,81 @@ export default function CampusDigitalTwin3D({
 
       renderer.render(scene, camera);
 
-      // Project 3D building labels to 2D screen coordinates
-      if (showLabels && camera && mountRef.current) {
+      // Smart Throttled Level-of-Detail (LOD) Label Projection
+      const now = performance.now();
+      if (showLabels && camera && mountRef.current && (now - lastLabelUpdateRef.current > 80)) {
+        lastLabelUpdateRef.current = now;
         const w = mountRef.current.clientWidth;
         const h = mountRef.current.clientHeight;
-        const labels = [];
+        const rawLabels = [];
+
+        // Camera distance for intelligent Level-of-Detail
+        const camDist = controls ? camera.position.distanceTo(controls.target) : 300;
+        const isFarOverview = camDist > 360;
+        const isMidZoom = camDist > 200 && camDist <= 360;
 
         // Key landmarks to show labels for
         const keyItems = [
           ...mergedBuildingList,
-          { id: 'fountain', name: 'Campus Fountain', label: 'FOUNTAIN', imageX: 0.4666, imageY: 0.5995, category: 'Landmark', height: 6 },
-          { id: 'mainLawn', name: 'Main Lawn', label: 'MAIN LAWN', imageX: 0.5918, imageY: 0.4403, category: 'Garden', height: 3 },
-          { id: 'football', name: 'Football Court', label: 'FOOTBALL COURT', imageX: 0.4117, imageY: 0.3679, category: 'Sports', height: 3 },
-          { id: 'basketball', name: 'Basketball Court', label: 'BASKETBALL COURT', imageX: 0.1973, imageY: 0.5428, category: 'Sports', height: 3 },
-          { id: 'mainGate', name: 'Main Gate', label: 'MAIN GATE', imageX: 0.5695, imageY: 0.2449, category: 'Gate', height: 14 }
+          { id: 'fountain', name: 'Campus Fountain', label: 'FOUNTAIN', imageX: 0.4666, imageY: 0.5995, category: 'Landmark', height: 6, priority: 9 },
+          { id: 'mainLawn', name: 'Main Lawn', label: 'MAIN LAWN', imageX: 0.5918, imageY: 0.4403, category: 'Garden', height: 3, priority: 4 },
+          { id: 'football', name: 'Football Ground', label: 'FOOTBALL ARENA', imageX: 0.4117, imageY: 0.3679, category: 'Sports', height: 3, priority: 7 },
+          { id: 'basketball', name: 'Basketball Court', label: 'BASKETBALL COURT', imageX: 0.1973, imageY: 0.5428, category: 'Sports', height: 3, priority: 5 },
+          { id: 'mainGate', name: 'Main Gate', label: 'MAIN GATE', imageX: 0.5695, imageY: 0.2449, category: 'Gate', height: 14, priority: 10 }
         ];
 
         keyItems.forEach(item => {
           if (activeCategory !== 'all' && item.category !== activeCategory) return;
+
+          // Priority LOD filtering
+          const isSelected = selectedLocation?.shortCode === item.shortCode || selectedLocation?.buildingId === item.id;
+          const isHovered = hoveredBuilding?.id === item.id;
+          const isMajor = item.priority >= 8 || item.id === 'bld_d_block' || item.id === 'mainGate' || item.id === 'fountain';
+
+          if (!isSelected && !isHovered) {
+            if (isFarOverview && !isMajor) return;
+            if (isMidZoom && item.category !== 'Academic' && !isMajor) return;
+          }
+
           const worldPos = mapToWorld(item.imageX, item.imageY, (item.dimensions?.height || item.height || 18) + 3);
           const projected = worldPos.clone().project(camera);
 
           if (projected.z < 1) {
             const sx = (projected.x * 0.5 + 0.5) * w;
             const sy = (-(projected.y * 0.5) + 0.5) * h;
-            if (sx >= -60 && sx <= w + 60 && sy >= -60 && sy <= h + 60) {
-              labels.push({
+            if (sx >= -40 && sx <= w + 40 && sy >= -40 && sy <= h + 40) {
+              rawLabels.push({
                 id: item.id,
                 name: item.label || item.name,
                 category: item.category,
                 x: sx,
                 y: sy,
-                spec: item
+                spec: item,
+                priority: isSelected ? 100 : isHovered ? 90 : (item.priority || 5)
               });
             }
           }
         });
-        setScreenLabels(labels);
+
+        // Anti-Collision Screen De-cluttering
+        rawLabels.sort((a, b) => b.priority - a.priority);
+        const placed = [];
+        const uncluttered = [];
+
+        rawLabels.forEach(lbl => {
+          if (lbl.priority >= 90) {
+            placed.push({ x: lbl.x, y: lbl.y });
+            uncluttered.push(lbl);
+            return;
+          }
+          const collides = placed.some(p => Math.abs(p.x - lbl.x) < 75 && Math.abs(p.y - lbl.y) < 32);
+          if (!collides) {
+            placed.push({ x: lbl.x, y: lbl.y });
+            uncluttered.push(lbl);
+          }
+        });
+
+        setScreenLabels(uncluttered);
       }
     };
     animate();

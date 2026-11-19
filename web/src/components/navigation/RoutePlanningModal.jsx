@@ -111,14 +111,28 @@ export default function RoutePlanningModal({
   const [routeError, setRouteError] = useState(null);
   const [isCalculating, setIsCalculating] = useState(false);
 
-  // Sync initial inputs
+  // Sync initial inputs safely (defend against non-string event objects)
   useEffect(() => {
-    if (initialStart) setStartPlaceId(initialStart);
-    if (initialDestination) setDestPlaceId(initialDestination);
+    if (initialStart && typeof initialStart === 'string') {
+      setStartPlaceId(initialStart);
+    } else if (initialStart && typeof initialStart === 'object' && initialStart.id) {
+      setStartPlaceId(initialStart.id);
+    }
+    if (initialDestination && typeof initialDestination === 'string') {
+      setDestPlaceId(initialDestination);
+    } else if (initialDestination && typeof initialDestination === 'object' && initialDestination.id) {
+      setDestPlaceId(initialDestination.id);
+    }
   }, [initialStart, initialDestination]);
 
-  // Resolve Place Details helper
-  const resolvePlace = (id) => {
+  // Resolve Place Details helper with bulletproof type protection
+  const resolvePlace = (rawId) => {
+    const id = (typeof rawId === 'string' && rawId.length > 0)
+      ? rawId
+      : (rawId && typeof rawId === 'object' && !rawId._reactName && (rawId.id || rawId.shortCode || rawId.name))
+        ? String(rawId.id || rawId.shortCode || rawId.name)
+        : 'node_main_gate';
+
     if (id === 'current_location') {
       return {
         id: 'current_location',
@@ -140,7 +154,7 @@ export default function RoutePlanningModal({
         icon: Building2
       };
     }
-    return { id, name: id, category: 'Campus', icon: MapPin };
+    return { id, name: String(id), category: 'Campus', icon: MapPin };
   };
 
   const selectedStartPlace = useMemo(() => resolvePlace(startPlaceId), [startPlaceId]);
