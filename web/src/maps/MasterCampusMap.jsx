@@ -27,11 +27,13 @@ import {
   LocateFixed,
   Target,
   RotateCcw,
+  RotateCw,
   DoorOpen,
   Footprints,
   CheckCircle2,
   Maximize2,
-  Star
+  Star,
+  Sliders
 } from 'lucide-react';
 import { getTranslation } from '../services/localization';
 import { MASTER_CAMPUS_FEATURES } from '../data/masterMapFeatures.js';
@@ -204,11 +206,15 @@ export default function MasterCampusMap({
   const imageWrapperRef = useRef(null);
   const searchInputRef = useRef(null);
 
-  // Pan & Zoom state: Default scale 1.15 for prominent initial display
-  const [scale, setScale] = useState(1.15);
+  // Pan & Zoom state: Default scale 1.35 for a generous, spacious presentation
+  const [scale, setScale] = useState(1.35);
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [rotation, setRotation] = useState(0); // 0 to 360 degrees
   const [isDragging, setIsDragging] = useState(false);
+  const [isRotating, setIsRotating] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [rotateStartAngle, setRotateStartAngle] = useState(0);
+  const [initialRotation, setInitialRotation] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [hoveredFeature, setHoveredFeature] = useState(null);
   const [localSelectedFeature, setLocalSelectedFeature] = useState(null);
@@ -407,29 +413,67 @@ export default function MasterCampusMap({
     }
   };
 
-  // 1. Zoom In
+  // Helper to compute pointer angle around container center for silky smooth rotation
+  const getAngleFromEvent = useCallback((e) => {
+    const container = containerRef.current;
+    if (!container) return 0;
+    const rect = container.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    return Math.atan2(e.clientY - centerY, e.clientX - centerX) * (180 / Math.PI);
+  }, []);
+
+  // 1. Zoom In (Smooth 25% step)
   const handleZoomIn = () => {
-    setScale(prev => Math.min(prev + 0.35, 4.5));
+    setScale(prev => Math.min(prev * 1.25, 5.0));
   };
 
-  // 2. Zoom Out
+  // 2. Zoom Out (Smooth 25% step)
   const handleZoomOut = () => {
-    setScale(prev => Math.max(prev - 0.35, 0.75));
+    setScale(prev => Math.max(prev / 1.25, 0.65));
   };
 
-  // 3. Fit Entire Campus
+  // 3. Rotate Left (-15° step)
+  const handleRotateLeft = () => {
+    setRotation(prev => (Math.round((prev - 15) / 15) * 15 + 360) % 360);
+  };
+
+  // 4. Rotate Right (+15° step)
+  const handleRotateRight = () => {
+    setRotation(prev => (Math.round((prev + 15) / 15) * 15) % 360);
+  };
+
+  // 5. Reset to True North (0°)
+  const handleResetNorth = () => {
+    setRotation(0);
+  };
+
+  // 6. Fit Entire Campus (Overview)
   const handleFitCampus = useCallback(() => {
     setScale(1.0);
     setPosition({ x: 0, y: 0 });
+    setRotation(0);
   }, []);
 
-  // 4. Fill Screen / Viewport
-  const handleFillViewport = useCallback(() => {
-    setScale(1.28);
+  // 7. Fit Width (Wide View - Eliminates side black dead space)
+  const handleFitWidth = useCallback(() => {
+    setScale(1.6);
     setPosition({ x: 0, y: 0 });
   }, []);
 
-  // 5. Focus Selected Building
+  // 8. Fill Entire Screen Viewport
+  const handleFillViewport = useCallback(() => {
+    setScale(1.9);
+    setPosition({ x: 0, y: 0 });
+  }, []);
+
+  // 9. Focus Academic Quad (D, E, F, L, H, J, K blocks)
+  const handleFocusQuad = useCallback(() => {
+    setScale(2.2);
+    setPosition({ x: 220, y: -150 });
+  }, []);
+
+  // 10. Focus Selected Building
   const handleFocusSelected = useCallback(() => {
     if (!activeSelected || !containerRef.current) return;
     const containerW = containerRef.current.clientWidth;
@@ -441,13 +485,14 @@ export default function MasterCampusMap({
     setPosition({ x: targetX, y: targetY });
   }, [activeSelected]);
 
-  // 6. Reset View
+  // 11. Reset All (Default Clean View)
   const handleResetView = () => {
-    setScale(1.15);
+    setScale(1.35);
     setPosition({ x: 0, y: 0 });
+    setRotation(0);
   };
 
-  // 7. Fullscreen toggle
+  // 12. Fullscreen toggle
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       containerRef.current?.requestFullscreen?.();
@@ -458,50 +503,96 @@ export default function MasterCampusMap({
     }
   };
 
-  // Mouse wheel zoom
+  // Mouse wheel: Shift+Wheel rotates; normal wheel zooms smoothly toward cursor coordinate
   const handleWheel = (e) => {
     e.preventDefault();
-    const zoomFactor = -e.deltaY * 0.0018;
-    setScale(prev => Math.min(Math.max(prev + zoomFactor, 0.75), 4.5));
+
+    // 1. Shift or Alt held -> Rotate in 5° / 15° steps
+    if (e.shiftKey || e.altKey) {
+      const step = e.altKey ? 15 : 5;
+      const rotDelta = e.deltaY > 0 ? step : -step;
+      setRotation(prev => (Math.round((prev + rotDelta) / step) * step + 360) % 360);
+      return;
+    }
+
+    // 2. Cursor-Centric Smooth Zoom
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+
+    const mouseX = e.clientX - (rect.left + rect.width / 2);
+    const mouseY = e.clientY - (rect.top + rect.height / 2);
+
+    const zoomSensitivity = 0.0016;
+    const factor = Math.exp(-e.deltaY * zoomSensitivity);
+
+    setScale(prevScale => {
+      const newScale = Math.min(Math.max(prevScale * factor, 0.65), 5.0);
+      const ratio = newScale / prevScale;
+
+      setPosition(prevPos => ({
+        x: mouseX - (mouseX - prevPos.x) * ratio,
+        y: mouseY - (mouseY - prevPos.y) * ratio
+      }));
+
+      return newScale;
+    });
   };
 
   // Double click to zoom in at mouse position
   const handleDoubleClick = (e) => {
     if (e.target.closest('.no-dblclick') || e.target.closest('button')) return;
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (!rect) return;
-
-    setScale(prev => {
-      const newScale = Math.min(prev + 0.6, 4.0);
-      return newScale;
-    });
+    setScale(prev => Math.min(prev + 0.5, 4.5));
   };
 
-  // Drag pan handlers
+  // Drag & Rotate Mouse handlers
   const handleMouseDown = (e) => {
-    if (e.target.closest('.interactive-map-marker') || e.target.closest('.interactive-polygon')) return;
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+    if (e.target.closest('.interactive-map-marker') || e.target.closest('.interactive-polygon') || e.target.closest('.no-drag')) return;
+
+    // Right-Click (e.button === 2) OR Left-Click with Shift Key -> Start Free Rotation!
+    if (e.button === 2 || (e.button === 0 && e.shiftKey)) {
+      e.preventDefault();
+      setIsRotating(true);
+      setRotateStartAngle(getAngleFromEvent(e));
+      setInitialRotation(rotation);
+      return;
+    }
+
+    // Normal Left Click (e.button === 0) -> Start Smooth Pan Drag
+    if (e.button === 0) {
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+    }
   };
 
   const handleMouseMove = (e) => {
-    if (!isDragging) return;
-    setPosition({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y
-    });
+    if (isRotating) {
+      const currentAngle = getAngleFromEvent(e);
+      const angleDelta = currentAngle - rotateStartAngle;
+      const newRotation = (initialRotation + angleDelta + 360) % 360;
+      setRotation(Math.round(newRotation * 10) / 10);
+      return;
+    }
+
+    if (isDragging) {
+      setPosition({
+        x: e.clientX - dragStart.x,
+        y: e.clientY - dragStart.y
+      });
+    }
   };
 
   const handleMouseUp = () => {
     setIsDragging(false);
+    setIsRotating(false);
   };
 
-  // Touch handlers for mobile pan & pinch-to-zoom
-  const touchStateRef = useRef({ dist: 0 });
+  // Touch handlers: 1 finger pan, 2 fingers pinch & twist-to-rotate
+  const touchStateRef = useRef({ dist: 0, angle: 0 });
 
   const handleTouchStart = (e) => {
     if (e.touches.length === 1) {
-      if (e.target.closest('.interactive-map-marker') || e.target.closest('.interactive-polygon')) return;
+      if (e.target.closest('.interactive-map-marker') || e.target.closest('.interactive-polygon') || e.target.closest('.no-drag')) return;
       setIsDragging(true);
       setDragStart({
         x: e.touches[0].clientX - position.x,
@@ -512,7 +603,12 @@ export default function MasterCampusMap({
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       );
-      touchStateRef.current.dist = dist;
+      const angle = Math.atan2(
+        e.touches[1].clientY - e.touches[0].clientY,
+        e.touches[1].clientX - e.touches[0].clientX
+      ) * (180 / Math.PI);
+
+      touchStateRef.current = { dist, angle };
     }
   };
 
@@ -527,9 +623,18 @@ export default function MasterCampusMap({
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       );
-      const diff = dist - touchStateRef.current.dist;
-      setScale(prev => Math.min(Math.max(prev + diff * 0.005, 0.75), 4.5));
-      touchStateRef.current.dist = dist;
+      const angle = Math.atan2(
+        e.touches[1].clientY - e.touches[0].clientY,
+        e.touches[1].clientX - e.touches[0].clientX
+      ) * (180 / Math.PI);
+
+      const diffDist = dist - touchStateRef.current.dist;
+      const diffAngle = angle - touchStateRef.current.angle;
+
+      setScale(prev => Math.min(Math.max(prev + diffDist * 0.005, 0.65), 5.0));
+      setRotation(prev => (prev + diffAngle + 360) % 360);
+
+      touchStateRef.current = { dist, angle };
     }
   };
 
@@ -565,33 +670,77 @@ export default function MasterCampusMap({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className={`relative w-full h-full overflow-hidden select-none bg-slate-950 flex items-center justify-center ${
-        isDragging ? 'cursor-grabbing' : isAdminEditorActive ? 'cursor-crosshair' : 'cursor-grab'
+      onContextMenu={(e) => e.preventDefault()}
+      className={`relative w-full h-full overflow-hidden select-none bg-gradient-to-b from-[#070b16] via-[#0b1328] to-[#050811] flex items-center justify-center ${
+        isRotating ? 'cursor-alias' : isDragging ? 'cursor-grabbing' : isAdminEditorActive ? 'cursor-crosshair' : 'cursor-grab'
       }`}
     >
-      {/* Subtle Background Radial Grid Pattern */}
-      <div className="absolute inset-0 opacity-15 pointer-events-none bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:28px_28px]"></div>
+      {/* High-Precision Architectural Coordinate Grid Pattern */}
+      <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(#38bdf8_1.2px,transparent_1.2px)] [background-size:32px_32px]"></div>
+
+      {/* Soft Ambient Radial Vignette behind Map */}
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.06)_0%,rgba(56,189,248,0.04)_40%,transparent_75%)]"></div>
 
       {/* ================================================================= */}
       {/* 1. TOP FLOATING GOOGLE MAPS-STYLE SEARCH & STATUS BAR             */}
       {/* ================================================================= */}
-      <div className="absolute top-4 left-4 right-4 z-40 flex flex-col sm:flex-row items-center justify-between gap-3 pointer-events-none">
+      <div className="absolute top-4 left-4 right-4 z-40 flex flex-col md:flex-row items-center justify-between gap-3 pointer-events-none">
         
-        {/* Left: Map Title & Status Pill */}
+        {/* Left: Map Title & Status Pill with Heading Telemetry */}
         <div className="pointer-events-auto flex items-center gap-3 px-4 py-2.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl text-slate-200">
           <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
           <div>
-            <div className="text-xs font-black text-white flex items-center gap-1.5">
+            <div className="text-xs font-black text-white flex items-center gap-1.5 flex-wrap">
               <span>Official Presidency Campus Map</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold border border-emerald-500/30">
                 Interactive Layer Live
               </span>
+              {Math.round((rotation % 360 + 360) % 360) !== 0 && (
+                <button
+                  onClick={handleResetNorth}
+                  className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-mono font-bold border border-rose-500/40 hover:bg-rose-500/30 transition-colors flex items-center gap-1"
+                  title="Click to reset North"
+                >
+                  <span>{Math.round((rotation % 360 + 360) % 360)}°</span>
+                  <span className="text-[9px] underline">Reset North</span>
+                </button>
+              )}
             </div>
             <div className="text-[10px] text-slate-400">Presidency University Bengaluru · Itgalpur Campus</div>
           </div>
         </div>
 
-        {/* Center/Right: Unified Search Bar with Autocomplete */}
+        {/* Center: Quick GIS View Mode Presets */}
+        <div className="pointer-events-auto hidden lg:flex items-center gap-1.5 px-2 py-1.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-xl">
+          <button
+            onClick={handleFitCampus}
+            className="px-2.5 py-1 text-[11px] font-bold rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1"
+            title="Fit Entire Campus in View"
+          >
+            <Compass className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Fit Campus</span>
+          </button>
+          <div className="w-px h-3.5 bg-slate-700/60" />
+          <button
+            onClick={handleFitWidth}
+            className="px-2.5 py-1 text-[11px] font-bold rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1"
+            title="Fit Canvas Width (Eliminate Side Gaps)"
+          >
+            <Maximize2 className="w-3.5 h-3.5 text-sky-400" />
+            <span>Wide View</span>
+          </button>
+          <div className="w-px h-3.5 bg-slate-700/60" />
+          <button
+            onClick={handleFocusQuad}
+            className="px-2.5 py-1 text-[11px] font-bold rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1"
+            title="Focus Academic Quad (D-E-F-L Blocks)"
+          >
+            <Building2 className="w-3.5 h-3.5 text-amber-400" />
+            <span>Academic Quad</span>
+          </button>
+        </div>
+
+        {/* Right: Unified Search Bar with Autocomplete */}
         <div className="pointer-events-auto relative w-full sm:w-80 md:w-96">
           <div className="relative flex items-center bg-slate-900/95 backdrop-blur-md border border-slate-700/90 rounded-2xl shadow-2xl focus-within:border-emerald-400 transition-colors">
             <Search className="w-4 h-4 text-slate-400 ml-3.5 shrink-0" />
@@ -649,13 +798,13 @@ export default function MasterCampusMap({
       </div>
 
       {/* ================================================================= */}
-      {/* 2. INTERACTIVE TRANSFORMED CANVAS CONTAINER                        */}
+      {/* 2. INTERACTIVE TRANSFORMED CANVAS CONTAINER (PAN, ZOOM, ROTATE)   */}
       {/* ================================================================= */}
       <div
         style={{
-          transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+          transform: `translate(${position.x}px, ${position.y}px) scale(${scale}) rotate(${rotation}deg)`,
           transformOrigin: 'center center',
-          transition: isDragging ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0, 0, 1)'
+          transition: (isDragging || isRotating) ? 'none' : 'transform 0.18s cubic-bezier(0.16, 1, 0.3, 1)'
         }}
         className="relative will-change-transform flex items-center justify-center"
       >
@@ -668,7 +817,7 @@ export default function MasterCampusMap({
             maxWidth: '96vw',
             aspectRatio: `${MAP_ASPECT_RATIO}`
           }}
-          className="relative rounded-2xl shadow-2xl border-4 border-slate-700/80 bg-white overflow-hidden drop-shadow-[0_25px_60px_rgba(0,0,0,0.85)]"
+          className="relative rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.85),0_0_50px_rgba(56,189,248,0.12)] border-2 border-slate-700/70 bg-white overflow-hidden drop-shadow-2xl"
         >
           {/* Official Presidency University Master Campus Map Base Image */}
           <img
@@ -894,6 +1043,10 @@ export default function MasterCampusMap({
               );
             }
 
+            // Smart Level-of-Detail (LOD): De-clutter dense academic & administrative blocks in overview mode
+            const isAcademic = feat.category === 'Academic' || feat.category === 'Administrative';
+            const isCompactLOD = isAcademic && scale < 1.4 && !isSelected && !isHovered;
+
             return (
               <div
                 key={feat.featureId}
@@ -915,22 +1068,29 @@ export default function MasterCampusMap({
                   <span className={`absolute -inset-3.5 rounded-full animate-ping opacity-80 ${style.bg}`} />
                 )}
 
-                {/* Marker Body */}
-                <div
-                  className={`relative flex items-center justify-center rounded-full transition-all duration-200 shadow-2xl ${
-                    isSelected
-                      ? `w-9 h-9 ${style.bg} ring-4 ring-white text-white scale-125 z-30 shadow-2xl`
-                      : isHovered
-                      ? `w-8 h-8 ${style.bg} ring-2 ring-white text-white scale-115 z-20`
-                      : `w-6 h-6 sm:w-7 sm:h-7 ${style.bg} text-white border-2 border-white hover:scale-120`
-                  }`}
-                  title={feat.featureName}
-                >
-                  <Icon className={`${isSelected ? 'w-4.5 h-4.5' : 'w-3.5 h-3.5'}`} />
-                </div>
+                {/* Marker Body: Sleek glowing micro-dot in overview mode, full interactive badge when zoomed/hovered */}
+                {isCompactLOD ? (
+                  <div
+                    className="relative w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-white/80 shadow-sm shadow-amber-500/60 group-hover:scale-150 transition-all duration-150"
+                    title={feat.featureName}
+                  />
+                ) : (
+                  <div
+                    className={`relative flex items-center justify-center rounded-full transition-all duration-200 shadow-2xl ${
+                      isSelected
+                        ? `w-9 h-9 ${style.bg} ring-4 ring-white text-white scale-125 z-30 shadow-2xl`
+                        : isHovered
+                        ? `w-8 h-8 ${style.bg} ring-2 ring-white text-white scale-115 z-20`
+                        : `w-6 h-6 sm:w-7 sm:h-7 ${style.bg} text-white border-2 border-white hover:scale-120`
+                    }`}
+                    title={feat.featureName}
+                  >
+                    <Icon className={`${isSelected ? 'w-4.5 h-4.5' : 'w-3.5 h-3.5'}`} />
+                  </div>
+                )}
 
-                {/* Permanent subtle name tag when zoomed in */}
-                {scale >= 1.5 && !isHovered && !isSelected && (
+                {/* Permanent subtle name tag when zoomed in close */}
+                {scale >= 1.6 && !isHovered && !isSelected && !isCompactLOD && (
                   <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-1.5 py-0.5 rounded bg-slate-900/90 text-[9px] font-bold text-white border border-slate-700 pointer-events-none whitespace-nowrap shadow-md">
                     {feat.code || feat.featureName}
                   </div>
@@ -977,14 +1137,62 @@ export default function MasterCampusMap({
       </div>
 
       {/* ================================================================= */}
-      {/* 6. RIGHT FLOATING GOOGLE MAPS CONTROLS BOX                        */}
+      {/* 6. RIGHT FLOATING GOOGLE MAPS & COMPASS CONTROLS BOX              */}
       {/* ================================================================= */}
-      <div className="absolute right-4 bottom-24 z-40 flex flex-col gap-1.5 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 p-1.5 rounded-2xl shadow-2xl no-dblclick">
+      <div className="absolute right-4 bottom-24 z-40 flex flex-col items-center gap-1.5 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 p-1.5 rounded-2xl shadow-2xl no-dblclick">
+        {/* Interactive Calibrated Compass Rose (Always points North, Click to Align North) */}
+        <button
+          onClick={handleResetNorth}
+          className="relative w-11 h-11 rounded-2xl bg-slate-950/90 border border-slate-700 hover:border-emerald-500/80 shadow-inner flex items-center justify-center group transition-all hover:scale-105 active:scale-95"
+          title={`Heading: ${Math.round((rotation % 360 + 360) % 360)}° · Click to Align True North`}
+        >
+          {/* Compass Dial Rotating Counter to Map */}
+          <div
+            style={{ transform: `rotate(${-rotation}deg)` }}
+            className="relative w-7 h-7 flex items-center justify-center transition-transform duration-100 ease-out pointer-events-none"
+          >
+            {/* North Red Needle */}
+            <div className="absolute top-0 w-0 h-0 border-l-[3.5px] border-l-transparent border-r-[3.5px] border-r-transparent border-b-[12px] border-b-rose-500 filter drop-shadow-[0_1px_2px_rgba(244,63,94,0.7)]" />
+            {/* South Silver Needle */}
+            <div className="absolute bottom-0 w-0 h-0 border-l-[3.5px] border-l-transparent border-r-[3.5px] border-r-transparent border-t-[12px] border-t-slate-400" />
+            {/* Pivot Center Pin */}
+            <div className="w-1.5 h-1.5 rounded-full bg-white ring-1 ring-slate-800 z-10 shadow" />
+            {/* North Letter */}
+            <span className="absolute -top-1.5 text-[7px] font-black text-rose-400 font-mono">N</span>
+          </div>
+          {/* Degree badge if rotated */}
+          {Math.round((rotation % 360 + 360) % 360) !== 0 && (
+            <span className="absolute -bottom-1 px-1 py-0.2 rounded-full bg-rose-600 text-white text-[7px] font-mono font-bold shadow-md">
+              {Math.round((rotation % 360 + 360) % 360)}°
+            </span>
+          )}
+        </button>
+
+        {/* Quick Rotate Left & Right Buttons */}
+        <div className="flex items-center gap-1 w-full justify-center">
+          <button
+            onClick={handleRotateLeft}
+            className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all hover:scale-110 active:scale-95"
+            title="Rotate Left 15° (↺)"
+          >
+            <RotateCcw className="w-3.5 h-3.5 text-slate-300" />
+          </button>
+          <button
+            onClick={handleRotateRight}
+            className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all hover:scale-110 active:scale-95"
+            title="Rotate Right 15° (↻)"
+          >
+            <RotateCw className="w-3.5 h-3.5 text-slate-300" />
+          </button>
+        </div>
+
+        <div className="h-px w-8 bg-slate-800" />
+
         {/* 1. Zoom In */}
         <button
           onClick={handleZoomIn}
           className="p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all hover:scale-110 active:scale-95"
-          title="Zoom In"
+          title="Zoom In (+)"
         >
           <ZoomIn className="w-4 h-4 text-sky-400" />
         </button>
@@ -993,32 +1201,41 @@ export default function MasterCampusMap({
         <button
           onClick={handleZoomOut}
           className="p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all hover:scale-110 active:scale-95"
-          title="Zoom Out"
+          title="Zoom Out (−)"
         >
           <ZoomOut className="w-4 h-4 text-sky-400" />
         </button>
 
-        <div className="h-px bg-slate-800 mx-1" />
+        <div className="h-px w-8 bg-slate-800" />
 
-        {/* 3. Fit Entire Campus */}
+        {/* 3. Fit Entire Campus Overview */}
         <button
           onClick={handleFitCampus}
           className="p-2.5 rounded-xl text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/20 transition-all hover:scale-110 active:scale-95 font-bold"
-          title="Fit Campus (Show All Features)"
+          title="Fit Entire Campus (Show All Facilities)"
         >
           <Compass className="w-4 h-4" />
         </button>
 
-        {/* 4. Fill Screen / Viewport */}
+        {/* 4. Fit Width / Wide View */}
         <button
-          onClick={handleFillViewport}
+          onClick={handleFitWidth}
           className="p-2.5 rounded-xl text-teal-400 hover:text-teal-300 hover:bg-teal-500/20 transition-all hover:scale-110 active:scale-95 font-bold"
-          title="Fill Screen (Eliminate side black bars)"
+          title="Wide View (Fill Width & Eliminate Side Gaps)"
         >
           <Maximize2 className="w-4 h-4" />
         </button>
 
-        {/* 5. Focus Selected Building */}
+        {/* 5. Focus Academic Quad */}
+        <button
+          onClick={handleFocusQuad}
+          className="p-2.5 rounded-xl text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 transition-all hover:scale-110 active:scale-95 font-bold"
+          title="Focus Academic Quad (D-E-F-L Blocks)"
+        >
+          <Building2 className="w-4 h-4" />
+        </button>
+
+        {/* 6. Focus Selected Building */}
         <button
           onClick={handleFocusSelected}
           disabled={!activeSelected}
@@ -1032,18 +1249,18 @@ export default function MasterCampusMap({
           <Target className="w-4 h-4" />
         </button>
 
-        {/* 6. Reset View */}
+        {/* 7. Reset View & Heading */}
         <button
           onClick={handleResetView}
           className="p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all hover:scale-110 active:scale-95"
-          title="Reset View"
+          title="Reset View & Heading (Default)"
         >
-          <RotateCcw className="w-4 h-4" />
+          <RefreshCw className="w-4 h-4" />
         </button>
 
-        <div className="h-px bg-slate-800 mx-1" />
+        <div className="h-px w-8 bg-slate-800" />
 
-        {/* 7. Full Screen */}
+        {/* 8. Full Screen */}
         <button
           onClick={toggleFullscreen}
           className="p-2.5 rounded-xl text-amber-300 hover:text-amber-200 hover:bg-amber-500/20 transition-all hover:scale-110 active:scale-95"
@@ -1051,6 +1268,12 @@ export default function MasterCampusMap({
         >
           {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
         </button>
+      </div>
+
+      {/* Floating Gesture Helper Tip */}
+      <div className="absolute bottom-4 right-20 hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/80 backdrop-blur-md border border-slate-700/60 text-slate-400 text-[10px] pointer-events-none z-30 shadow-lg">
+        <Sparkles className="w-3 h-3 text-sky-400 shrink-0" />
+        <span>Right-Click or Shift+Drag to Rotate 360° · Shift+Scroll to Spin · Wheel to Zoom</span>
       </div>
 
       {/* ================================================================= */}
