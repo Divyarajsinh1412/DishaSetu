@@ -59,9 +59,11 @@ export const connectDB = async () => {
   try {
     const conn = await mongoose.connect(rawUri, {
       dbName: TARGET_DB_NAME,
-      serverSelectionTimeoutMS: 8000,
+      serverSelectionTimeoutMS: 10000,
       connectTimeoutMS: 10000,
-      autoIndex: true
+      autoIndex: process.env.NODE_ENV !== 'production',
+      maxPoolSize: 10,
+      minPoolSize: 1
     });
 
     isConnected = conn.connection.readyState === 1;

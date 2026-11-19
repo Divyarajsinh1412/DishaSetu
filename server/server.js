@@ -81,15 +81,17 @@ export const startServer = (port = DEFAULT_PORT) => {
       console.log(` Environment : ${process.env.NODE_ENV || 'development'}`);
       console.log(`========================================================`);
       await connectDB();
-      try {
-        const nodes = await NavigationNode.find({ isActive: true });
-        const paths = await WalkingPath.find({ status: 'active' });
-        if (nodes.length > 0 && paths.length > 0) {
-          routingServiceInstance.updateGraph(nodes, paths);
-          console.log(`[RoutingEngine] Loaded ${nodes.length} nodes & ${paths.length} walking paths from MongoDB Atlas.`);
+      if (mongoose.connection.readyState === 1) {
+        try {
+          const nodes = await NavigationNode.find({ isActive: true });
+          const paths = await WalkingPath.find({ status: 'active' });
+          if (nodes.length > 0 && paths.length > 0) {
+            routingServiceInstance.updateGraph(nodes, paths);
+            console.log(`[RoutingEngine] Loaded ${nodes.length} nodes & ${paths.length} walking paths from MongoDB Atlas.`);
+          }
+        } catch (err) {
+          console.warn('[RoutingEngine] Initial graph sync fallback:', err.message);
         }
-      } catch (err) {
-        console.warn('[RoutingEngine] Initial graph sync fallback:', err.message);
       }
       resolve({ server, port: activePort });
     });
