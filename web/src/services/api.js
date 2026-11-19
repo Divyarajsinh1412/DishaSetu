@@ -3,6 +3,23 @@
  * Integrated with Presidency University Bengaluru Campus Backend
  */
 import { INITIAL_PANORAMA_SCENES, INITIAL_PANORAMA_HOTSPOTS } from '../data/panoramaData.js';
+import { API_BASE_URL, getApiUrl, apiFetch } from '../config/apiConfig.js';
+export { API_BASE_URL, getApiUrl, apiFetch };
+
+/**
+ * Resilient centralized fetch wrapper that automatically prepends API_BASE_URL
+ * and injects authorization headers.
+ */
+export const appFetch = (endpoint, options = {}) => {
+  const fullUrl = getApiUrl(endpoint);
+  const token = options.token || (typeof window !== 'undefined' ? localStorage.getItem('dishasetu_admin_token') : null);
+  const headers = { ...options.headers };
+  if (token && !headers['Authorization']) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return fetch(fullUrl, { ...options, headers });
+};
+
 
 // Fallback verified campus dataset (matches server/data/verifiedCoordinates.js)
 const FALLBACK_CAMPUS_DATA = {
@@ -272,7 +289,7 @@ const FALLBACK_CAMPUS_DATA = {
 
 export const fetchCampusData = async () => {
   try {
-    const res = await fetch('/api/campus');
+    const res = await appFetch('/api/campus');
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.campus) return data.campus;
@@ -285,7 +302,7 @@ export const fetchCampusData = async () => {
 
 export const fetchCampusFeatures = async () => {
   try {
-    const res = await fetch('/api/features');
+    const res = await appFetch('/api/features');
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.data) return data.data;
@@ -301,7 +318,7 @@ export const fetchCampusLocations = async (category = '', search = '') => {
     const params = new URLSearchParams();
     if (category) params.append('category', category);
     if (search) params.append('search', search);
-    const res = await fetch(`/api/locations?${params.toString()}`);
+    const res = await appFetch(`/api/locations?${params.toString()}`);
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.data) return data.data;
@@ -320,7 +337,7 @@ export const fetchCampusLocations = async (category = '', search = '') => {
 
 export const fetchCampusRoutes = async () => {
   try {
-    const res = await fetch('/api/routes');
+    const res = await appFetch('/api/routes');
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.data) return data.data;
@@ -337,7 +354,7 @@ export const fetchBuildings = async (category = '', search = '') => {
     const params = new URLSearchParams();
     if (category) params.append('category', category);
     if (search) params.append('search', search);
-    const res = await fetch(`/api/buildings?${params.toString()}`);
+    const res = await appFetch(`/api/buildings?${params.toString()}`);
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.data) return data.data;
@@ -349,7 +366,7 @@ export const fetchBuildings = async (category = '', search = '') => {
 };
 
 export const createBuildingApi = async (buildingData, token) => {
-  const res = await fetch('/api/buildings', {
+  const res = await appFetch('/api/buildings', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -361,7 +378,7 @@ export const createBuildingApi = async (buildingData, token) => {
 };
 
 export const updateBuildingApi = async (id, buildingData, token) => {
-  const res = await fetch(`/api/buildings/${id}`, {
+  const res = await appFetch(`/api/buildings/${id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -373,7 +390,7 @@ export const updateBuildingApi = async (id, buildingData, token) => {
 };
 
 export const deleteBuildingApi = async (id, token) => {
-  const res = await fetch(`/api/buildings/${id}`, {
+  const res = await appFetch(`/api/buildings/${id}`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`
@@ -383,7 +400,7 @@ export const deleteBuildingApi = async (id, token) => {
 };
 
 export const addBuildingEntranceApi = async (buildingId, entranceData, token) => {
-  const res = await fetch(`/api/buildings/${buildingId}/entrances`, {
+  const res = await appFetch(`/api/buildings/${buildingId}/entrances`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -395,7 +412,7 @@ export const addBuildingEntranceApi = async (buildingId, entranceData, token) =>
 };
 
 export const deleteBuildingEntranceApi = async (buildingId, entranceId, token) => {
-  const res = await fetch(`/api/buildings/${buildingId}/entrances/${entranceId}`, {
+  const res = await appFetch(`/api/buildings/${buildingId}/entrances/${entranceId}`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`
@@ -410,7 +427,7 @@ export const fetchDepartments = async (filter = {}) => {
     const params = new URLSearchParams();
     if (filter.faculty) params.append('faculty', filter.faculty);
     if (filter.buildingShortCode) params.append('buildingShortCode', filter.buildingShortCode);
-    const res = await fetch(`/api/departments?${params.toString()}`);
+    const res = await appFetch(`/api/departments?${params.toString()}`);
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.data) return data.data;
@@ -422,7 +439,7 @@ export const fetchDepartments = async (filter = {}) => {
 };
 
 export const createDepartmentApi = async (deptData, token) => {
-  const res = await fetch('/api/departments', {
+  const res = await appFetch('/api/departments', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -434,7 +451,7 @@ export const createDepartmentApi = async (deptData, token) => {
 };
 
 export const updateDepartmentApi = async (id, deptData, token) => {
-  const res = await fetch(`/api/departments/${id}`, {
+  const res = await appFetch(`/api/departments/${id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -446,7 +463,7 @@ export const updateDepartmentApi = async (id, deptData, token) => {
 };
 
 export const deleteDepartmentApi = async (id, token) => {
-  const res = await fetch(`/api/departments/${id}`, {
+  const res = await appFetch(`/api/departments/${id}`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`
@@ -458,7 +475,7 @@ export const deleteDepartmentApi = async (id, token) => {
 // APPROVALS & AUDIT API
 export const fetchApprovals = async (token) => {
   try {
-    const res = await fetch('/api/approvals', {
+    const res = await appFetch('/api/approvals', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (res.ok) {
@@ -472,7 +489,7 @@ export const fetchApprovals = async (token) => {
 };
 
 export const reviewApprovalApi = async (id, decision, rejectionReason, token) => {
-  const res = await fetch(`/api/approvals/${id}/review`, {
+  const res = await appFetch(`/api/approvals/${id}/review`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -485,7 +502,7 @@ export const reviewApprovalApi = async (id, decision, rejectionReason, token) =>
 
 export const fetchAuditLogs = async (limit = 50, token) => {
   try {
-    const res = await fetch(`/api/audit-logs?limit=${limit}`, {
+    const res = await appFetch(`/api/audit-logs?limit=${limit}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (res.ok) {
@@ -501,7 +518,7 @@ export const fetchAuditLogs = async (limit = 50, token) => {
 // REAL-TIME SYNC STREAM
 export const connectSyncStream = (onEvent) => {
   try {
-    const eventSource = new EventSource('/api/sync/stream');
+    const eventSource = new EventSource(getApiUrl('/api/sync/stream'));
     eventSource.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
@@ -530,7 +547,7 @@ export const fetchCampusCatalog = async (filter = {}) => {
     if (filter.status) params.append('status', filter.status);
     if (filter.search) params.append('search', filter.search);
 
-    const res = await fetch(`/api/campus/catalog?${params.toString()}`);
+    const res = await appFetch(`/api/campus/catalog?${params.toString()}`);
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.data) return data.data;
@@ -549,7 +566,7 @@ export const fetchCampusCatalog = async (filter = {}) => {
 };
 
 export const updateLocationSurveyApi = async (id, surveyData, token) => {
-  const res = await fetch(`/api/admin/locations/${id}/survey`, {
+  const res = await appFetch(`/api/admin/locations/${id}/survey`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -565,7 +582,7 @@ export const updateLocationSurveyApi = async (id, surveyData, token) => {
 // ========================================================
 export const calculateRouteApi = async (routeParams) => {
   try {
-    const res = await fetch('/api/navigation/route', {
+    const res = await appFetch('/api/navigation/route', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(routeParams)
@@ -585,7 +602,7 @@ export const calculateRouteApi = async (routeParams) => {
 
 export const fetchNavigationNodes = async () => {
   try {
-    const res = await fetch('/api/navigation/nodes');
+    const res = await appFetch('/api/navigation/nodes');
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.data) return data.data;
@@ -599,7 +616,7 @@ export const fetchNavigationNodes = async () => {
 
 export const fetchWalkingPaths = async () => {
   try {
-    const res = await fetch('/api/navigation/paths');
+    const res = await appFetch('/api/navigation/paths');
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.data) return data.data;
@@ -613,7 +630,7 @@ export const fetchWalkingPaths = async () => {
 
 export const fetchNavigationGraph = async () => {
   try {
-    const res = await fetch('/api/navigation/graph');
+    const res = await appFetch('/api/navigation/graph');
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.data) return data.data;
@@ -626,7 +643,7 @@ export const fetchNavigationGraph = async () => {
 };
 
 export const createWalkingPathApi = async (pathData, token) => {
-  const res = await fetch('/api/admin/paths', {
+  const res = await appFetch('/api/admin/paths', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -638,7 +655,7 @@ export const createWalkingPathApi = async (pathData, token) => {
 };
 
 export const updateWalkingPathApi = async (pathId, updates, token) => {
-  const res = await fetch(`/api/admin/paths/${pathId}`, {
+  const res = await appFetch(`/api/admin/paths/${pathId}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -650,7 +667,7 @@ export const updateWalkingPathApi = async (pathId, updates, token) => {
 };
 
 export const deleteWalkingPathApi = async (pathId, token) => {
-  const res = await fetch(`/api/admin/paths/${pathId}`, {
+  const res = await appFetch(`/api/admin/paths/${pathId}`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`
@@ -665,7 +682,7 @@ export const deleteWalkingPathApi = async (pathId, token) => {
 
 export const fetchPanoramaScenes = async () => {
   try {
-    const res = await fetch('/api/panorama/scenes');
+    const res = await appFetch('/api/panorama/scenes');
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.data && data.data.length > 0) return data.data;
@@ -678,7 +695,7 @@ export const fetchPanoramaScenes = async () => {
 
 export const fetchPanoramaSceneById = async (sceneId) => {
   try {
-    const res = await fetch(`/api/panorama/scenes/${sceneId}`);
+    const res = await appFetch(`/api/panorama/scenes/${sceneId}`);
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.data) return data.data;
@@ -692,7 +709,7 @@ export const fetchPanoramaSceneById = async (sceneId) => {
 export const fetchPanoramaHotspots = async (sceneId = null) => {
   try {
     const url = sceneId ? `/api/panorama/hotspots?sceneId=${sceneId}` : '/api/panorama/hotspots';
-    const res = await fetch(url);
+    const res = await appFetch(url);
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.data && data.data.length > 0) return data.data;
@@ -707,7 +724,7 @@ export const fetchPanoramaHotspots = async (sceneId = null) => {
 };
 
 export const createPanoramaSceneApi = async (sceneData, token) => {
-  const res = await fetch('/api/panorama/scenes', {
+  const res = await appFetch('/api/panorama/scenes', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -719,7 +736,7 @@ export const createPanoramaSceneApi = async (sceneData, token) => {
 };
 
 export const updatePanoramaSceneApi = async (id, updates, token) => {
-  const res = await fetch(`/api/panorama/scenes/${id}`, {
+  const res = await appFetch(`/api/panorama/scenes/${id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -731,7 +748,7 @@ export const updatePanoramaSceneApi = async (id, updates, token) => {
 };
 
 export const deletePanoramaSceneApi = async (id, token) => {
-  const res = await fetch(`/api/panorama/scenes/${id}`, {
+  const res = await appFetch(`/api/panorama/scenes/${id}`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`
@@ -741,7 +758,7 @@ export const deletePanoramaSceneApi = async (id, token) => {
 };
 
 export const createPanoramaHotspotApi = async (hotspotData, token) => {
-  const res = await fetch('/api/panorama/hotspots', {
+  const res = await appFetch('/api/panorama/hotspots', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -753,7 +770,7 @@ export const createPanoramaHotspotApi = async (hotspotData, token) => {
 };
 
 export const updatePanoramaHotspotApi = async (id, updates, token) => {
-  const res = await fetch(`/api/panorama/hotspots/${id}`, {
+  const res = await appFetch(`/api/panorama/hotspots/${id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -765,7 +782,7 @@ export const updatePanoramaHotspotApi = async (id, updates, token) => {
 };
 
 export const deletePanoramaHotspotApi = async (id, token) => {
-  const res = await fetch(`/api/panorama/hotspots/${id}`, {
+  const res = await appFetch(`/api/panorama/hotspots/${id}`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`
@@ -780,7 +797,7 @@ export const deletePanoramaHotspotApi = async (id, token) => {
 
 export const fetchDynamicCampusBounds = async () => {
   try {
-    const res = await fetch('/api/campus/bounds');
+    const res = await appFetch('/api/campus/bounds');
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.data) return data.data;
@@ -804,7 +821,7 @@ export const fetchDynamicCampusBounds = async () => {
 export const fetchIndoorFloors = async (buildingId = null) => {
   try {
     const url = buildingId ? `/api/indoor/floors?buildingId=${buildingId}` : '/api/indoor/floors';
-    const res = await fetch(url);
+    const res = await appFetch(url);
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.data) return data.data;
@@ -817,7 +834,7 @@ export const fetchIndoorFloors = async (buildingId = null) => {
 
 export const fetchIndoorFloorById = async (floorId) => {
   try {
-    const res = await fetch(`/api/indoor/floors/${floorId}`);
+    const res = await appFetch(`/api/indoor/floors/${floorId}`);
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.data) return data.data;
@@ -829,7 +846,7 @@ export const fetchIndoorFloorById = async (floorId) => {
 };
 
 export const createIndoorFloorApi = async (floorData, token) => {
-  const res = await fetch('/api/indoor/floors', {
+  const res = await appFetch('/api/indoor/floors', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -841,7 +858,7 @@ export const createIndoorFloorApi = async (floorData, token) => {
 };
 
 export const updateIndoorFloorApi = async (floorId, updates, token) => {
-  const res = await fetch(`/api/indoor/floors/${floorId}`, {
+  const res = await appFetch(`/api/indoor/floors/${floorId}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -853,7 +870,7 @@ export const updateIndoorFloorApi = async (floorId, updates, token) => {
 };
 
 export const deleteIndoorFloorApi = async (floorId, token) => {
-  const res = await fetch(`/api/indoor/floors/${floorId}`, {
+  const res = await appFetch(`/api/indoor/floors/${floorId}`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`
@@ -867,7 +884,7 @@ export const fetchIndoorGraph = async (buildingId, floorNumber) => {
     const query = new URLSearchParams();
     if (buildingId) query.set('buildingId', buildingId);
     if (floorNumber !== undefined) query.set('floorNumber', floorNumber);
-    const res = await fetch(`/api/indoor/graph?${query.toString()}`);
+    const res = await appFetch(`/api/indoor/graph?${query.toString()}`);
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.data) return data.data;
@@ -880,7 +897,7 @@ export const fetchIndoorGraph = async (buildingId, floorNumber) => {
 
 export const calculateIndoorRouteApi = async (routeParams) => {
   try {
-    const res = await fetch('/api/indoor/route', {
+    const res = await appFetch('/api/indoor/route', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(routeParams)
@@ -906,7 +923,7 @@ export const fetchSurveyChecklist = async ({ status = 'all', category = 'all', s
     if (category && category !== 'all') query.set('category', category);
     if (search) query.set('search', search);
 
-    const res = await fetch(`/api/survey/checklist?${query.toString()}`);
+    const res = await appFetch(`/api/survey/checklist?${query.toString()}`);
     if (res.ok) {
       const data = await res.json();
       if (data.success) return data;
@@ -933,7 +950,7 @@ export const captureGpsSurveyApi = async (surveyData, token) => {
   const headers = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch('/api/survey/capture', {
+  const res = await appFetch('/api/survey/capture', {
     method: 'POST',
     headers,
     body: JSON.stringify(surveyData)
@@ -942,7 +959,7 @@ export const captureGpsSurveyApi = async (surveyData, token) => {
 };
 
 export const verifySurveyRecordApi = async (id, verifiedBy, token) => {
-  const res = await fetch(`/api/survey/verify/${id}`, {
+  const res = await appFetch(`/api/survey/verify/${id}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -954,7 +971,7 @@ export const verifySurveyRecordApi = async (id, verifiedBy, token) => {
 };
 
 export const publishSurveyRecordApi = async (id, token) => {
-  const res = await fetch(`/api/survey/publish/${id}`, {
+  const res = await appFetch(`/api/survey/publish/${id}`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`
@@ -973,7 +990,7 @@ export const exportSurveyChecklistUrl = (format = 'csv') => {
 
 export const fetchCafes = async () => {
   try {
-    const res = await fetch('/api/cafes');
+    const res = await appFetch('/api/cafes');
     if (!res.ok) throw new Error('Failed to fetch cafes');
     return await res.json();
   } catch (err) {
@@ -984,7 +1001,7 @@ export const fetchCafes = async () => {
 
 export const fetchCafeById = async (id) => {
   try {
-    const res = await fetch(`/api/cafes/${id}`);
+    const res = await appFetch(`/api/cafes/${id}`);
     if (!res.ok) throw new Error('Failed to fetch cafe');
     return await res.json();
   } catch (err) {
@@ -994,7 +1011,7 @@ export const fetchCafeById = async (id) => {
 };
 
 export const createCafeApi = async (data, token) => {
-  const res = await fetch('/api/cafes', {
+  const res = await appFetch('/api/cafes', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -1006,7 +1023,7 @@ export const createCafeApi = async (data, token) => {
 };
 
 export const updateCafeApi = async (id, data, token) => {
-  const res = await fetch(`/api/cafes/${id}`, {
+  const res = await appFetch(`/api/cafes/${id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -1019,7 +1036,7 @@ export const updateCafeApi = async (id, data, token) => {
 
 export const fetchCafeMenu = async (cafeId) => {
   try {
-    const res = await fetch(`/api/cafes/${cafeId}/menu`);
+    const res = await appFetch(`/api/cafes/${cafeId}/menu`);
     if (!res.ok) throw new Error('Failed to fetch menu');
     return await res.json();
   } catch (err) {
@@ -1028,7 +1045,7 @@ export const fetchCafeMenu = async (cafeId) => {
 };
 
 export const createMenuItemApi = async (cafeId, data, token) => {
-  const res = await fetch(`/api/cafes/${cafeId}/menu`, {
+  const res = await appFetch(`/api/cafes/${cafeId}/menu`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -1040,7 +1057,7 @@ export const createMenuItemApi = async (cafeId, data, token) => {
 };
 
 export const updateMenuItemApi = async (cafeId, itemId, data, token) => {
-  const res = await fetch(`/api/cafes/${cafeId}/menu/${itemId}`, {
+  const res = await appFetch(`/api/cafes/${cafeId}/menu/${itemId}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -1052,7 +1069,7 @@ export const updateMenuItemApi = async (cafeId, itemId, data, token) => {
 };
 
 export const deleteMenuItemApi = async (cafeId, itemId, token) => {
-  const res = await fetch(`/api/cafes/${cafeId}/menu/${itemId}`, {
+  const res = await appFetch(`/api/cafes/${cafeId}/menu/${itemId}`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`
@@ -1064,7 +1081,7 @@ export const deleteMenuItemApi = async (cafeId, itemId, token) => {
 export const fetchDailyMenu = async (cafeId, date) => {
   try {
     const url = date ? `/api/cafes/${cafeId}/daily-menu?date=${date}` : `/api/cafes/${cafeId}/daily-menu`;
-    const res = await fetch(url);
+    const res = await appFetch(url);
     if (!res.ok) throw new Error('Failed to fetch daily menu');
     return await res.json();
   } catch (err) {
@@ -1073,7 +1090,7 @@ export const fetchDailyMenu = async (cafeId, date) => {
 };
 
 export const upsertDailyMenuApi = async (cafeId, data, token) => {
-  const res = await fetch(`/api/cafes/${cafeId}/daily-menu`, {
+  const res = await appFetch(`/api/cafes/${cafeId}/daily-menu`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -1085,7 +1102,7 @@ export const upsertDailyMenuApi = async (cafeId, data, token) => {
 };
 
 export const submitReviewApi = async (data) => {
-  const res = await fetch('/api/reviews', {
+  const res = await appFetch('/api/reviews', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
@@ -1094,7 +1111,7 @@ export const submitReviewApi = async (data) => {
 };
 
 export const reportReviewApi = async (reviewId, reason = 'Inappropriate content') => {
-  const res = await fetch(`/api/reviews/${reviewId}/report`, {
+  const res = await appFetch(`/api/reviews/${reviewId}/report`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ reason })
@@ -1103,7 +1120,7 @@ export const reportReviewApi = async (reviewId, reason = 'Inappropriate content'
 };
 
 export const replyToReviewApi = async (reviewId, replyText, token) => {
-  const res = await fetch(`/api/reviews/${reviewId}/reply`, {
+  const res = await appFetch(`/api/reviews/${reviewId}/reply`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -1115,7 +1132,7 @@ export const replyToReviewApi = async (reviewId, replyText, token) => {
 };
 
 export const submitIssueReportApi = async (data) => {
-  const res = await fetch('/api/issues', {
+  const res = await appFetch('/api/issues', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)
@@ -1125,7 +1142,7 @@ export const submitIssueReportApi = async (data) => {
 
 export const fetchIssueReports = async (token) => {
   try {
-    const res = await fetch('/api/issues', {
+    const res = await appFetch('/api/issues', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (!res.ok) throw new Error('Failed to fetch issues');
@@ -1136,7 +1153,7 @@ export const fetchIssueReports = async (token) => {
 };
 
 export const updateIssueStatusApi = async (issueId, data, token) => {
-  const res = await fetch(`/api/issues/${issueId}`, {
+  const res = await appFetch(`/api/issues/${issueId}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -1148,7 +1165,7 @@ export const updateIssueStatusApi = async (issueId, data, token) => {
 };
 
 export const adminLoginApi = async (email, password) => {
-  const res = await fetch('/api/admin/login', {
+  const res = await appFetch('/api/admin/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password })
@@ -1167,7 +1184,7 @@ export const adminLoginApi = async (email, password) => {
 export const fetchMapMarkersApi = async (category) => {
   try {
     const url = category && category !== 'all' ? `/api/map-markers?category=${category}` : '/api/map-markers';
-    const res = await fetch(url);
+    const res = await appFetch(url);
     if (!res.ok) throw new Error('Failed to fetch map markers');
     return await res.json();
   } catch (err) {
@@ -1178,7 +1195,7 @@ export const fetchMapMarkersApi = async (category) => {
 
 export const fetchMapMarkerByIdApi = async (id) => {
   try {
-    const res = await fetch(`/api/map-markers/${id}`);
+    const res = await appFetch(`/api/map-markers/${id}`);
     if (!res.ok) throw new Error('Failed to fetch map marker');
     return await res.json();
   } catch (err) {
@@ -1187,7 +1204,7 @@ export const fetchMapMarkerByIdApi = async (id) => {
 };
 
 export const createMapMarkerApi = async (markerData, token) => {
-  const res = await fetch('/api/map-markers', {
+  const res = await appFetch('/api/map-markers', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -1203,7 +1220,7 @@ export const createMapMarkerApi = async (markerData, token) => {
 };
 
 export const updateMapMarkerApi = async (id, markerData, token) => {
-  const res = await fetch(`/api/map-markers/${id}`, {
+  const res = await appFetch(`/api/map-markers/${id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -1219,7 +1236,7 @@ export const updateMapMarkerApi = async (id, markerData, token) => {
 };
 
 export const deleteMapMarkerApi = async (id, token) => {
-  const res = await fetch(`/api/map-markers/${id}`, {
+  const res = await appFetch(`/api/map-markers/${id}`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`
@@ -1230,4 +1247,20 @@ export const deleteMapMarkerApi = async (id, token) => {
     throw new Error(data.message || 'Failed to delete map marker');
   }
   return data;
+};
+
+
+/**
+ * Health check endpoint integration
+ */
+export const fetchHealthStatus = async () => {
+  try {
+    const res = await appFetch('/api/health');
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn('[API] Health check unreachable:', err.message);
+  }
+  return { status: 'offline', database: { connected: false } };
 };

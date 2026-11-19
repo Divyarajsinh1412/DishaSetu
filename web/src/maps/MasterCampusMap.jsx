@@ -653,6 +653,13 @@ export default function MasterCampusMap({
     focusCoordinate(activeSelected.normalizedX, activeSelected.normalizedY, 2.2);
   }, [activeSelected, focusCoordinate]);
 
+  // Auto-focus selected building / location when clicked or selected from search
+  useEffect(() => {
+    if (activeSelected && activeSelected.normalizedX != null && activeSelected.normalizedY != null) {
+      handleFocusSelected();
+    }
+  }, [activeSelected?.featureId, handleFocusSelected]);
+
   // 12. Reset All (Default Clean View)
   const handleResetView = () => {
     handleFocusMainGate();

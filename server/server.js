@@ -19,12 +19,48 @@ dotenv.config({ path: path.join(__dirname, '.env') });
 const app = express();
 const DEFAULT_PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
 
-// Middleware
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// Whitelist allowed origins for secure CORS
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:5000',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5000',
+  'https://dishasetu-jx71.onrender.com',
+  ...(process.env.CLIENT_URL ? process.env.CLIENT_URL.split(',').map(s => s.trim()) : [])
+];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow server-to-server, mobile native requests, or same-origin without Origin header
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+
+    try {
+      const url = new URL(origin);
+      if (
+        url.hostname.endsWith('.onrender.com') ||
+        url.hostname === 'localhost' ||
+        url.hostname === '127.0.0.1' ||
+        url.hostname.endsWith('presidencyuniversity.in')
+      ) {
+        return callback(null, true);
+      }
+    } catch {}
+
+    return callback(new Error(`Origin ${origin} not permitted by CORS policy`));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 
 // Request logger
@@ -50,6 +86,7 @@ const handleHealthCheck = (req, res) => {
     timestamp: new Date().toISOString(),
     database: {
       status: db.connected ? 'connected' : 'disconnected',
+      connected: db.connected,
       state: db.state,
       database: db.database,
       host: db.host

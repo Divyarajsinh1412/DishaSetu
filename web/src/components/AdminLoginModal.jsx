@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   AlertCircle
 } from 'lucide-react';
+import { adminLoginApi } from '../services/api';
 
 export default function AdminLoginModal({ isOpen, onClose }) {
   const [email, setEmail] = useState('admin@presidency.ac.in');
@@ -24,26 +25,15 @@ export default function AdminLoginModal({ isOpen, onClose }) {
     setErrorMessage('');
 
     try {
-      const res = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      const data = await res.json();
-      if (data.success) {
+      const data = await adminLoginApi(email, password);
+      if (data && data.success && data.token) {
         setLoginSuccess(true);
         localStorage.setItem('dishasetu_admin_token', data.token);
       } else {
-        setErrorMessage(data.message || 'Invalid administrative credentials');
+        setErrorMessage(data?.message || 'Invalid administrative credentials');
       }
-    } catch {
-      // In offline / fallback mode:
-      if (email === 'admin@presidency.ac.in') {
-        setLoginSuccess(true);
-        localStorage.setItem('dishasetu_admin_token', 'mock_verified_admin_token');
-      } else {
-        setErrorMessage('Authentication server unreachable');
-      }
+    } catch (err) {
+      setErrorMessage(err.message || 'Authentication server unreachable. Please check connection.');
     } finally {
       setIsLoading(false);
     }

@@ -119,6 +119,7 @@ router.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     database: {
       status: db.connected ? 'connected' : 'disconnected',
+      connected: db.connected,
       state: db.state,
       database: db.database,
       host: db.host

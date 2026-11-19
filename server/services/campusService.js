@@ -488,7 +488,6 @@ export const CampusService = {
 
   async createBuilding(buildingData, user) {
     const newBuilding = {
-      _id: `bld_${Date.now()}`,
       name: buildingData.name,
       shortCode: buildingData.shortCode.toUpperCase(),
       category: buildingData.category || 'Academic',
@@ -498,7 +497,7 @@ export const CampusService = {
       entrances: buildingData.entrances || [],
       photos: buildingData.photos || [],
       isVerified: buildingData.isVerified || false,
-      status: buildingData.status || (user.role === 'super_admin' ? 'published' : 'pending_approval'),
+      status: buildingData.status || (user?.role === 'super_admin' ? 'published' : 'pending_approval'),
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -509,7 +508,7 @@ export const CampusService = {
     }
 
     const created = await Building.create(newBuilding);
-    this.logAudit('create', user.email, user.role, 'building', created._id.toString(), { name: created.name });
+    this.logAudit('create', user?.email || 'admin@presidency.ac.in', user?.role || 'super_admin', 'building', created._id.toString(), { name: created.name });
     syncService.broadcast('building:created', created);
     return created;
   },
@@ -631,7 +630,6 @@ export const CampusService = {
 
   async createDepartment(departmentData, user) {
     const newDept = {
-      _id: `dept_${Date.now()}`,
       name: departmentData.name,
       code: departmentData.code.toUpperCase(),
       faculty: departmentData.faculty || 'School of Engineering',
@@ -652,7 +650,7 @@ export const CampusService = {
     }
 
     const created = await Department.create(newDept);
-    this.logAudit('create', user.email, user.role, 'department', created._id.toString(), { name: created.name });
+    this.logAudit('create', user?.email || 'admin@presidency.ac.in', user?.role || 'super_admin', 'department', created._id.toString(), { name: created.name });
     syncService.broadcast('department:created', created);
     return created;
   },

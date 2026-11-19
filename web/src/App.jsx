@@ -22,6 +22,7 @@ import AdminLoginModal from './components/AdminLoginModal';
 import AdminDashboard from './components/admin/AdminDashboard';
 import CampusAIAssistantModal from './components/assistant/CampusAIAssistantModal';
 import CampusEventsModal from './components/events/CampusEventsModal';
+import Toast from './components/common/Toast';
 import {
   fetchCampusData,
   fetchCampusFeatures,
@@ -122,6 +123,15 @@ export default function App() {
   const [isPickingCoordinates, setIsPickingCoordinates] = useState(false);
   const [targetBuildingForPick, setTargetBuildingForPick] = useState(null);
   const [pickedCoordinates, setPickedCoordinates] = useState(null);
+
+  // Unified Toast Notifications
+  const [toast, setToast] = useState(null);
+  const showToast = useCallback((message, type = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast(curr => (curr?.message === message ? null : curr));
+    }, 4500);
+  }, []);
 
   // Load campus data
   const loadData = useCallback(async () => {
@@ -273,7 +283,7 @@ export default function App() {
         });
         setActiveRoute(route);
       } catch (localErr) {
-        alert(`Navigation Error: ${localErr.message}`);
+        showToast(`No verified walking route is currently available for this destination. ${localErr.message}`, 'error');
       }
     }
   };
@@ -850,6 +860,9 @@ export default function App() {
           <span className="text-[10px]">SOS</span>
         </button>
       </nav>
+
+      {/* Global Toast Notification */}
+      <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }
