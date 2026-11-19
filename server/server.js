@@ -11,10 +11,11 @@ import routingServiceInstance from './services/routingService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+dotenv.config();
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 const app = express();
-const DEFAULT_PORT = parseInt(process.env.PORT, 10) || 5000;
+const DEFAULT_PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 5000;
 
 // Middleware
 app.use(cors({
@@ -72,10 +73,10 @@ app.use((err, req, res, next) => {
 
 export const startServer = (port = DEFAULT_PORT) => {
   return new Promise((resolve, reject) => {
-    const server = app.listen(port, async () => {
+    const server = app.listen(port, '0.0.0.0', async () => {
       const activePort = server.address().port;
       console.log(`========================================================`);
-      console.log(` DishaSetu Server running on http://localhost:${activePort}`);
+      console.log(` DishaSetu Server running on http://0.0.0.0:${activePort}`);
       console.log(` Institution : Presidency University Bengaluru        `);
       console.log(` Environment : ${process.env.NODE_ENV || 'development'}`);
       console.log(`========================================================`);
@@ -94,8 +95,8 @@ export const startServer = (port = DEFAULT_PORT) => {
     });
 
     server.on('error', (err) => {
-      if (err.code === 'EADDRINUSE') {
-        console.warn(`[Server] Port ${port} in use, attempting port ${port + 1}...`);
+      if (err.code === 'EADDRINUSE' || (err.code === 'EACCES' && port < 5010)) {
+        console.warn(`[Server] Port ${port} unavailable (${err.code}), attempting port ${port + 1}...`);
         resolve(startServer(port + 1));
       } else {
         reject(err);
@@ -104,9 +105,19 @@ export const startServer = (port = DEFAULT_PORT) => {
   });
 };
 
-// Auto start if run directly
-if (process.argv[1] && process.argv[1].endsWith('server.js')) {
-  startServer().catch(console.error);
+// Auto start if executed directly
+const isRunDirectly = !process.env.TEST_MODE && (
+  !process.argv[1] ||
+  process.argv[1].endsWith('server.js') ||
+  process.argv[1].endsWith('server') ||
+  import.meta.url === `file://${process.argv[1]}`
+);
+
+if (isRunDirectly) {
+  startServer().catch((err) => {
+    console.error('[Fatal Server Startup Error]:', err);
+    process.exit(1);
+  });
 }
 
 export default app;
