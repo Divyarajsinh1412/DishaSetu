@@ -6,7 +6,9 @@
   "main": "server/server.js",
   "type": "module",
   "scripts": {
-    "build": "npm --prefix server install",
+    "build": "cd server && npm install && cd ../web && npm install --install-links && npm run build && cd ..",
+    "build:web": "cd web && npm install --install-links && npm run build && cd ..",
+    "build:server": "cd server && npm install && cd ..",
     "start": "node server/server.js",
     "server": "npm --prefix server start",
     "dev": "npm --prefix server run dev",

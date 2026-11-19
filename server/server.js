@@ -2,7 +2,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
+import mongoose from 'mongoose';
 import apiRoutes from './routes/api.js';
 import connectDB, { getDbStatus } from './config/db.js';
 import NavigationNode from './models/NavigationNode.js';
@@ -38,29 +40,45 @@ app.use((req, res, next) => {
 // Mount API routes
 app.use('/api', apiRoutes);
 
-// Root route
-app.get('/', (req, res) => {
-  res.json({
-    name: 'DishaSetu API',
-    tagline: 'Your Campus. Your Direction. Your Way.',
-    institution: 'Presidency University, Bengaluru, Karnataka, India',
-    endpoints: {
-      health: '/api/health',
-      campus: '/api/campus',
-      features: '/api/features',
-      locations: '/api/locations',
-      routes: '/api/routes',
-      buildings: '/api/buildings',
-      departments: '/api/departments',
-      approvals: '/api/approvals',
-      syncStream: '/api/sync/stream',
-      emergency: '/api/emergency/directory'
-    },
-    database: getDbStatus()
-  });
-});
+// Serve Web Frontend in production or when web/dist exists
+const webDistPath = path.resolve(__dirname, '../web/dist');
 
-// 404 handler
+if (fs.existsSync(webDistPath)) {
+  console.log(`[Static] Serving web application from ${webDistPath}`);
+  app.use(express.static(webDistPath));
+
+  // SPA fallback for all frontend client-side routes (non-API)
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+    res.sendFile(path.join(webDistPath, 'index.html'));
+  });
+} else {
+  // Fallback API root route if web/dist is not present
+  app.get('/', (req, res) => {
+    res.json({
+      name: 'DishaSetu API',
+      tagline: 'Your Campus. Your Direction. Your Way.',
+      institution: 'Presidency University, Bengaluru, Karnataka, India',
+      endpoints: {
+        health: '/api/health',
+        campus: '/api/campus',
+        features: '/api/features',
+        locations: '/api/locations',
+        routes: '/api/routes',
+        buildings: '/api/buildings',
+        departments: '/api/departments',
+        approvals: '/api/approvals',
+        syncStream: '/api/sync/stream',
+        emergency: '/api/emergency/directory'
+      },
+      database: getDbStatus()
+    });
+  });
+}
+
+// 404 handler for unmatched routes
 app.use((req, res) => {
   res.status(404).json({ success: false, message: `Route ${req.originalUrl} not found` });
 });
