@@ -6,7 +6,7 @@ import {
   ZoomOut,
   Maximize,
   Minimize,
-  Navigation,
+  Navigation as NavigationIcon,
   MapPin,
   Building2,
   Coffee,
@@ -54,7 +54,7 @@ const getCategoryIcon = (category) => {
     case 'Library': return BookOpen;
     case 'Medical': return HeartPulse;
     case 'Security': return Shield;
-    case 'Transport': return Navigation;
+    case 'Transport': return NavigationIcon;
     default: return MapPin;
   }
 };
@@ -449,14 +449,6 @@ export default function MasterCampusMap({
     setPosition({ x: targetX, y: targetY });
   }, [activeRoute, mapRoutePoints]);
 
-  // Initial Map Focus: Center on Main Gate upon mounting
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      handleFocusMainGate();
-    }, 120);
-    return () => clearTimeout(timer);
-  }, [handleFocusMainGate]);
-
   // Handle Feature Selection & Auto-Focus
   const handleSelectFeature = useCallback((feature) => {
     setLocalSelectedFeature(feature);
@@ -593,36 +585,30 @@ export default function MasterCampusMap({
     setRotation(0);
   };
 
-  // 6. Focus Main Gate (Initial View & Quick Access)
-  const handleFocusMainGate = useCallback(() => {
-    if (!containerRef.current) {
-      setScale(1.5);
-      setPosition({ x: -35, y: 155 });
-      setRotation(0);
-      return;
-    }
-    const containerW = containerRef.current.clientWidth;
-    const containerH = containerRef.current.clientHeight;
-    const targetScale = 1.55;
+  // Universal Coordinate Centering Helper (Mathematically exact aspect ratio centering)
+  const focusCoordinate = useCallback((nx, ny, targetScale = 1.55) => {
+    if (!containerRef.current) return;
+    const containerH = containerRef.current.clientHeight || 800;
+    const imgEl = imageWrapperRef.current;
+    const imageW = imgEl?.clientWidth || (containerH * 0.92 * MAP_ASPECT_RATIO);
+    const imageH = imgEl?.clientHeight || (containerH * 0.92);
+
     setScale(targetScale);
-    // Main gate is at normalizedX = 0.5695, normalizedY = 0.2449
-    const targetX = -(0.5695 - 0.5) * (containerW * 0.72) * targetScale;
-    const targetY = -(0.2449 - 0.5) * (containerH * 0.90) * targetScale;
+    const targetX = -(nx - 0.5) * imageW * targetScale;
+    const targetY = -(ny - 0.5) * imageH * targetScale;
     setPosition({ x: targetX, y: targetY });
     setRotation(0);
   }, []);
 
+  // 6. Focus Main Gate (Initial View & Quick Access)
+  const handleFocusMainGate = useCallback(() => {
+    // Main gate is at normalizedX = 0.5695, normalizedY = 0.2449
+    focusCoordinate(0.5695, 0.2449, 1.55);
+  }, [focusCoordinate]);
+
   // 7. Fit Entire Campus (Overview with comfortable padding)
   const handleFitCampus = useCallback(() => {
-    if (!containerRef.current) {
-      setScale(1.1);
-      setPosition({ x: 0, y: 0 });
-      setRotation(0);
-      return;
-    }
-    const containerW = containerRef.current.clientWidth;
-    const isMobile = containerW < 768;
-    setScale(isMobile ? 1.05 : 1.15);
+    setScale(1.15);
     setPosition({ x: 0, y: 0 });
     setRotation(0);
   }, []);
@@ -630,35 +616,51 @@ export default function MasterCampusMap({
   // 8. Focus My Current GPS Location
   const handleFocusMyLocation = useCallback(() => {
     if (userLocation && userLocation.latitude && userLocation.longitude) {
-      setScale(1.8);
-      setPosition({ x: -35, y: 140 });
+      focusCoordinate(0.5695, 0.2449, 1.8);
     } else {
       handleFocusMainGate();
     }
-  }, [userLocation, handleFocusMainGate]);
+  }, [userLocation, handleFocusMainGate, focusCoordinate]);
 
   // 9. Fit Width (Wide View - Eliminates side dead space)
   const handleFitWidth = useCallback(() => {
-    setScale(1.6);
+    if (!containerRef.current) {
+      setScale(1.6);
+      setPosition({ x: 0, y: 0 });
+      return;
+    }
+    const containerW = containerRef.current.clientWidth;
+    const imgEl = imageWrapperRef.current;
+    const imageW = imgEl?.clientWidth || (containerRef.current.clientHeight * 0.92 * MAP_ASPECT_RATIO);
+    const fitScale = Math.min(2.5, Math.max(1.2, (containerW * 0.90) / imageW));
+    setScale(fitScale);
     setPosition({ x: 0, y: 0 });
   }, []);
 
-  // 10. Focus Selected Building
-  const handleFocusSelected = useCallback(() => {
-    if (!activeSelected || !containerRef.current) return;
-    const containerW = containerRef.current.clientWidth;
-    const containerH = containerRef.current.clientHeight;
-    const targetScale = 2.4;
-    setScale(targetScale);
-    const targetX = -(activeSelected.normalizedX - 0.5) * (containerW * 0.75) * targetScale;
-    const targetY = -(activeSelected.normalizedY - 0.5) * (containerH * 0.95) * targetScale;
-    setPosition({ x: targetX, y: targetY });
-  }, [activeSelected]);
+  // 10. Focus Academic Quad (D, E, F, L Blocks)
+  const handleFocusQuad = useCallback(() => {
+    // Academic Quad is at normalizedX = 0.235, normalizedY = 0.812
+    focusCoordinate(0.235, 0.812, 1.85);
+  }, [focusCoordinate]);
 
-  // 11. Reset All (Default Clean View)
+  // 11. Focus Selected Building
+  const handleFocusSelected = useCallback(() => {
+    if (!activeSelected) return;
+    focusCoordinate(activeSelected.normalizedX, activeSelected.normalizedY, 2.2);
+  }, [activeSelected, focusCoordinate]);
+
+  // 12. Reset All (Default Clean View)
   const handleResetView = () => {
     handleFocusMainGate();
   };
+
+  // Initial Map Focus: Center on Main Gate upon mounting (Placed AFTER definition to avoid TDZ ReferenceError)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      handleFocusMainGate();
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [handleFocusMainGate]);
 
   // 12. Fullscreen toggle
   const toggleFullscreen = () => {
@@ -926,7 +928,7 @@ export default function MasterCampusMap({
             className="flex items-center gap-1.5 px-3.5 py-2.5 bg-gradient-to-r from-sky-600 via-indigo-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white rounded-2xl font-black text-xs shadow-xl shadow-sky-600/30 border border-sky-400/50 transition-all hover:scale-105 active:scale-95 shrink-0"
             title="Directions: Select place and navigate from one place to another place"
           >
-            <Navigation className="w-3.5 h-3.5 text-sky-200" />
+            <NavigationIcon className="w-3.5 h-3.5 text-sky-200" />
             <span>Directions</span>
           </button>
 
@@ -1431,7 +1433,7 @@ export default function MasterCampusMap({
           className="p-2.5 rounded-xl text-sky-400 hover:text-sky-300 hover:bg-sky-500/20 transition-all hover:scale-110 active:scale-95 font-bold"
           title="Campus Wayfinding: Navigate between any two places"
         >
-          <Navigation className="w-4 h-4" />
+          <NavigationIcon className="w-4 h-4" />
         </button>
 
         <div className="h-px w-8 bg-slate-800" />
@@ -1600,7 +1602,7 @@ export default function MasterCampusMap({
               className="py-2 px-2.5 bg-slate-850 hover:bg-sky-600/90 text-sky-300 hover:text-white border border-slate-700 hover:border-sky-400 font-bold text-xs rounded-xl shadow-md transition-all hover:scale-105 flex items-center gap-1"
               title="Navigate to this location"
             >
-              <Navigation className="w-3.5 h-3.5" />
+              <NavigationIcon className="w-3.5 h-3.5" />
               <span>Route</span>
             </button>
 

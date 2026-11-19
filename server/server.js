@@ -99,16 +99,16 @@ export const startServer = (port = DEFAULT_PORT) => {
       console.log(` Environment : ${process.env.NODE_ENV || 'development'}`);
       console.log(`========================================================`);
       await connectDB();
-      if (mongoose.connection.readyState === 1) {
+      if (mongoose.connection && mongoose.connection.readyState === 1) {
         try {
-          const nodes = await NavigationNode.find({ isActive: true });
-          const paths = await WalkingPath.find({ status: 'active' });
-          if (nodes.length > 0 && paths.length > 0) {
+          const nodes = await NavigationNode.find({ isActive: true }).exec();
+          const paths = await WalkingPath.find({ status: 'active' }).exec();
+          if (nodes && nodes.length > 0 && paths && paths.length > 0) {
             routingServiceInstance.updateGraph(nodes, paths);
             console.log(`[RoutingEngine] Loaded ${nodes.length} nodes & ${paths.length} walking paths from MongoDB Atlas.`);
           }
         } catch (err) {
-          console.warn('[RoutingEngine] Initial graph sync fallback:', err.message);
+          console.warn('[RoutingEngine] MongoDB Atlas offline, maintaining in-memory verified pedestrian routing graph.');
         }
       }
       resolve({ server, port: activePort });

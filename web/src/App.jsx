@@ -38,7 +38,7 @@ import {
   connectSyncStream
 } from './services/api';
 import { clientRoutingEngine } from './services/routingEngine';
-import { Menu, Navigation, Compass, Shield, Globe, Map, Crosshair, Box, DoorOpen } from 'lucide-react';
+import { Menu, Navigation as NavigationIcon, Compass, Shield, Globe, Map, Crosshair, Box, DoorOpen } from 'lucide-react';
 
 export default function App() {
   const [campus, setCampus] = useState(null);
@@ -693,7 +693,7 @@ export default function App() {
           className="flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl text-sky-400 hover:text-sky-300 transition-all font-bold"
           title="Directions: Select place and navigate from one place to another place"
         >
-          <Navigation className="w-4 h-4 text-sky-400" />
+          <NavigationIcon className="w-4 h-4 text-sky-400" />
           <span className="text-[10px]">Directions</span>
         </button>
 
@@ -773,7 +773,7 @@ export default function App() {
             isSidebarOpen && sidebarTab === 'directions' ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Navigation className="w-4 h-4" />
+          <NavigationIcon className="w-4 h-4" />
           <span className="text-[10px]">Route</span>
         </button>
 
