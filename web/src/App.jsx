@@ -40,7 +40,7 @@ import {
   connectSyncStream
 } from './services/api';
 import { clientRoutingEngine } from './services/routingEngine';
-import { Menu, Navigation as NavigationIcon, Compass, Shield, Globe, Map, Crosshair, Box, DoorOpen } from 'lucide-react';
+import { Menu, Navigation as NavigationIcon, Compass, Shield, Globe, Map, Crosshair, Box, DoorOpen, Sparkles } from 'lucide-react';
 
 export default function App() {
   const [campus, setCampus] = useState(null);

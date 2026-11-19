@@ -4,7 +4,7 @@ import { RefreshCw, AlertTriangle } from 'lucide-react';
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null, errorInfo: null, showDetails: false };
+    this.state = { hasError: false, error: null, errorInfo: null, showDetails: true };
   }
 
   static getDerivedStateFromError(error) {
