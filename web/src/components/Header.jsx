@@ -19,7 +19,8 @@ import {
   Utensils,
   HelpCircle,
   Languages,
-  DoorOpen
+  DoorOpen,
+  Navigation
 } from 'lucide-react';
 import { getTranslation } from '../services/localization';
 
