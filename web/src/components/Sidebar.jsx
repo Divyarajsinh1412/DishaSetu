@@ -38,6 +38,9 @@ export default function Sidebar({
   onStartNavigation,
   onCalculateRoute,
   onOpenIndoor,
+  onOpenBuildingPopup,
+  onOpenIndoorMap,
+  onStartIndoorNavigation,
   userLocation,
   catalog = [],
   activeTab: controlledTab,
@@ -394,19 +397,20 @@ export default function Sidebar({
               return (
                 <div
                   key={bld._id || bld.shortCode}
-                  className="p-3 rounded-xl bg-[#1e293b]/60 border border-slate-800 hover:border-slate-700 transition-all space-y-2"
+                  onClick={() => onOpenBuildingPopup ? onOpenBuildingPopup(bld) : onOpenIndoor && onOpenIndoor(bld)}
+                  className="p-3.5 rounded-2xl bg-[#1e293b]/70 border border-slate-800 hover:border-slate-700 transition-all space-y-2.5 cursor-pointer group"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                      <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0 mt-0.5 group-hover:scale-110 transition-transform">
                         <Building2 className="w-4 h-4 text-indigo-400" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-xs text-white">{bld.name}</h4>
+                        <h4 className="font-bold text-xs text-white group-hover:text-emerald-400 transition-colors">{bld.name}</h4>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[10px] font-mono px-1 rounded bg-slate-800 text-slate-300">{bld.shortCode}</span>
+                          <span className="text-[10px] font-mono px-1 rounded bg-slate-800 text-slate-300 font-semibold">{bld.shortCode}</span>
                           <span className="text-[10px] text-slate-400">&bull;</span>
-                          <span className="text-[10px] text-slate-400">{bld.totalFloors} Floors</span>
+                          <span className="text-[10px] text-slate-400">{bld.totalFloors || 4} Floors</span>
                         </div>
                       </div>
                     </div>
@@ -417,29 +421,51 @@ export default function Sidebar({
                   </p>
 
                   {/* Entrances Count & Directions Action */}
-                  <div className="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[11px]">
+                  <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
                     <span className="text-slate-400">
                       {hasEntrances ? (
-                        <span className="text-emerald-400 flex items-center gap-1">
+                        <span className="text-emerald-400 flex items-center gap-1 font-semibold">
                           <CheckCircle2 className="w-3 h-3" /> {bld.entrances.length} Entrance(s)
                         </span>
                       ) : (
                         <span className="text-amber-400/80">Pending Survey</span>
                       )}
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
+                      {(onOpenIndoorMap || onOpenIndoor) && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onOpenIndoorMap) onOpenIndoorMap(bld);
+                            else if (onOpenIndoor) onOpenIndoor(bld);
+                          }}
+                          className="px-2 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30 flex items-center gap-1 transition-all"
+                          title="BUTTON 1: Open Indoor Map"
+                        >
+                          <Layers className="w-3 h-3" /> Map
+                        </button>
+                      )}
+                      {onStartIndoorNavigation && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onStartIndoorNavigation(bld);
+                          }}
+                          className="px-2 py-1 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 font-bold border border-sky-500/30 flex items-center gap-1 transition-all"
+                          title="BUTTON 2: Start Indoor Navigation"
+                        >
+                          <Navigation className="w-3 h-3" /> Nav
+                        </button>
+                      )}
                       <button
-                        onClick={() => onOpenIndoor && onOpenIndoor(bld)}
-                        className="text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1 transition-colors"
-                        title="Explore Indoor Floor Plan"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onStartNavigation && onStartNavigation(bld);
+                        }}
+                        className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold flex items-center gap-0.5 transition-colors"
+                        title="Walk to building via outdoor paths"
                       >
-                        <Layers className="w-3 h-3" /> Floors
-                      </button>
-                      <button
-                        onClick={() => onStartNavigation && onStartNavigation(bld)}
-                        className="text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1 transition-colors"
-                      >
-                        Navigate <ChevronRight className="w-3 h-3" />
+                        GPS <ChevronRight className="w-3 h-3" />
                       </button>
                     </div>
                   </div>

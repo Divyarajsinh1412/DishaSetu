@@ -18,35 +18,50 @@ import {
   ZoomOut,
   RotateCcw,
   Maximize2,
+  Minimize2,
+  Target,
   Eye,
+  EyeOff,
   Camera,
   Map as MapIcon,
   Globe,
+  ChevronLeft,
   ChevronRight,
   Info,
   X,
   Footprints,
   Clock,
-  Sparkles
+  Sparkles,
+  Search,
+  CheckCircle2
 } from 'lucide-react';
 import {
+  mapToWorld,
+  worldToMap,
   gpsToWorld,
   worldToGps,
   REF_LAT,
   REF_LNG,
-  CAMPUS_BUILDING_SPECS
+  CAMPUS_BUILDING_SPECS,
+  CAMPUS_LANDMARK_SPECS
 } from './campusCoords';
 import {
-  buildGroundAndRoads,
+  materials,
+  buildPresentationPlinth,
+  buildRoadNetwork,
+  buildMainLawnAndGardens,
+  buildCentralFountain,
   buildSportsComplex,
-  buildParkingAndVehicles,
-  buildLandscapingAndTrees,
+  buildEastSectorAmenities,
+  buildParkingZones,
+  buildCampusTrees,
   buildBuildingMesh
 } from './campusGeometryBuilder';
 
 /**
- * DishaSetu: Photorealistic 3D Campus Digital Twin
- * Front-Facing Isometric Campus View for Presidency University Bengaluru
+ * DishaSetu: Premium 3D Campus Digital Twin
+ * Large, Spacious Architectural Miniature Model for Presidency University Bengaluru
+ * Calibrated with increased scale, generous building spacing, and comprehensive map controls.
  */
 export default function CampusDigitalTwin3D({
   buildings = [],
@@ -59,6 +74,9 @@ export default function CampusDigitalTwin3D({
   onClearRoute,
   onStartNavigation,
   onOpenIndoor,
+  onOpenBuildingPopup,
+  onOpenIndoorMap,
+  onStartIndoorNavigation,
   onSwitchToImmersive,
   onSwitchToMap,
   userLocation = null
@@ -74,7 +92,7 @@ export default function CampusDigitalTwin3D({
     controls: null,
     buildingsGroup: null,
     routeGroup: null,
-    dynamicGroup: null,
+    waterMesh: null,
     raycaster: new THREE.Raycaster(),
     mouse: new THREE.Vector2(),
     animationFrameId: null,
@@ -83,12 +101,16 @@ export default function CampusDigitalTwin3D({
 
   // UI States
   const [activeCategory, setActiveCategory] = useState('all');
-  const [viewAngle, setViewAngle] = useState('front_isometric'); // 'front_isometric', 'angled_perspective', 'top_down'
+  const [viewAngle, setViewAngle] = useState('front_isometric');
+  const [showLabels, setShowLabels] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const [hoveredBuilding, setHoveredBuilding] = useState(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0, visible: false });
-  const [isNavigating, setIsNavigating] = useState(false);
+  const [screenLabels, setScreenLabels] = useState([]);
 
-  // Merged Building Specs: Merges static calibrated 3D models with dynamic MongoDB records
+  // Merged Building Specs: Merges calibrated 3D models with dynamic MongoDB records
   const mergedBuildingList = useMemo(() => {
     const list = Object.values(CAMPUS_BUILDING_SPECS);
     
@@ -96,19 +118,23 @@ export default function CampusDigitalTwin3D({
     if (buildings && buildings.length > 0) {
       buildings.forEach(b => {
         const existing = list.find(s => s.shortCode === b.shortCode || s.name === b.name);
-        if (!existing && b.entranceCoordinates?.lat) {
+        if (existing) {
+          existing.mongoRecord = b;
+        } else if (b.entranceCoordinates?.lat) {
           list.push({
             id: `dyn_${b._id || b.shortCode}`,
             name: b.name,
+            label: b.shortCode || b.name,
             shortCode: b.shortCode,
             category: b.category || 'Academic',
+            imageX: 0.4666,
+            imageY: 0.5995,
             centerGps: { lat: b.entranceCoordinates.lat, lng: b.entranceCoordinates.lng },
-            dimensions: { width: 35, depth: 25, height: (b.totalFloors || 3) * 4.5, floors: b.totalFloors || 3 },
-            rotation: -0.12,
+            dimensions: { width: 44, depth: 22, height: (b.totalFloors || 4) * 4.5, floors: b.totalFloors || 4 },
+            rotation: 0.0,
             color: '#FFFFFF',
             accentColor: '#10B981',
-            roofType: 'flat_solar',
-            entranceOffset: { x: 0, z: 0 },
+            roofType: 'flat_modern',
             departments: b.departments || [],
             mongoRecord: b
           });
@@ -120,35 +146,34 @@ export default function CampusDigitalTwin3D({
 
   // Left Toolbar Navigation Categories
   const navCategories = [
-    { id: 'all', label: 'Campus Overview', icon: Compass },
-    { id: 'Academic', label: 'Buildings', icon: Building2 },
-    { id: 'Administrative', label: 'Departments', icon: Layers },
-    { id: 'Laboratories', label: 'Laboratories', icon: FlaskConical },
+    { id: 'all', label: 'All Campus', icon: Compass },
+    { id: 'Academic', label: 'Academic Blocks', icon: Building2 },
+    { id: 'Administrative', label: 'Administrative', icon: Layers },
     { id: 'Library', label: 'Library', icon: BookOpen },
     { id: 'Cafe', label: 'Food & Dining', icon: Coffee },
     { id: 'Medical', label: 'Medical Care', icon: HeartPulse },
     { id: 'Sports', label: 'Sports Arena', icon: Trophy },
-    { id: 'Garden', label: 'Gardens & Quads', icon: Trees },
-    { id: 'Parking', label: 'Parking Zones', icon: Car }
+    { id: 'Garden', label: 'Main Lawn & Quads', icon: Trees },
+    { id: 'Parking', label: 'Parking Sectors', icon: Car }
   ];
 
-  // Camera presets
+  // Camera presets tuned to the enlarged 3D model footprint
   const applyCameraPreset = useCallback((preset) => {
     const { camera, controls } = threeRef.current;
     if (!camera || !controls) return;
 
     if (preset === 'front_isometric') {
-      // Front-Facing Angled Isometric View looking from Main Gate (North) into Campus
-      camera.position.set(0, 150, -240);
-      controls.target.set(0, 5, 25);
+      // Bold front isometric view framing Main Gate, Lawn, Fountain, and Academic wings closely
+      camera.position.set(-95, 125, -155);
+      controls.target.set(5, 8, -10);
     } else if (preset === 'angled_perspective') {
-      // Dramatic Angled 45° Perspective View
-      camera.position.set(160, 130, -140);
-      controls.target.set(-10, 8, 15);
+      // Perspective from East looking past Auditorium and Fountain towards West Academic wings
+      camera.position.set(155, 120, 85);
+      controls.target.set(-15, 8, 10);
     } else if (preset === 'top_down') {
-      // 90° Top-Down Plan View
-      camera.position.set(0, 320, 15);
-      controls.target.set(0, 0, 15);
+      // 90° Bird's-Eye Architectural Master Plan Blueprint View
+      camera.position.set(5, 290, -15);
+      controls.target.set(5, 0, -15);
     }
     controls.update();
     setViewAngle(preset);
@@ -157,18 +182,17 @@ export default function CampusDigitalTwin3D({
   // Initialize Three.js Scene
   useEffect(() => {
     if (!mountRef.current) return;
-
     const width = mountRef.current.clientWidth;
     const height = mountRef.current.clientHeight;
 
-    // 1. Scene & Atmospheric Fog
+    // 1. Scene & Deep Architectural Sky Background
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x071B32);
-    scene.fog = new THREE.FogExp2(0x071B32, 0.0016);
+    scene.background = new THREE.Color(0x0A1128); // Deep architectural midnight navy
+    scene.fog = new THREE.FogExp2(0x0A1128, 0.0008);
 
-    // 2. Camera Setup (Isometric Front View default)
-    const camera = new THREE.PerspectiveCamera(40, width / height, 1, 1500);
-    camera.position.set(0, 150, -240);
+    // 2. Camera Setup (Perspective tuned for large architectural models)
+    const camera = new THREE.PerspectiveCamera(42, width / height, 1, 2000);
+    camera.position.set(-95, 125, -155);
 
     // 3. WebGL Renderer with High-Fidelity Tone Mapping & Soft Shadows
     const renderer = new THREE.WebGLRenderer({
@@ -179,47 +203,62 @@ export default function CampusDigitalTwin3D({
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMappingExposure = 1.35;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-    // 4. OrbitControls
+    // 4. OrbitControls with smooth damping
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.maxPolarAngle = Math.PI / 2 - 0.05; // Do not go below ground
-    controls.minDistance = 30;
-    controls.maxDistance = 500;
-    controls.target.set(0, 5, 25);
+    controls.maxPolarAngle = Math.PI / 2 - 0.04;
+    controls.minDistance = 35;
+    controls.maxDistance = 750;
+    controls.target.set(5, 8, -10);
     controls.update();
 
-    // 5. Lighting Setup (Directional Sunlight + Soft Blue Hemispherical Sky Bounce)
-    const hemiLight = new THREE.HemisphereLight(0xE0F2FE, 0x0F172A, 0.75);
+    // 5. Studio Lighting Setup
+    // A. Hemisphere Light (Soft Sky & Ground Ambient Fill)
+    const hemiLight = new THREE.HemisphereLight(0xF1F5F9, 0x1E293B, 0.9);
     scene.add(hemiLight);
 
-    const dirLight = new THREE.DirectionalLight(0xFFFBEB, 1.3);
-    dirLight.position.set(120, 180, -90);
-    dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
-    dirLight.shadow.camera.near = 10;
-    dirLight.shadow.camera.far = 450;
-    dirLight.shadow.camera.left = -180;
-    dirLight.shadow.camera.right = 180;
-    dirLight.shadow.camera.top = 180;
-    dirLight.shadow.camera.bottom = -180;
-    dirLight.shadow.bias = -0.0005;
-    scene.add(dirLight);
+    // B. Key Directional Sunlight (Casting Soft Shadows)
+    const sunLight = new THREE.DirectionalLight(0xFFFBF0, 1.6);
+    sunLight.position.set(160, 240, -120);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    sunLight.shadow.camera.near = 10;
+    sunLight.shadow.camera.far = 700;
+    sunLight.shadow.camera.left = -280;
+    sunLight.shadow.camera.right = 280;
+    sunLight.shadow.camera.top = 280;
+    sunLight.shadow.camera.bottom = -280;
+    sunLight.shadow.bias = -0.0003;
+    scene.add(sunLight);
 
-    const fillLight = new THREE.DirectionalLight(0x38BDF8, 0.4);
-    fillLight.position.set(-100, 60, 120);
+    // C. Soft Blue Fill Light
+    const fillLight = new THREE.DirectionalLight(0x38BDF8, 0.45);
+    fillLight.position.set(-160, 110, 160);
     scene.add(fillLight);
 
-    // 6. Build Procedural Environment Geometries (Ground, Roads, Sports, Trees, Vehicles)
-    buildGroundAndRoads(scene);
+    // 6. Build Master Architectural Model Environment
+    buildPresentationPlinth(scene);
+    buildRoadNetwork(scene);
+    buildMainLawnAndGardens(scene);
+    const fountainGroup = buildCentralFountain(scene);
     buildSportsComplex(scene);
-    buildParkingAndVehicles(scene);
-    buildLandscapingAndTrees(scene);
+    buildEastSectorAmenities(scene);
+    buildParkingZones(scene);
+    buildCampusTrees(scene);
+
+    // Find fountain water mesh for ripple animation
+    let waterMesh = null;
+    fountainGroup.traverse(child => {
+      if (child.userData?.isFountainWater) {
+        waterMesh = child;
+      }
+    });
 
     // Container Groups for Buildings & Routes
     const buildingsGroup = new THREE.Group();
@@ -237,6 +276,7 @@ export default function CampusDigitalTwin3D({
     threeRef.current.controls = controls;
     threeRef.current.buildingsGroup = buildingsGroup;
     threeRef.current.routeGroup = routeGroup;
+    threeRef.current.waterMesh = waterMesh;
 
     // Resize Handler
     const handleResize = () => {
@@ -256,16 +296,60 @@ export default function CampusDigitalTwin3D({
       threeRef.current.animationFrameId = requestAnimationFrame(animate);
       controls.update();
 
-      // Pulsate any route or beacon markers
+      // Gentle animated water ripple on the fountain
+      if (waterMesh) {
+        waterMesh.rotation.z += 0.003;
+      }
+
+      // Pulsate any route beacons
       const time = performance.now() * 0.003;
       routeGroup.children.forEach(c => {
         if (c.userData?.isBeacon) {
           c.rotation.y = time;
-          c.position.y = c.userData.baseY + Math.sin(time * 2) * 0.4;
+          c.position.y = c.userData.baseY + Math.sin(time * 2.5) * 0.4;
         }
       });
 
       renderer.render(scene, camera);
+
+      // Project 3D building labels to 2D screen coordinates
+      if (showLabels && camera && mountRef.current) {
+        const w = mountRef.current.clientWidth;
+        const h = mountRef.current.clientHeight;
+        const labels = [];
+
+        // Key landmarks to show labels for
+        const keyItems = [
+          ...mergedBuildingList,
+          { id: 'fountain', name: 'Campus Fountain', label: 'FOUNTAIN', imageX: 0.4666, imageY: 0.5995, category: 'Landmark', height: 6 },
+          { id: 'mainLawn', name: 'Main Lawn', label: 'MAIN LAWN', imageX: 0.5918, imageY: 0.4403, category: 'Garden', height: 3 },
+          { id: 'football', name: 'Football Court', label: 'FOOTBALL COURT', imageX: 0.4117, imageY: 0.3679, category: 'Sports', height: 3 },
+          { id: 'basketball', name: 'Basketball Court', label: 'BASKETBALL COURT', imageX: 0.1973, imageY: 0.5428, category: 'Sports', height: 3 },
+          { id: 'mainGate', name: 'Main Gate', label: 'MAIN GATE', imageX: 0.5695, imageY: 0.2449, category: 'Gate', height: 14 }
+        ];
+
+        keyItems.forEach(item => {
+          if (activeCategory !== 'all' && item.category !== activeCategory) return;
+          const worldPos = mapToWorld(item.imageX, item.imageY, (item.dimensions?.height || item.height || 18) + 3);
+          const projected = worldPos.clone().project(camera);
+
+          if (projected.z < 1) {
+            const sx = (projected.x * 0.5 + 0.5) * w;
+            const sy = (-(projected.y * 0.5) + 0.5) * h;
+            if (sx >= -60 && sx <= w + 60 && sy >= -60 && sy <= h + 60) {
+              labels.push({
+                id: item.id,
+                name: item.label || item.name,
+                category: item.category,
+                x: sx,
+                y: sy,
+                spec: item
+              });
+            }
+          }
+        });
+        setScreenLabels(labels);
+      }
     };
     animate();
 
@@ -276,9 +360,9 @@ export default function CampusDigitalTwin3D({
       renderer.dispose();
       controls.dispose();
     };
-  }, []);
+  }, [showLabels, activeCategory, mergedBuildingList]);
 
-  // Update Building Meshes whenever buildings, selection, or category changes
+  // Update Building Meshes whenever buildings, selection, or category filter changes
   useEffect(() => {
     const { buildingsGroup } = threeRef.current;
     if (!buildingsGroup) return;
@@ -293,7 +377,12 @@ export default function CampusDigitalTwin3D({
     // Rebuild buildings matching active category filter
     mergedBuildingList.forEach(spec => {
       const isMatchCategory = activeCategory === 'all' || spec.category === activeCategory;
-      const isSelected = selectedLocation && (selectedLocation.shortCode === spec.shortCode || selectedLocation.name === spec.name);
+      const isSelected = selectedLocation && (
+        selectedLocation.shortCode === spec.shortCode ||
+        selectedLocation.name === spec.name ||
+        selectedLocation._id === spec.id ||
+        selectedLocation.id === spec.id
+      );
       
       const mesh = buildBuildingMesh(spec, isSelected, false);
       
@@ -302,7 +391,7 @@ export default function CampusDigitalTwin3D({
         mesh.traverse(child => {
           if (child.isMesh && child.material) {
             child.material.transparent = true;
-            child.material.opacity = 0.35;
+            child.material.opacity = 0.25;
           }
         });
       }
@@ -311,6 +400,18 @@ export default function CampusDigitalTwin3D({
       threeRef.current.buildingMeshes.set(spec.id, mesh);
     });
   }, [mergedBuildingList, activeCategory, selectedLocation]);
+
+  // Toggle billboard sprite visibility when showLabels changes
+  useEffect(() => {
+    const { buildingsGroup } = threeRef.current;
+    if (buildingsGroup) {
+      buildingsGroup.traverse(child => {
+        if (child.userData?.isBillboard) {
+          child.visible = showLabels;
+        }
+      });
+    }
+  }, [showLabels]);
 
   // Handle Raycasting for Mouse Hover & Selection
   const handlePointerMove = (e) => {
@@ -328,7 +429,6 @@ export default function CampusDigitalTwin3D({
     );
 
     if (intersects.length > 0) {
-      // Find root building group
       let obj = intersects[0].object;
       while (obj && !obj.userData?.isBuilding && obj.parent) {
         obj = obj.parent;
@@ -343,7 +443,6 @@ export default function CampusDigitalTwin3D({
   };
 
   const handlePointerDown = (e) => {
-    // Only handle primary click
     if (e.button !== 0 || !mountRef.current) return;
     const rect = mountRef.current.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -364,18 +463,59 @@ export default function CampusDigitalTwin3D({
       }
       if (obj && obj.userData?.spec) {
         const spec = obj.userData.spec;
-        if (onSelectLocation) {
-          onSelectLocation(spec.mongoRecord || {
-            locationId: spec.id,
-            name: spec.name,
-            shortCode: spec.shortCode,
-            category: spec.category,
-            coordinates: spec.centerGps,
-            entranceCoordinates: spec.centerGps,
-            departments: spec.departments,
-            description: `${spec.name} — ${spec.dimensions.floors} floors, modern academic facility at Presidency University.`
-          });
-        }
+        selectBuilding(spec);
+      }
+    }
+  };
+
+  // Helper to select and smoothly zoom/frame a building in 3D
+  const selectBuilding = useCallback((spec) => {
+    if (!spec) return;
+    const { camera, controls } = threeRef.current;
+    if (camera && controls) {
+      const worldPos = mapToWorld(spec.imageX, spec.imageY);
+      // Smoothly pan camera to frame the selected building closely
+      controls.target.set(worldPos.x, 8, worldPos.z);
+      camera.position.set(worldPos.x - 55, 65, worldPos.z - 65);
+      controls.update();
+    }
+
+    const buildingRecord = spec.mongoRecord || {
+      _id: spec.id,
+      buildingId: spec.id,
+      locationId: spec.id,
+      name: spec.name,
+      shortCode: spec.shortCode,
+      category: spec.category,
+      coordinates: spec.centerGps,
+      entranceCoordinates: spec.centerGps,
+      imageX: spec.imageX,
+      imageY: spec.imageY,
+      totalFloors: spec.dimensions?.floors || 4,
+      departments: spec.departments,
+      description: `${spec.name} — ${spec.dimensions?.floors || 4} floors, modern academic block at Presidency University.`
+    };
+
+    if (onSelectLocation) {
+      onSelectLocation(buildingRecord);
+    }
+
+    if (onOpenBuildingPopup && (spec.category === 'Academic' || spec.shortCode?.includes('BLOCK') || spec.name?.includes('Block') || spec.category === 'Library')) {
+      onOpenBuildingPopup(buildingRecord);
+    }
+  }, [onSelectLocation, onOpenBuildingPopup]);
+
+  // Focus Selected Building Action (Explicit Map Control)
+  const handleFocusSelected = () => {
+    if (selectedLocation) {
+      const spec = mergedBuildingList.find(b =>
+        b.shortCode === selectedLocation.shortCode ||
+        b.name === selectedLocation.name ||
+        b.id === selectedLocation._id ||
+        b.id === selectedLocation.id
+      );
+      if (spec) {
+        selectBuilding(spec);
       }
     }
   };
@@ -398,16 +538,16 @@ export default function CampusDigitalTwin3D({
       const lat = Array.isArray(pt) ? pt[0] : pt.lat;
       const lng = Array.isArray(pt) ? pt[1] : pt.lng;
       const v = gpsToWorld(lat, lng);
-      return new THREE.Vector3(v.x, 0.4, v.z);
+      return new THREE.Vector3(v.x, 0.6, v.z);
     });
 
     // Create Smooth 3D Spline Curve
     const curve = new THREE.CatmullRomCurve3(worldPoints);
-    const tubeGeom = new THREE.TubeGeometry(curve, 120, 0.6, 8, false);
+    const tubeGeom = new THREE.TubeGeometry(curve, 140, 0.9, 8, false);
     const tubeMat = new THREE.MeshStandardMaterial({
       color: 0x00A878,
       emissive: 0x10B981,
-      emissiveIntensity: 0.8,
+      emissiveIntensity: 0.95,
       roughness: 0.2
     });
     const tubeMesh = new THREE.Mesh(tubeGeom, tubeMat);
@@ -417,32 +557,32 @@ export default function CampusDigitalTwin3D({
     // Origin Pin Beacon
     const originPos = worldPoints[0];
     const originPin = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.2, 0.1, 3.5, 16),
+      new THREE.CylinderGeometry(1.6, 0.2, 5.0, 16),
       new THREE.MeshBasicMaterial({ color: 0x38BDF8 })
     );
-    originPin.position.set(originPos.x, 2.5, originPos.z);
-    originPin.userData = { isBeacon: true, baseY: 2.5 };
+    originPin.position.set(originPos.x, 3.0, originPos.z);
+    originPin.userData = { isBeacon: true, baseY: 3.0 };
     routeGroup.add(originPin);
 
     // Destination Pin Beacon
     const destPos = worldPoints[worldPoints.length - 1];
     const destPin = new THREE.Mesh(
-      new THREE.ConeGeometry(1.5, 4.0, 16),
+      new THREE.ConeGeometry(2.0, 5.5, 16),
       new THREE.MeshBasicMaterial({ color: 0x00A878 })
     );
     destPin.rotation.x = Math.PI;
-    destPin.position.set(destPos.x, 3.5, destPos.z);
-    destPin.userData = { isBeacon: true, baseY: 3.5 };
+    destPin.position.set(destPos.x, 4.5, destPos.z);
+    destPin.userData = { isBeacon: true, baseY: 4.5 };
     routeGroup.add(destPin);
 
   }, [activeRoute]);
 
-  // Fit Campus View Action
+  // Fit Campus View Action (1 of 6 required controls)
   const handleFitCampus = () => {
     applyCameraPreset('front_isometric');
   };
 
-  // Zoom Controls
+  // Zoom Controls (Controls 1 & 2)
   const handleZoom = (delta) => {
     const { camera, controls } = threeRef.current;
     if (!camera || !controls) return;
@@ -451,82 +591,228 @@ export default function CampusDigitalTwin3D({
     controls.update();
   };
 
+  // Fullscreen Toggle (Control 6)
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      mountRef.current?.requestFullscreen?.();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen?.();
+      setIsFullscreen(false);
+    }
+  };
+
+  // Filtered search list
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
+    return mergedBuildingList.filter(b =>
+      b.name.toLowerCase().includes(q) ||
+      b.shortCode?.toLowerCase().includes(q) ||
+      b.departments?.some(d => d.toLowerCase().includes(q))
+    ).slice(0, 6);
+  }, [searchQuery, mergedBuildingList]);
+
   return (
     <div
       ref={mountRef}
       onPointerMove={handlePointerMove}
       onPointerDown={handlePointerDown}
-      className="relative w-full h-full select-none overflow-hidden bg-[#071B32]"
+      className="relative w-full h-full select-none overflow-hidden bg-[#0A1128]"
     >
       <canvas ref={canvasRef} className="w-full h-full block cursor-grab active:cursor-grabbing" />
 
       {/* ======================================================== */}
-      {/* 1. LEFT-SIDE NAVIGATION TOOLBAR (Matching Reference UI)   */}
+      {/* 1. FLOATING 3D SCREEN LABELS OVER KEY CAMPUS BUILDINGS   */}
       {/* ======================================================== */}
-      <div className="absolute top-4 left-4 z-20 flex flex-col gap-1 bg-[#0F172A]/90 backdrop-blur-md p-2 rounded-2xl border border-slate-700/80 shadow-2xl max-h-[85vh] overflow-y-auto w-56 scrollbar-thin">
-        <div className="px-3 py-2 border-b border-slate-800 flex items-center justify-between mb-1">
-          <div className="flex items-center gap-2">
-            <Compass className="w-4 h-4 text-emerald-400 animate-spin" style={{ animationDuration: '20s' }} />
-            <span className="text-xs font-extrabold uppercase tracking-wider text-slate-100">Presidency 3D</span>
+      {showLabels && screenLabels.map(lbl => (
+        <div
+          key={lbl.id}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (lbl.spec?.dimensions) selectBuilding(lbl.spec);
+          }}
+          className={`absolute pointer-events-auto cursor-pointer transform -translate-x-1/2 -translate-y-full mb-2 transition-all duration-150 ${
+            hoveredBuilding?.id === lbl.id || selectedLocation?.shortCode === lbl.spec?.shortCode
+              ? 'scale-115 z-30'
+              : 'hover:scale-105 z-10'
+          }`}
+          style={{ left: `${Math.round(lbl.x)}px`, top: `${Math.round(lbl.y)}px` }}
+        >
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0F172A]/95 backdrop-blur-md border border-slate-700/80 shadow-xl text-[11px] font-bold text-slate-100 hover:border-emerald-400 hover:text-emerald-300">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="tracking-wide uppercase">{lbl.name}</span>
           </div>
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">
-            Live
-          </span>
+        </div>
+      ))}
+
+      {/* ======================================================== */}
+      {/* 2. LEFT NAVIGATION & SEARCH TOOLBAR (Collapsible)        */}
+      {/* ======================================================== */}
+      <div className={`absolute top-4 left-4 z-20 transition-all duration-300 flex flex-col gap-2 max-h-[85vh] ${
+        isSidebarCollapsed ? 'w-14' : 'w-64'
+      }`}>
+        {/* Toggle Collapse Button Header */}
+        <div className="bg-[#0F172A]/90 backdrop-blur-md rounded-2xl border border-slate-700/80 shadow-2xl p-2 flex items-center justify-between">
+          {!isSidebarCollapsed ? (
+            <div className="flex items-center gap-2 px-1">
+              <Compass className="w-4 h-4 text-emerald-400 animate-spin" style={{ animationDuration: '24s' }} />
+              <span className="text-xs font-extrabold uppercase tracking-wider text-slate-100">Presidency 3D</span>
+            </div>
+          ) : (
+            <Compass className="w-5 h-5 text-emerald-400 mx-auto" />
+          )}
+
+          <button
+            onClick={() => setIsSidebarCollapsed(prev => !prev)}
+            className="p-1.5 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-colors"
+            title={isSidebarCollapsed ? 'Expand Menu' : 'Collapse Menu (Maximize Map)'}
+          >
+            {isSidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          </button>
         </div>
 
-        {navCategories.map(cat => {
-          const IconComponent = cat.icon;
-          const isActive = activeCategory === cat.id;
-          return (
-            <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-                isActive
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20'
-                  : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
-              }`}
-            >
-              <IconComponent className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-              <span className="truncate">{cat.label}</span>
-            </button>
-          );
-        })}
+        {/* Search Input Box (Hidden when collapsed) */}
+        {!isSidebarCollapsed && (
+          <div className="relative bg-[#0F172A]/90 backdrop-blur-md rounded-2xl border border-slate-700/80 shadow-2xl p-1.5">
+            <div className="relative flex items-center">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Search campus buildings..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-7 py-2 bg-slate-900/80 text-xs text-white placeholder-slate-400 rounded-xl border border-slate-800 focus:outline-none focus:border-emerald-500 font-medium"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 text-slate-400 hover:text-white"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Quick Search Dropdown */}
+            {searchResults.length > 0 && (
+              <div className="mt-1.5 pt-1.5 border-t border-slate-800 flex flex-col gap-1 max-h-48 overflow-y-auto scrollbar-thin">
+                {searchResults.map(b => (
+                  <button
+                    key={b.id}
+                    onClick={() => {
+                      selectBuilding(b);
+                      setSearchQuery('');
+                    }}
+                    className="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-left text-xs hover:bg-slate-800 transition-all text-slate-200"
+                  >
+                    <span className="font-semibold truncate">{b.name}</span>
+                    <span className="text-[10px] text-emerald-400 font-mono ml-2">{b.shortCode}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Category Filter Pills (Icons only when collapsed) */}
+        <div className="bg-[#0F172A]/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-700/80 shadow-2xl flex flex-col gap-1 overflow-y-auto scrollbar-thin">
+          {navCategories.map(cat => {
+            const IconComponent = cat.icon;
+            const isActive = activeCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setActiveCategory(cat.id)}
+                title={cat.label}
+                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                  isActive
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20'
+                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                } ${isSidebarCollapsed ? 'justify-center px-2' : ''}`}
+              >
+                <IconComponent className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                {!isSidebarCollapsed && <span className="truncate">{cat.label}</span>}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* ======================================================== */}
-      {/* 2. RIGHT-SIDE FLOATING CAMERA & VIEW CONTROLS            */}
+      {/* 3. RIGHT-SIDE FLOATING CONTROLS (ALL 6 REQUIRED CONTROLS) */}
       {/* ======================================================== */}
       <div className="absolute top-4 right-4 z-20 flex flex-col gap-2">
-        {/* Zoom & View Presets Box */}
+        {/* Navigation & Zoom Presets Box */}
         <div className="bg-[#0F172A]/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-700/80 shadow-2xl flex flex-col gap-1">
+          {/* 1. Zoom In */}
           <button
             onClick={() => handleZoom(1)}
             className="p-2.5 hover:bg-slate-800 rounded-xl text-slate-300 hover:text-white transition-all"
-            title="Zoom In"
+            title="1. Zoom In"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
+
+          {/* 2. Zoom Out */}
           <button
             onClick={() => handleZoom(-1)}
             className="p-2.5 hover:bg-slate-800 rounded-xl text-slate-300 hover:text-white transition-all"
-            title="Zoom Out"
+            title="2. Zoom Out"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
+
+          {/* 3. Fit Entire Campus */}
           <button
             onClick={handleFitCampus}
             className="p-2.5 hover:bg-slate-800 rounded-xl text-emerald-400 hover:text-emerald-300 transition-all font-bold"
-            title="Fit Entire Campus in Viewport"
+            title="3. Fit Entire Campus in Viewport"
           >
             <Maximize2 className="w-4 h-4" />
           </button>
+
+          {/* 4. Focus Selected Building */}
+          <button
+            onClick={handleFocusSelected}
+            disabled={!selectedLocation}
+            className={`p-2.5 rounded-xl transition-all ${
+              selectedLocation
+                ? 'text-sky-400 hover:bg-sky-500/20 hover:text-sky-300 cursor-pointer'
+                : 'text-slate-600 cursor-not-allowed'
+            }`}
+            title="4. Focus Selected Building (Zoom Directly into Selection)"
+          >
+            <Target className="w-4 h-4" />
+          </button>
+
+          {/* 5. Reset View */}
           <button
             onClick={() => applyCameraPreset('front_isometric')}
             className="p-2.5 hover:bg-slate-800 rounded-xl text-slate-300 hover:text-white transition-all"
-            title="Reset Camera (Front Isometric)"
+            title="5. Reset View (Default Front Isometric)"
           >
             <RotateCcw className="w-4 h-4" />
+          </button>
+
+          {/* 6. Full Screen Toggle */}
+          <button
+            onClick={toggleFullscreen}
+            className="p-2.5 hover:bg-slate-800 rounded-xl text-amber-300 hover:text-amber-200 transition-all"
+            title="6. Full Screen"
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+          </button>
+
+          {/* Label Toggle */}
+          <button
+            onClick={() => setShowLabels(prev => !prev)}
+            className={`p-2.5 rounded-xl transition-all ${
+              showLabels ? 'text-emerald-400 hover:bg-emerald-500/10' : 'text-slate-400 hover:bg-slate-800'
+            }`}
+            title={showLabels ? 'Hide 3D Building Labels' : 'Show 3D Building Labels'}
+          >
+            {showLabels ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
           </button>
         </div>
 
@@ -564,7 +850,7 @@ export default function CampusDigitalTwin3D({
           </button>
         </div>
 
-        {/* Switch View Mode: 360° Aerial Tour & 2D GPS Map */}
+        {/* Switch View Mode: 360° Aerial Tour & 2D Official Map */}
         <div className="bg-[#0F172A]/90 backdrop-blur-md p-1.5 rounded-2xl border border-slate-700/80 shadow-2xl flex flex-col gap-1">
           <button
             onClick={onSwitchToImmersive}
@@ -577,91 +863,121 @@ export default function CampusDigitalTwin3D({
           <button
             onClick={onSwitchToMap}
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-sky-400 hover:bg-sky-500/10 transition-all border border-sky-500/20"
-            title="Switch to 2D GPS Ground Map"
+            title="Switch to Official Master Campus Map"
           >
             <MapIcon className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">2D Map</span>
+            <span className="hidden sm:inline">Official Map</span>
           </button>
         </div>
       </div>
 
       {/* ======================================================== */}
-      {/* 3. HOVER TOOLTIP FLOATING ON 3D CANVAS                    */}
+      {/* 4. HOVER TOOLTIP FLOATING ON 3D CANVAS                    */}
       {/* ======================================================== */}
       {tooltipPos.visible && hoveredBuilding && (
         <div
-          className="fixed pointer-events-none z-50 bg-[#0F172A]/95 text-white px-3 py-2 rounded-xl border border-emerald-500/40 shadow-2xl text-xs transform -translate-x-1/2 -translate-y-full -mt-2 backdrop-blur-md"
+          className="fixed pointer-events-none z-50 bg-[#0F172A]/95 text-white px-3.5 py-2.5 rounded-xl border border-emerald-500/40 shadow-2xl text-xs transform -translate-x-1/2 -translate-y-full -mt-2 backdrop-blur-md"
           style={{ left: tooltipPos.x, top: tooltipPos.y }}
         >
           <div className="font-bold text-emerald-400 flex items-center gap-1.5">
             <Building2 className="w-3.5 h-3.5" />
             <span>{hoveredBuilding.name}</span>
           </div>
-          <div className="text-[11px] text-slate-300 mt-0.5">
-            {hoveredBuilding.dimensions.floors} Floors · {hoveredBuilding.category}
+          <div className="text-[11px] text-slate-300 mt-1 flex items-center gap-2">
+            <span>{hoveredBuilding.dimensions?.floors || 4} Floors</span>
+            <span>•</span>
+            <span className="text-sky-300">{hoveredBuilding.category}</span>
           </div>
+          {hoveredBuilding.departments && hoveredBuilding.departments.length > 0 && (
+            <div className="text-[10px] text-slate-400 mt-1 truncate max-w-xs">
+              {hoveredBuilding.departments.slice(0, 2).join(' · ')}
+            </div>
+          )}
         </div>
       )}
 
       {/* ======================================================== */}
-      {/* 4. BOTTOM CAMPUS INFORMATION PANEL (Matching Screenshot) */}
+      {/* 5. BOTTOM CAMPUS INFORMATION PANEL                       */}
       {/* ======================================================== */}
       <div className="absolute bottom-4 left-4 right-4 z-20 flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#0F172A]/90 backdrop-blur-md p-3.5 sm:px-6 rounded-2xl border border-slate-700/80 shadow-2xl">
-        {/* Campus Brand & Verified Footprint */}
+        {/* Campus Brand & Architecture Model Stats */}
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 shrink-0">
             <Compass className="w-5 h-5" />
           </div>
           <div>
             <div className="text-sm font-extrabold text-white flex items-center gap-2">
               <span>Presidency University Bengaluru</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-mono font-bold border border-emerald-500/30">
-                13.1706°N, 77.5358°E
+                Spacious 3D Model
               </span>
             </div>
             <div className="text-xs text-slate-400 mt-0.5 flex items-center gap-3">
-              <span>60+ Acres Digital Twin</span>
+              <span>Architectural Miniature</span>
               <span>•</span>
-              <span className="text-emerald-400 font-semibold">{mergedBuildingList.length} Major Blocks</span>
+              <span className="text-emerald-400 font-semibold">{mergedBuildingList.length} Verified Blocks</span>
               <span>•</span>
-              <span>43 Verified Facilities</span>
+              <span>Generous Separation</span>
               <span>•</span>
-              <span>4 Parking Sectors</span>
+              <span>Sports & Lawns</span>
             </div>
           </div>
         </div>
 
-        {/* Selected Building Details Action Pill */}
+        {/* Selected Building Details Action Drawer: Unified Requirement 10 Buttons */}
         {selectedLocation ? (
-          <div className="flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-xl border border-slate-700/80 shadow-inner">
-            <div className="text-right">
+          <div className="flex flex-wrap items-center gap-2 bg-slate-900/95 px-4 py-2.5 rounded-xl border border-slate-700 shadow-inner">
+            <div className="text-left sm:text-right mr-1">
               <div className="text-xs font-bold text-white truncate max-w-[200px]">
                 {selectedLocation.name}
               </div>
               <div className="text-[10px] text-emerald-400 font-medium">
-                {selectedLocation.category || 'Academic Complex'}
+                {selectedLocation.category || 'Academic Facility'} · {selectedLocation.shortCode || 'PU-CAMPUS'}
               </div>
             </div>
+
+            {onOpenBuildingPopup && (
+              <button
+                onClick={() => onOpenBuildingPopup(selectedLocation)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-950/60 hover:bg-indigo-900 text-indigo-300 text-xs font-bold rounded-lg border border-indigo-500/30 transition-all hover:scale-105"
+                title="Inspect Building Info"
+              >
+                <Building2 className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="hidden sm:inline">Inspect</span>
+              </button>
+            )}
+
+            {(onOpenIndoorMap || onOpenIndoor) && (
+              <button
+                onClick={() => onOpenIndoorMap ? onOpenIndoorMap(selectedLocation) : onOpenIndoor(selectedLocation)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-lg shadow-md transition-all hover:scale-105"
+                title="BUTTON 1: Open Indoor Map"
+              >
+                <MapIcon className="w-3.5 h-3.5 text-emerald-200" />
+                <span>Indoor Map</span>
+              </button>
+            )}
+
+            {onStartIndoorNavigation && (
+              <button
+                onClick={() => onStartIndoorNavigation(selectedLocation)}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-bold rounded-lg shadow-md transition-all hover:scale-105"
+                title="BUTTON 2: Start Indoor Navigation"
+              >
+                <Navigation className="w-3.5 h-3.5 text-sky-200" />
+                <span>Indoor Nav</span>
+              </button>
+            )}
 
             <button
               onClick={() => {
                 if (onStartNavigation) onStartNavigation(selectedLocation);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-xs font-bold rounded-lg shadow-md transition-all hover:scale-105"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-lg border border-slate-700 transition-all hover:scale-105"
+              title="Walk to building via outdoor paths"
             >
-              <Navigation className="w-3.5 h-3.5" />
-              <span>Navigate</span>
-            </button>
-
-            <button
-              onClick={() => {
-                if (onOpenIndoor) onOpenIndoor(selectedLocation);
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-bold rounded-lg border border-slate-700 transition-all hover:scale-105"
-              title="Explore Multi-Floor Indoor Plan"
-            >
-              <Layers className="w-3.5 h-3.5" />
-              <span>Floors</span>
+              <Footprints className="w-3.5 h-3.5 text-sky-400" />
+              <span className="hidden md:inline">Outdoor Walk</span>
             </button>
 
             <button
@@ -675,8 +991,8 @@ export default function CampusDigitalTwin3D({
           </div>
         ) : (
           <div className="text-xs text-slate-400 flex items-center gap-2">
-            <Info className="w-3.5 h-3.5 text-sky-400" />
-            <span>Click any 3D academic block to inspect, navigate, or view indoor floor plans</span>
+            <Info className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Click any 3D academic block, lawn, or fountain to inspect details or navigate</span>
           </div>
         )}
       </div>

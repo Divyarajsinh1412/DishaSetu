@@ -59,4 +59,4 @@ const NavigationNodeSchema = new mongoose.Schema({
 
 NavigationNodeSchema.index({ geometry: '2dsphere' });
 
-export default mongoose.models.NavigationNode || mongoose.model('NavigationNode', NavigationNodeSchema);
+export default mongoose.models.NavigationNode || mongoose.model('NavigationNode', NavigationNodeSchema, 'navigationNodes');

@@ -54,6 +54,7 @@ import {
   createFloor,
   updateFloor,
   deleteFloor,
+  updateRoom,
   getIndoorGraph,
   calculateIndoorRoute
 } from '../controllers/indoorController.js';
@@ -64,6 +65,30 @@ import {
   publishSurveyRecord,
   exportSurveyChecklist
 } from '../controllers/surveyController.js';
+import {
+  getCafes,
+  getCafeById,
+  createCafe,
+  updateCafe,
+  getMenuItems,
+  createMenuItem,
+  updateMenuItem,
+  deleteMenuItem,
+  getDailyMenu,
+  upsertDailyMenu,
+  addReview,
+  replyToReview,
+  submitIssueReport,
+  getIssueReports,
+  updateIssueStatus
+} from '../controllers/cafeController.js';
+import {
+  getMapMarkers,
+  getMapMarkerById,
+  createMapMarker,
+  updateMapMarker,
+  deleteMapMarker
+} from '../controllers/mapMarkerController.js';
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
 import { getDbStatus } from '../config/db.js';
 import syncService from '../services/syncService.js';
@@ -170,6 +195,7 @@ router.get('/indoor/floors/:id', getFloorById);
 router.post('/indoor/floors', requireAuth, createFloor);
 router.put('/indoor/floors/:id', requireAuth, updateFloor);
 router.delete('/indoor/floors/:id', requireAuth, deleteFloor);
+router.put('/indoor/floors/:floorId/rooms/:roomId', requireAuth, updateRoom);
 
 router.get('/indoor/graph', getIndoorGraph);
 router.post('/indoor/route', calculateIndoorRoute);
@@ -227,5 +253,44 @@ router.post('/emergency/sos', (req, res) => {
     timestamp: new Date()
   });
 });
+
+// ==========================================
+// PHASE 6: Cafes, Menus, Reviews & Issue Reports
+// Enforces Non-Negotiable Business Rules 1, 2, and 3
+// ==========================================
+
+// Rule 1 & 2: Public Cafe & Menu Access
+router.get('/cafes', getCafes);
+router.get('/cafes/:id', getCafeById);
+router.post('/cafes', requireAuth, requireRole(['super_admin', 'campus_admin']), createCafe); // Rule 1
+router.put('/cafes/:id', requireAuth, requireRole(['super_admin', 'campus_admin', 'cafe_owner']), updateCafe);
+
+// Rule 2: Cafe Owner Menu Management
+router.get('/cafes/:cafeId/menu', getMenuItems);
+router.post('/cafes/:cafeId/menu', requireAuth, requireRole(['super_admin', 'cafe_owner']), createMenuItem);
+router.put('/cafes/:cafeId/menu/:itemId', requireAuth, requireRole(['super_admin', 'cafe_owner']), updateMenuItem);
+router.delete('/cafes/:cafeId/menu/:itemId', requireAuth, requireRole(['super_admin', 'cafe_owner']), deleteMenuItem);
+
+// Rule 2: Cafe Owner Daily Menu Scheduling
+router.get('/cafes/:cafeId/daily-menu', getDailyMenu);
+router.post('/cafes/:cafeId/daily-menu', requireAuth, requireRole(['super_admin', 'cafe_owner']), upsertDailyMenu);
+
+// Rule 3: Normal Users & Guests Can Review
+router.post('/reviews', addReview);
+router.post('/reviews/:reviewId/reply', requireAuth, requireRole(['super_admin', 'cafe_owner']), replyToReview);
+
+// Campus Issue Reporting Module (Section 11)
+router.post('/issues', submitIssueReport);
+router.get('/issues', requireAuth, requireRole(['super_admin', 'campus_admin', 'building_manager']), getIssueReports);
+router.put('/issues/:issueId', requireAuth, requireRole(['super_admin', 'campus_admin', 'building_manager']), updateIssueStatus);
+
+// ==========================================
+// OFFICIAL CAMPUS MASTER MAP MARKERS (Rule 1 & Rule 4)
+// ==========================================
+router.get('/map-markers', getMapMarkers);
+router.get('/map-markers/:id', getMapMarkerById);
+router.post('/map-markers', requireAuth, requireRole(['super_admin', 'campus_admin']), createMapMarker);
+router.put('/map-markers/:id', requireAuth, requireRole(['super_admin', 'campus_admin']), updateMapMarker);
+router.delete('/map-markers/:id', requireAuth, requireRole(['super_admin', 'campus_admin']), deleteMapMarker);
 
 export default router;

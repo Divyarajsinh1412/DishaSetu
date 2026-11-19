@@ -14,9 +14,18 @@ import {
 export default function LocationDetailsModal({
   location,
   onClose,
-  onStartNavigation
+  onStartNavigation,
+  onOpenIndoorMap,
+  onStartIndoorNavigation
 }) {
   if (!location) return null;
+
+  const isBuilding = location.category === 'Academic' ||
+                     location.category === 'Building' ||
+                     location.category === 'Library' ||
+                     location.shortCode?.includes('BLOCK') ||
+                     location.name?.includes('Block') ||
+                     location.buildingId;
 
   const locId = location.locationId || location._id || location.shortCode;
   const [isSaved, setIsSaved] = useState(() => {
@@ -105,23 +114,51 @@ export default function LocationDetailsModal({
           </div>
         </div>
 
-        {/* Modal Footer Actions */}
-        <div className="p-4 bg-[#0b132b] border-t border-slate-800 flex items-center gap-3">
-          <button
-            onClick={() => {
-              onStartNavigation(location);
-              onClose();
-            }}
-            className="flex-1 py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-blue-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
-          >
-            <Navigation className="w-4 h-4" /> Start Walking Route
-          </button>
-          <button
-            onClick={onClose}
-            className="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-sm rounded-xl transition-colors"
-          >
-            Close
-          </button>
+        {/* Modal Footer Actions: Requirement 10 Buttons */}
+        <div className="p-4 bg-[#0b132b] border-t border-slate-800 space-y-2">
+          {isBuilding && (
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => {
+                  if (onOpenIndoorMap) onOpenIndoorMap(location);
+                  onClose();
+                }}
+                className="py-2.5 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md transition-all hover:scale-[1.02]"
+                title="BUTTON 1: Open Indoor Map"
+              >
+                <Layers className="w-4 h-4" /> Open Indoor Map
+              </button>
+
+              <button
+                onClick={() => {
+                  if (onStartIndoorNavigation) onStartIndoorNavigation(location);
+                  onClose();
+                }}
+                className="py-2.5 px-3 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md transition-all hover:scale-[1.02]"
+                title="BUTTON 2: Start Indoor Navigation"
+              >
+                <Navigation className="w-4 h-4" /> Start Indoor Nav
+              </button>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                onStartNavigation(location);
+                onClose();
+              }}
+              className="flex-1 py-2 px-3 bg-slate-800 hover:bg-slate-750 text-slate-200 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 border border-slate-700 transition-colors"
+            >
+              <Navigation className="w-3.5 h-3.5 text-sky-400" /> Walk via GPS
+            </button>
+            <button
+              onClick={onClose}
+              className="py-2 px-4 bg-slate-850 hover:bg-slate-800 text-slate-400 font-semibold text-xs rounded-xl transition-colors"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>

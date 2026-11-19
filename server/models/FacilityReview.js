@@ -3,8 +3,11 @@ import mongoose from 'mongoose';
 const FacilityReviewSchema = new mongoose.Schema({
   locationId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Location',
-    required: true
+    ref: 'Location'
+  },
+  cafeId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Cafe'
   },
   rating: {
     type: Number,
@@ -14,11 +17,27 @@ const FacilityReviewSchema = new mongoose.Schema({
   },
   reviewerName: {
     type: String,
-    default: 'Campus Visitor'
+    default: 'Presidency Student / Visitor'
   },
   comment: {
     type: String,
-    trim: true
+    trim: true,
+    required: true
+  },
+  photos: [String],
+  helpfulVotes: {
+    type: Number,
+    default: 0
+  },
+  isReported: {
+    type: Boolean,
+    default: false
+  },
+  reportedReason: String,
+  reply: {
+    text: String,
+    repliedAt: Date,
+    repliedBy: String
   },
   isApproved: {
     type: Boolean,

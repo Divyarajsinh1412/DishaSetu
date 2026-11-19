@@ -3,10 +3,16 @@ import SplashScreen from './components/SplashScreen';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import CampusMap from './maps/CampusMap';
+import MasterCampusMap from './maps/MasterCampusMap';
 import CampusDigitalTwin3D from './components/twin3d/CampusDigitalTwin3D';
 import ImmersiveViewer from './components/immersive/ImmersiveViewer';
 import SurveyChecklistModal from './components/survey/SurveyChecklistModal';
 import IndoorNavigationModal from './components/indoor/IndoorNavigationModal';
+import BuildingPopupModal from './components/building/BuildingPopupModal';
+import CafeModal from './components/cafe/CafeModal';
+import CafeOwnerDashboard from './components/cafe/CafeOwnerDashboard';
+import IssueReportModal from './components/issues/IssueReportModal';
+import AdminMapEditorModal from './components/admin/AdminMapEditorModal';
 import NavigationPanel from './components/NavigationPanel';
 import NavigationGuidanceBar from './components/NavigationGuidanceBar';
 import LocationDetailsModal from './components/LocationDetailsModal';
@@ -26,6 +32,7 @@ import {
   fetchWalkingPaths,
   fetchPanoramaScenes,
   fetchPanoramaHotspots,
+  fetchMapMarkersApi,
   calculateRouteApi,
   connectSyncStream
 } from './services/api';
@@ -45,9 +52,11 @@ export default function App() {
   const [walkingPaths, setWalkingPaths] = useState([]);
   const [userLocation, setUserLocation] = useState(null);
 
-  // View Mode: '3d' (default realistic 3D campus digital twin), 'immersive' (360° aerial virtual campus) or 'map' (2D Leaflet GPS map)
-  const [viewMode, setViewMode] = useState('3d');
+  // View Mode: 'master' (Official Presidency Master Campus Map), '3d' (3D Digital Twin), 'immersive' (360° Aerial Tour), or 'map' (2D GPS Map)
+  const [viewMode, setViewMode] = useState('master');
   const [showSplash, setShowSplash] = useState(true);
+  const [mapMarkers, setMapMarkers] = useState([]);
+  const [isMapEditorOpen, setIsMapEditorOpen] = useState(false);
   const [panoramaScenes, setPanoramaScenes] = useState([]);
   const [panoramaHotspots, setPanoramaHotspots] = useState([]);
   const [currentSceneId, setCurrentSceneId] = useState('scene_central_campus_aerial');
@@ -66,7 +75,21 @@ export default function App() {
   const [isSurveyModalOpen, setIsSurveyModalOpen] = useState(false);
   const [isIndoorModalOpen, setIsIndoorModalOpen] = useState(false);
   const [targetIndoorBuilding, setTargetIndoorBuilding] = useState(null);
+  const [selectedBuildingForPopup, setSelectedBuildingForPopup] = useState(null);
+  const [indoorModalMode, setIndoorModalMode] = useState('view'); // 'view' | 'navigate'
+  const [isCafeModalOpen, setIsCafeModalOpen] = useState(false);
+  const [selectedCafeId, setSelectedCafeId] = useState(null);
+  const [isCafeOwnerOpen, setIsCafeOwnerOpen] = useState(false);
+  const [isIssueReportOpen, setIsIssueReportOpen] = useState(false);
+  const [language, setLanguage] = useState(() => localStorage.getItem('dishasetu_lang') || 'en');
   const [isLoading, setIsLoading] = useState(true);
+
+  // Handle Cafe Opening (Universal click from Master Map, 3D Twin, or Directory)
+  const handleOpenCafe = useCallback((cafe) => {
+    const cId = cafe?._id || cafe?.shortCode || cafe?.code || (typeof cafe === 'string' ? cafe : 'PU-CAFE-D-BLOCK');
+    setSelectedCafeId(cId);
+    setIsCafeModalOpen(true);
+  }, []);
 
   // Map Coordinate Picker State for GPS Survey
   const [isPickingCoordinates, setIsPickingCoordinates] = useState(false);
@@ -77,7 +100,7 @@ export default function App() {
   const loadData = useCallback(async () => {
     try {
       const token = localStorage.getItem('dishasetu_admin_token');
-      const [c, f, l, r, b, d, app, aud, cat, paths, scenes, spots] = await Promise.all([
+      const [c, f, l, r, b, d, app, aud, cat, paths, scenes, spots, markersRes] = await Promise.all([
         fetchCampusData(),
         fetchCampusFeatures(),
         fetchCampusLocations(),
@@ -89,7 +112,8 @@ export default function App() {
         fetchCampusCatalog(),
         fetchWalkingPaths(),
         fetchPanoramaScenes(),
-        fetchPanoramaHotspots()
+        fetchPanoramaHotspots(),
+        fetchMapMarkersApi()
       ]);
       setCampus(c);
       setFeatures(f);
@@ -103,6 +127,9 @@ export default function App() {
       setWalkingPaths(paths);
       setPanoramaScenes(scenes);
       setPanoramaHotspots(spots);
+      if (markersRes?.markers) {
+        setMapMarkers(markersRes.markers);
+      }
       if (scenes && scenes.length > 0) {
         setCurrentSceneId(prev => prev || scenes[0].sceneId);
       }
@@ -250,6 +277,36 @@ export default function App() {
     setIsAdminDashboardOpen(true);
   };
 
+  // Universal Building Popup & Indoor Navigation Handlers
+  const handleOpenBuildingPopup = useCallback((bld) => {
+    if (!bld) return;
+    const match = buildings.find(b =>
+      b.shortCode === bld.shortCode ||
+      b.buildingId === bld.buildingId ||
+      b.name === bld.name ||
+      b._id === bld._id ||
+      (bld.buildingShortCode && b.shortCode === bld.buildingShortCode) ||
+      (bld.shortCode && b.shortCode?.toLowerCase() === bld.shortCode.toLowerCase())
+    );
+    setSelectedBuildingForPopup(match || bld);
+  }, [buildings]);
+
+  const handleOpenIndoorMap = useCallback((bld) => {
+    const dBlock = buildings.find(b => b.shortCode === 'PU-D-BLOCK' || /d[-_]?block/i.test(b.name)) || { name: 'D Block', shortCode: 'PU-D-BLOCK', buildingId: 'bld_d_block' };
+    const target = bld || targetIndoorBuilding || dBlock;
+    setTargetIndoorBuilding(target);
+    setIndoorModalMode('view');
+    setIsIndoorModalOpen(true);
+  }, [targetIndoorBuilding, buildings]);
+
+  const handleStartIndoorNavigation = useCallback((bld) => {
+    const dBlock = buildings.find(b => b.shortCode === 'PU-D-BLOCK' || /d[-_]?block/i.test(b.name)) || { name: 'D Block', shortCode: 'PU-D-BLOCK', buildingId: 'bld_d_block' };
+    const target = bld || targetIndoorBuilding || dBlock;
+    setTargetIndoorBuilding(target);
+    setIndoorModalMode('navigate');
+    setIsIndoorModalOpen(true);
+  }, [targetIndoorBuilding, buildings]);
+
   const handleSplashFinish = useCallback(() => {
     setShowSplash(false);
   }, []);
@@ -269,21 +326,55 @@ export default function App() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         activeCategory={activeCategory}
-        onCategorySelect={setActiveCategory}
+        onCategorySelect={(cat) => {
+          setActiveCategory(cat);
+          if (cat === 'Cafe') {
+            setIsCafeModalOpen(true);
+          }
+        }}
         onOpenSOS={() => setIsSOSOpen(true)}
         onOpenAdmin={() => setIsAdminDashboardOpen(true)}
         onOpenSurvey={() => setIsSurveyModalOpen(true)}
         onOpenIndoor={(bld) => {
-          setTargetIndoorBuilding(bld || buildings[0]);
+          const dBlock = buildings.find(b => b.shortCode === 'PU-D-BLOCK' || /d[-_]?block/i.test(b.name)) || { name: 'D Block', shortCode: 'PU-D-BLOCK', buildingId: 'bld_d_block' };
+          setTargetIndoorBuilding(bld || dBlock);
           setIsIndoorModalOpen(true);
         }}
+        onOpenCafes={() => setIsCafeModalOpen(true)}
+        onOpenCafeOwner={() => setIsCafeOwnerOpen(true)}
+        onOpenIssueReport={() => setIsIssueReportOpen(true)}
+        onOpenMapEditor={() => setIsMapEditorOpen(true)}
         locations={filteredLocations}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        language={language}
+        onLanguageChange={(lang) => {
+          setLanguage(lang);
+          localStorage.setItem('dishasetu_lang', lang);
+        }}
       />
 
-      {/* Main Workspace Viewport: 3D Campus Digital Twin vs 360° Immersive Aerial vs 2D Ground Map */}
-      {viewMode === '3d' ? (
+      {/* Main Workspace Viewport: Official Master Campus Map vs 3D Campus vs 360° Aerial vs 2D GPS Map */}
+      {viewMode === 'master' ? (
+        <div className="flex-1 relative w-full h-full overflow-hidden">
+          <MasterCampusMap
+            markers={mapMarkers}
+            activeCategory={activeCategory}
+            searchQuery={searchQuery}
+            selectedMarker={selectedLocation}
+            onSelectMarker={(m) => setSelectedLocation(m)}
+            onStartNavigation={handleStartNavigation}
+            onOpenIndoor={handleOpenIndoorMap}
+            onOpenBuildingPopup={handleOpenBuildingPopup}
+            onOpenIndoorMap={handleOpenIndoorMap}
+            onStartIndoorNavigation={handleStartIndoorNavigation}
+            onOpenCafe={handleOpenCafe}
+            activeRoute={activeRoute}
+            userLocation={userLocation}
+            language={language}
+          />
+        </div>
+      ) : viewMode === '3d' ? (
         <div className="flex-1 relative w-full h-full overflow-hidden">
           <CampusDigitalTwin3D
             buildings={buildings}
@@ -295,10 +386,10 @@ export default function App() {
             activeRoute={activeRoute}
             onClearRoute={() => setActiveRoute(null)}
             onStartNavigation={handleStartNavigation}
-            onOpenIndoor={(bld) => {
-              setTargetIndoorBuilding(bld || buildings[0]);
-              setIsIndoorModalOpen(true);
-            }}
+            onOpenIndoor={handleOpenIndoorMap}
+            onOpenBuildingPopup={handleOpenBuildingPopup}
+            onOpenIndoorMap={handleOpenIndoorMap}
+            onStartIndoorNavigation={handleStartIndoorNavigation}
             onSwitchToImmersive={() => setViewMode('immersive')}
             onSwitchToMap={() => setViewMode('map')}
             userLocation={userLocation}
@@ -312,6 +403,9 @@ export default function App() {
             currentSceneId={currentSceneId}
             onSceneChange={setCurrentSceneId}
             onStartNavigation={handleStartNavigation}
+            onOpenBuildingPopup={handleOpenBuildingPopup}
+            onOpenIndoorMap={handleOpenIndoorMap}
+            onStartIndoorNavigation={handleStartIndoorNavigation}
             onSwitchToMap={() => setViewMode('map')}
             activeRoute={activeRoute}
             onClearRoute={() => setActiveRoute(null)}
@@ -342,10 +436,10 @@ export default function App() {
             onSelectLocation={(loc) => setSelectedLocation(loc)}
             onStartNavigation={handleStartNavigation}
             onCalculateRoute={handleCalculateRoute}
-            onOpenIndoor={(bld) => {
-              setTargetIndoorBuilding(bld);
-              setIsIndoorModalOpen(true);
-            }}
+            onOpenIndoor={handleOpenIndoorMap}
+            onOpenBuildingPopup={handleOpenBuildingPopup}
+            onOpenIndoorMap={handleOpenIndoorMap}
+            onStartIndoorNavigation={handleStartIndoorNavigation}
             userLocation={userLocation}
             catalog={catalog}
             activeTab={sidebarTab}
@@ -367,10 +461,10 @@ export default function App() {
               isPickingCoordinates={isPickingCoordinates}
               onCoordinatePicked={handleCoordinatePicked}
               pickedCoordinates={pickedCoordinates}
-              onOpenIndoor={(bld) => {
-                setTargetIndoorBuilding(bld);
-                setIsIndoorModalOpen(true);
-              }}
+              onOpenIndoor={handleOpenIndoorMap}
+              onOpenBuildingPopup={handleOpenBuildingPopup}
+              onOpenIndoorMap={handleOpenIndoorMap}
+              onStartIndoorNavigation={handleStartIndoorNavigation}
             />
 
             {/* Phase 3A: Live Outdoor Walking Guidance Bar */}
@@ -399,6 +493,8 @@ export default function App() {
           location={selectedLocation}
           onClose={() => setSelectedLocation(null)}
           onStartNavigation={handleStartNavigation}
+          onOpenIndoorMap={handleOpenIndoorMap}
+          onStartIndoorNavigation={handleStartIndoorNavigation}
         />
       )}
 
@@ -438,23 +534,95 @@ export default function App() {
         onSelectDestination={handleStartNavigation}
       />
 
+      {/* UNIVERSAL BUILDING POPUP: Requirement 10 (Open Indoor Map & Start Indoor Navigation) */}
+      <BuildingPopupModal
+        isOpen={Boolean(selectedBuildingForPopup)}
+        building={selectedBuildingForPopup}
+        onClose={() => setSelectedBuildingForPopup(null)}
+        onOpenIndoorMap={handleOpenIndoorMap}
+        onStartIndoorNavigation={handleStartIndoorNavigation}
+        onStartOutdoorNavigation={handleStartNavigation}
+      />
+
       {/* PHASE 6, 7, 8 & 10: Multi-Floor Indoor Navigation & Floor Plan Modal */}
       <IndoorNavigationModal
         isOpen={isIndoorModalOpen}
         onClose={() => setIsIndoorModalOpen(false)}
         initialBuilding={targetIndoorBuilding}
+        initialMode={indoorModalMode}
         buildings={buildings}
         onStartOutdoorNavigation={handleStartNavigation}
+      />
+
+      {/* RULE 3 & PHASE 6: Student & Visitor Campus Dining & Live Menus Modal */}
+      <CafeModal
+        isOpen={isCafeModalOpen}
+        onClose={() => setIsCafeModalOpen(false)}
+        initialCafeId={selectedCafeId}
+        onStartNavigation={handleStartNavigation}
+        onNavigateToCafe={(cafe) => {
+          setIsCafeModalOpen(false);
+          if (cafe.locationId) {
+            const loc = locations.find(l => l.locationId === cafe.locationId || l._id === cafe.locationId);
+            if (loc) {
+              handleStartNavigation(loc);
+              return;
+            }
+          }
+          if (cafe.coordinates && cafe.coordinates.length === 2) {
+            handleStartNavigation({
+              name: cafe.name,
+              latitude: cafe.coordinates[0],
+              longitude: cafe.coordinates[1],
+              category: 'Cafe'
+            });
+          }
+        }}
+      />
+
+      {/* RULE 2: Dedicated Dining Concessionaire Partner Dashboard */}
+      <CafeOwnerDashboard
+        isOpen={isCafeOwnerOpen}
+        onClose={() => setIsCafeOwnerOpen(false)}
+      />
+
+      {/* RULE 3: Public Helpdesk & Campus Obstacle Issue Reporter */}
+      <IssueReportModal
+        isOpen={isIssueReportOpen}
+        onClose={() => setIsIssueReportOpen(false)}
+        buildings={buildings}
+        userLocation={userLocation}
+      />
+
+      {/* TASK 5 & RULE 1: Admin Interactive Campus Master Map Marker Editor */}
+      <AdminMapEditorModal
+        isOpen={isMapEditorOpen}
+        onClose={() => setIsMapEditorOpen(false)}
+        buildings={buildings}
+        onRefreshMarkers={loadData}
       />
 
       {/* Mobile Bottom Navigation Bar (Visible on mobile/tablet screens < 768px) */}
       <nav className="md:hidden h-14 bg-[#0f172a]/95 backdrop-blur-xl border-t border-slate-800 flex items-center justify-around px-2 z-30 shrink-0 shadow-2xl">
         <button
           onClick={() => {
+            setViewMode('master');
+            setIsSidebarOpen(false);
+          }}
+          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
+            viewMode === 'master' ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Map className="w-4 h-4 text-emerald-400" />
+          <span className="text-[10px]">Official Map</span>
+        </button>
+
+        <button
+          onClick={() => {
             setViewMode('3d');
             setIsSidebarOpen(false);
           }}
-          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition-all ${
+          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
             viewMode === '3d' ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -467,7 +635,7 @@ export default function App() {
             setViewMode('immersive');
             setIsSidebarOpen(false);
           }}
-          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition-all ${
+          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
             viewMode === 'immersive' ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-slate-200'
           }`}
         >

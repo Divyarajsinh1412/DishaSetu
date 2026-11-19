@@ -10,4 +10,4 @@ const AuditLogSchema = new mongoose.Schema({
   ipAddress: String
 }, { timestamps: true });
 
-export default mongoose.models.AuditLog || mongoose.model('AuditLog', AuditLogSchema);
+export default mongoose.models.AuditLog || mongoose.model('AuditLog', AuditLogSchema, 'auditLogs');

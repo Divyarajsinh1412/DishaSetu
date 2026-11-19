@@ -30,6 +30,9 @@ export default function ImmersiveViewer({
   currentSceneId,
   onSceneChange,
   onStartNavigation,
+  onOpenBuildingPopup,
+  onOpenIndoorMap,
+  onStartIndoorNavigation,
   onSwitchToMap,
   activeRoute = null,
   onClearRoute
@@ -505,6 +508,17 @@ export default function ImmersiveViewer({
 
     // Otherwise open preview card
     setSelectedHotspot(spot);
+
+    const isBuilding = spot.buildingShortCode || spot.title?.includes('Block') || spot.title?.includes('Library');
+    if (isBuilding && onOpenBuildingPopup) {
+      onOpenBuildingPopup({
+        name: spot.title,
+        shortCode: spot.buildingShortCode || 'PU-BLD',
+        category: 'Academic Block',
+        description: spot.description,
+        totalFloors: 4
+      });
+    }
   };
 
   return (
@@ -574,31 +588,36 @@ export default function ImmersiveViewer({
               {/* Pulsing Target Ring */}
               <div
                 className={`absolute inset-0 rounded-full animate-ping opacity-60 ${
-                  isPortal ? 'bg-amber-400' : 'bg-sky-400'
+                  isPortal ? 'bg-amber-400' : 'bg-orange-500'
                 }`}
               />
 
-              {/* Central Pin Icon */}
+              {/* Authentic Presidency University Orange Teardrop Pin */}
               <div
-                className={`relative flex items-center justify-center p-2 rounded-full shadow-2xl transition-all duration-200 transform group-hover:scale-125 cursor-pointer ${
-                  isSelected
-                    ? 'ring-4 ring-white bg-gradient-to-tr from-amber-500 to-yellow-400 text-slate-950 scale-125'
-                    : isPortal
-                    ? 'bg-gradient-to-tr from-amber-600 to-yellow-500 text-white hover:brightness-110'
-                    : 'bg-gradient-to-tr from-sky-600 to-indigo-600 text-white hover:brightness-110 border border-white/40'
+                className={`relative transition-all duration-200 transform cursor-pointer ${
+                  isSelected ? 'scale-125 drop-shadow-[0_0_15px_rgba(249,115,22,0.8)]' : 'group-hover:scale-125'
                 }`}
               >
-                {isPortal ? (
-                  <Sparkles className="w-4 h-4 text-white" />
-                ) : spot.hotspotType === 'cafeteria' ? (
-                  <Coffee className="w-4 h-4 text-white" />
-                ) : spot.hotspotType === 'sports' ? (
-                  <Trophy className="w-4 h-4 text-white" />
-                ) : spot.hotspotType === 'library' ? (
-                  <BookOpen className="w-4 h-4 text-white" />
-                ) : (
-                  <Building2 className="w-4 h-4 text-white" />
-                )}
+                <svg width="40" height="52" viewBox="0 0 40 52" fill="none" className="drop-shadow-2xl">
+                  {/* Orange Teardrop Shape */}
+                  <path
+                    d="M20 0 C9 0 0 9 0 20 C0 35 20 52 20 52 C20 52 40 35 40 20 C40 9 31 0 20 0 Z"
+                    fill={isPortal ? '#d97706' : '#ea580c'}
+                    stroke="#ffffff"
+                    strokeWidth="1.5"
+                  />
+                  {/* Inner Dark Navy Crest Badge */}
+                  <circle cx="20" cy="20" r="14.5" fill="#071B32" stroke="#ffffff" strokeWidth="0.8" />
+                  {/* Presidency Monogram & Emblem */}
+                  <g transform="translate(10, 10) scale(0.55)">
+                    <path d="M18 4 L7 18 L29 18 Z" fill="#ffffff" />
+                    <path d="M18 7 L10 17 L26 17 Z" fill="#071B32" />
+                    <path d="M18 9 L13 16 L23 16 Z" fill="#ffffff" />
+                    <text x="18" y="24" textAnchor="middle" fill="#ffffff" fontSize="4.2" fontWeight="bold" fontFamily="sans-serif">
+                      PRESIDENCY
+                    </text>
+                  </g>
+                </svg>
               </div>
 
               {/* Hover Floating Pill Tag */}
@@ -624,9 +643,25 @@ export default function ImmersiveViewer({
         })}
       </div>
 
-      {/* Top Floating View Info Pill */}
+      {/* Top Left Circular MENU Button (Matches Reference Screenshots) */}
+      <div className="absolute top-4 left-4 z-20 flex items-center gap-3">
+        <button
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          className="w-12 h-12 rounded-full bg-slate-950/85 hover:bg-slate-900 border-2 border-white/80 shadow-2xl flex flex-col items-center justify-center text-white transition-all hover:scale-105 active:scale-95"
+          title="Toggle Campus Directory Menu"
+        >
+          <div className="flex flex-col gap-0.5 items-center mb-0.5">
+            <span className="w-4 h-0.5 bg-white rounded-full"></span>
+            <span className="w-4 h-0.5 bg-white rounded-full"></span>
+            <span className="w-4 h-0.5 bg-white rounded-full"></span>
+          </div>
+          <span className="text-[7.5px] font-black tracking-widest uppercase">MENU</span>
+        </button>
+      </div>
+
+      {/* Top Floating View Info Pill & Grid Button */}
       <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-        <div className="px-3.5 py-2 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl text-xs text-slate-200 shadow-xl flex items-center gap-2">
+        <div className="px-3.5 py-2 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-xl text-xs text-slate-200 shadow-xl hidden sm:flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span className="font-semibold">{activeScene?.sceneName || 'Aerial 360°'}</span>
           <span className="text-slate-400">·</span>
@@ -636,11 +671,30 @@ export default function ImmersiveViewer({
         {/* Switch to 2D GPS Map Button */}
         <button
           onClick={onSwitchToMap}
-          className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600/90 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-xl transition-all hover:scale-105 active:scale-95"
+          className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600/90 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-xl transition-all hover:scale-105 active:scale-95"
           title="Switch to 2D Ground GPS Map"
         >
           <Compass className="w-4 h-4 text-white" />
           <span className="hidden sm:inline">2D Ground Map</span>
+        </button>
+
+        {/* 9-Dot Grid Scene Selector Button (Matches Reference) */}
+        <button
+          onClick={() => setShowSceneDrawer(!showSceneDrawer)}
+          className="w-11 h-11 rounded-full bg-slate-950/85 hover:bg-slate-900 border-2 border-white/80 shadow-2xl flex items-center justify-center text-white transition-all hover:scale-105 active:scale-95"
+          title="All Aerial Vistas"
+        >
+          <div className="grid grid-cols-3 gap-0.5">
+            <span className="w-1 h-1 bg-white rounded-full"></span>
+            <span className="w-1 h-1 bg-white rounded-full"></span>
+            <span className="w-1 h-1 bg-white rounded-full"></span>
+            <span className="w-1 h-1 bg-white rounded-full"></span>
+            <span className="w-1 h-1 bg-white rounded-full"></span>
+            <span className="w-1 h-1 bg-white rounded-full"></span>
+            <span className="w-1 h-1 bg-white rounded-full"></span>
+            <span className="w-1 h-1 bg-white rounded-full"></span>
+            <span className="w-1 h-1 bg-white rounded-full"></span>
+          </div>
         </button>
       </div>
 
@@ -719,98 +773,130 @@ export default function ImmersiveViewer({
             {selectedHotspot.description || 'Key academic and instructional facility at Presidency University Bengaluru.'}
           </p>
 
-          <div className="mt-3.5 pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
+          <div className="mt-3.5 pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
             <button
               onClick={() => {
                 centerCameraOnHotspot(selectedHotspot);
                 setSelectedHotspot(null);
               }}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition-colors"
+              className="flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition-colors"
             >
               <Eye className="w-3.5 h-3.5 text-sky-400" />
-              <span>Center View</span>
+              <span>Center</span>
             </button>
+
+            {onOpenIndoorMap && (selectedHotspot.buildingShortCode || selectedHotspot.title?.includes('Block')) && (
+              <button
+                onClick={() => {
+                  onOpenIndoorMap({
+                    name: selectedHotspot.title,
+                    shortCode: selectedHotspot.buildingShortCode,
+                    totalFloors: 4
+                  });
+                  setSelectedHotspot(null);
+                }}
+                className="flex items-center justify-center gap-1.5 py-2 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-xl shadow-md transition-all hover:scale-105"
+                title="BUTTON 1: Open Indoor Map"
+              >
+                <Compass className="w-3.5 h-3.5 text-emerald-200" />
+                <span>Indoor Map</span>
+              </button>
+            )}
+
+            {onStartIndoorNavigation && (selectedHotspot.buildingShortCode || selectedHotspot.title?.includes('Block')) && (
+              <button
+                onClick={() => {
+                  onStartIndoorNavigation({
+                    name: selectedHotspot.title,
+                    shortCode: selectedHotspot.buildingShortCode,
+                    totalFloors: 4
+                  });
+                  setSelectedHotspot(null);
+                }}
+                className="flex items-center justify-center gap-1.5 py-2 px-3 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-md transition-all hover:scale-105"
+                title="BUTTON 2: Start Indoor Navigation"
+              >
+                <Navigation className="w-3.5 h-3.5 text-sky-200" />
+                <span>Indoor Nav</span>
+              </button>
+            )}
 
             <button
               onClick={() => {
                 onStartNavigation(selectedHotspot);
                 setSelectedHotspot(null);
               }}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-900/30 transition-all hover:scale-105 active:scale-95"
+              className="flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition-all hover:scale-105"
             >
-              <Navigation className="w-3.5 h-3.5 text-white" />
+              <Navigation className="w-3.5 h-3.5 text-sky-400" />
               <span>Walk Here</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* Floating Bottom Circular Controls Toolbar */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 p-1.5 bg-slate-950/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl shadow-2xl">
+      {/* Floating Bottom Circular Controls Toolbar (Matches Reference Screenshots) */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2.5 p-2 bg-slate-950/75 backdrop-blur-xl border border-white/25 rounded-full shadow-2xl">
         {/* Reset Home View */}
         <button
           onClick={handleResetHome}
-          className="p-3 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all hover:scale-110 active:scale-95"
-          title="Reset Camera View"
+          className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-950/90 hover:bg-slate-900 border-2 border-white/80 text-white flex items-center justify-center shadow-lg transition-all hover:scale-110 active:scale-95"
+          title="Reset Camera View to Default"
         >
           <Compass className="w-5 h-5 text-sky-400" />
-        </button>
-
-        {/* Auto Rotate Toggle */}
-        <button
-          onClick={toggleAutoRotate}
-          className={`p-3 rounded-xl transition-all hover:scale-110 active:scale-95 ${
-            isAutoRotate
-              ? 'bg-sky-600 text-white shadow-lg shadow-sky-600/30'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
-          }`}
-          title={isAutoRotate ? 'Pause 360° Auto-Rotation' : 'Start 360° Auto-Rotation'}
-        >
-          <RotateCw className={`w-5 h-5 ${isAutoRotate ? 'animate-spin' : ''}`} style={{ animationDuration: '8s' }} />
         </button>
 
         {/* Ambient Campus Sound Synthesizer */}
         <button
           onClick={toggleAudioAmbiance}
-          className={`p-3 rounded-xl transition-all hover:scale-110 active:scale-95 ${
+          className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full border-2 border-white/80 flex items-center justify-center shadow-lg transition-all hover:scale-110 active:scale-95 ${
             isAudioPlaying
-              ? 'bg-amber-500 text-slate-950 font-bold shadow-lg shadow-amber-500/30'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
+              ? 'bg-amber-500 text-slate-950 font-bold'
+              : 'bg-slate-950/90 hover:bg-slate-900 text-white'
           }`}
           title={isAudioPlaying ? 'Mute Campus Ambiance' : 'Play Gentle Campus Breeze Ambiance'}
         >
           {isAudioPlaying ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
         </button>
 
+        {/* Fullscreen Toggle */}
+        <button
+          onClick={toggleFullscreen}
+          className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-950/90 hover:bg-slate-900 border-2 border-white/80 text-white flex items-center justify-center shadow-lg transition-all hover:scale-110 active:scale-95"
+          title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+        >
+          {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+        </button>
+
+        {/* Auto Rotate Toggle */}
+        <button
+          onClick={toggleAutoRotate}
+          className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full border-2 border-white/80 flex items-center justify-center shadow-lg transition-all hover:scale-110 active:scale-95 ${
+            isAutoRotate ? 'bg-sky-500 text-white' : 'bg-slate-950/90 hover:bg-slate-900 text-white'
+          }`}
+          title={isAutoRotate ? 'Pause 360° Auto-Rotation' : 'Start 360° Auto-Rotation'}
+        >
+          <RotateCw className={`w-5 h-5 ${isAutoRotate ? 'animate-spin' : ''}`} style={{ animationDuration: '8s' }} />
+        </button>
+
         {/* Camera Snapshot */}
         <button
           onClick={handleTakeSnapshot}
-          className="p-3 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all hover:scale-110 active:scale-95"
+          className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-slate-950/90 hover:bg-slate-900 border-2 border-white/80 text-white flex items-center justify-center shadow-lg transition-all hover:scale-110 active:scale-95"
           title="Capture Snapshot Image"
         >
-          <Camera className="w-5 h-5 text-indigo-400" />
+          <Camera className="w-5 h-5 text-indigo-300" />
         </button>
 
         {/* Scene Switcher Drawer Trigger */}
         <button
           onClick={() => setShowSceneDrawer(!showSceneDrawer)}
-          className={`p-3 rounded-xl transition-all hover:scale-110 active:scale-95 ${
-            showSceneDrawer
-              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
-              : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+          className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full border-2 border-white/80 flex items-center justify-center shadow-lg transition-all hover:scale-110 active:scale-95 ${
+            showSceneDrawer ? 'bg-indigo-600 text-white' : 'bg-slate-950/90 hover:bg-slate-900 text-white'
           }`}
-          title="Switch Aerial 360° Scene"
+          title="Switch Aerial 360° Vista"
         >
-          <Layers className="w-5 h-5 text-emerald-400" />
-        </button>
-
-        {/* Fullscreen Toggle */}
-        <button
-          onClick={toggleFullscreen}
-          className="p-3 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all hover:scale-110 active:scale-95"
-          title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-        >
-          {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+          <Layers className="w-5 h-5 text-emerald-300" />
         </button>
       </div>
 

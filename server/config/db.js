@@ -3,7 +3,10 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const TARGET_DB_NAME = 'dishasetu_db';
+// Fail fast when disconnected from MongoDB instead of buffering for 10000ms
+mongoose.set('bufferCommands', false);
+
+const TARGET_DB_NAME = process.env.DB_NAME || 'dishasetu_db';
 
 /**
  * Helper to mask credentials in MongoDB URI for safe logging
@@ -46,10 +49,10 @@ export const connectDB = async () => {
     return mongoose.connection;
   }
 
-  const rawUri = process.env.MONGODB_URI;
+  const rawUri = process.env.MONGO_URI || process.env.MONGODB_URI;
 
   if (!rawUri) {
-    console.warn('[MongoDB Atlas] MONGODB_URI environment variable not defined. Operating with resilient in-memory fallback.');
+    console.warn('[MongoDB Atlas] MONGO_URI / MONGODB_URI environment variable not defined. Operating with resilient in-memory fallback.');
     return null;
   }
 

@@ -19,13 +19,17 @@ const AdminUserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['super_admin', 'building_manager', 'editor', 'security_officer'],
+    enum: ['super_admin', 'campus_admin', 'building_manager', 'cafe_owner', 'editor', 'security_officer'],
     default: 'building_manager'
   },
   assignedBuildings: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Building'
   }],
+  assignedCafe: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Cafe'
+  },
   isActive: {
     type: Boolean,
     default: true
@@ -35,4 +39,4 @@ const AdminUserSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-export default mongoose.models.AdminUser || mongoose.model('AdminUser', AdminUserSchema);
+export default mongoose.models.AdminUser || mongoose.model('AdminUser', AdminUserSchema, 'adminusers');

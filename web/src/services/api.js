@@ -516,7 +516,7 @@ export const connectSyncStream = (onEvent) => {
     return () => eventSource.close();
   } catch (err) {
     console.warn('Could not establish EventSource connection:', err.message);
-    return () => {};
+    return () => { };
   }
 };
 
@@ -965,4 +965,269 @@ export const publishSurveyRecordApi = async (id, token) => {
 
 export const exportSurveyChecklistUrl = (format = 'csv') => {
   return `/api/survey/export?format=${format}`;
+};
+
+// ==========================================
+// PHASE 6: Cafes, Menus, Reviews & Issue Reports APIs
+// ==========================================
+
+export const fetchCafes = async () => {
+  try {
+    const res = await fetch('/api/cafes');
+    if (!res.ok) throw new Error('Failed to fetch cafes');
+    return await res.json();
+  } catch (err) {
+    console.warn('[API] fetchCafes fallback:', err.message);
+    return [];
+  }
+};
+
+export const fetchCafeById = async (id) => {
+  try {
+    const res = await fetch(`/api/cafes/${id}`);
+    if (!res.ok) throw new Error('Failed to fetch cafe');
+    return await res.json();
+  } catch (err) {
+    console.warn('[API] fetchCafeById fallback:', err.message);
+    return null;
+  }
+};
+
+export const createCafeApi = async (data, token) => {
+  const res = await fetch('/api/cafes', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
+  return await res.json();
+};
+
+export const updateCafeApi = async (id, data, token) => {
+  const res = await fetch(`/api/cafes/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
+  return await res.json();
+};
+
+export const fetchCafeMenu = async (cafeId) => {
+  try {
+    const res = await fetch(`/api/cafes/${cafeId}/menu`);
+    if (!res.ok) throw new Error('Failed to fetch menu');
+    return await res.json();
+  } catch (err) {
+    return [];
+  }
+};
+
+export const createMenuItemApi = async (cafeId, data, token) => {
+  const res = await fetch(`/api/cafes/${cafeId}/menu`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
+  return await res.json();
+};
+
+export const updateMenuItemApi = async (cafeId, itemId, data, token) => {
+  const res = await fetch(`/api/cafes/${cafeId}/menu/${itemId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
+  return await res.json();
+};
+
+export const deleteMenuItemApi = async (cafeId, itemId, token) => {
+  const res = await fetch(`/api/cafes/${cafeId}/menu/${itemId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  return await res.json();
+};
+
+export const fetchDailyMenu = async (cafeId, date) => {
+  try {
+    const url = date ? `/api/cafes/${cafeId}/daily-menu?date=${date}` : `/api/cafes/${cafeId}/daily-menu`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch daily menu');
+    return await res.json();
+  } catch (err) {
+    return null;
+  }
+};
+
+export const upsertDailyMenuApi = async (cafeId, data, token) => {
+  const res = await fetch(`/api/cafes/${cafeId}/daily-menu`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
+  return await res.json();
+};
+
+export const submitReviewApi = async (data) => {
+  const res = await fetch('/api/reviews', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  return await res.json();
+};
+
+export const reportReviewApi = async (reviewId, reason = 'Inappropriate content') => {
+  const res = await fetch(`/api/reviews/${reviewId}/report`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason })
+  });
+  return await res.json();
+};
+
+export const replyToReviewApi = async (reviewId, replyText, token) => {
+  const res = await fetch(`/api/reviews/${reviewId}/reply`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ replyText })
+  });
+  return await res.json();
+};
+
+export const submitIssueReportApi = async (data) => {
+  const res = await fetch('/api/issues', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  return await res.json();
+};
+
+export const fetchIssueReports = async (token) => {
+  try {
+    const res = await fetch('/api/issues', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch issues');
+    return await res.json();
+  } catch (err) {
+    return [];
+  }
+};
+
+export const updateIssueStatusApi = async (issueId, data, token) => {
+  const res = await fetch(`/api/issues/${issueId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(data)
+  });
+  return await res.json();
+};
+
+export const adminLoginApi = async (email, password) => {
+  const res = await fetch('/api/admin/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Authentication failed');
+  }
+  return data;
+};
+
+// ==========================================
+// OFFICIAL CAMPUS MASTER MAP MARKERS APIS (Task 4 & 5)
+// ==========================================
+
+export const fetchMapMarkersApi = async (category) => {
+  try {
+    const url = category && category !== 'all' ? `/api/map-markers?category=${category}` : '/api/map-markers';
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch map markers');
+    return await res.json();
+  } catch (err) {
+    console.warn('[API] fetchMapMarkersApi fallback error:', err.message);
+    return { success: false, markers: [] };
+  }
+};
+
+export const fetchMapMarkerByIdApi = async (id) => {
+  try {
+    const res = await fetch(`/api/map-markers/${id}`);
+    if (!res.ok) throw new Error('Failed to fetch map marker');
+    return await res.json();
+  } catch (err) {
+    return null;
+  }
+};
+
+export const createMapMarkerApi = async (markerData, token) => {
+  const res = await fetch('/api/map-markers', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(markerData)
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to create map marker');
+  }
+  return data;
+};
+
+export const updateMapMarkerApi = async (id, markerData, token) => {
+  const res = await fetch(`/api/map-markers/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(markerData)
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to update map marker');
+  }
+  return data;
+};
+
+export const deleteMapMarkerApi = async (id, token) => {
+  const res = await fetch(`/api/map-markers/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to delete map marker');
+  }
+  return data;
 };

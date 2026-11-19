@@ -247,7 +247,10 @@ export default function CampusMap({
   isPickingCoordinates,
   onCoordinatePicked,
   pickedCoordinates,
-  onOpenIndoor
+  onOpenIndoor,
+  onOpenBuildingPopup,
+  onOpenIndoorMap,
+  onStartIndoorNavigation
 }) {
   const [mapType, setMapType] = useState('street');
   const [focusMainGateTrigger, setFocusMainGateTrigger] = useState(0);
@@ -749,7 +752,13 @@ export default function CampusMap({
               position={[loc.coordinates.lat, loc.coordinates.lng]}
               icon={icon}
               eventHandlers={{
-                click: () => onSelectLocation && onSelectLocation(loc)
+                click: () => {
+                  if (onSelectLocation) onSelectLocation(loc);
+                  const isBld = loc.category === 'Academic' || loc.category === 'Building' || loc.category === 'Library' || loc.shortCode?.includes('BLOCK') || loc.name?.includes('Block');
+                  if (isBld && onOpenBuildingPopup) {
+                    onOpenBuildingPopup(loc);
+                  }
+                }
               }}
             >
               <Popup>
@@ -765,19 +774,47 @@ export default function CampusMap({
                   <div className="text-[10px] text-slate-400 font-mono mb-2">
                     {loc.coordinates.lat.toFixed(6)}, {loc.coordinates.lng.toFixed(6)}
                   </div>
-                  <button
-                    onClick={() => onSelectLocation && onSelectLocation(loc)}
-                    className="w-full py-1.5 px-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors"
-                  >
-                    <Navigation className="w-3.5 h-3.5" /> Start Walking Navigation
-                  </button>
 
-                  {(loc.category === 'Academic' || loc.category === 'Building' || loc.category === 'Library') && (
+                  {(loc.category === 'Academic' || loc.category === 'Building' || loc.category === 'Library') ? (
+                    <div className="space-y-1.5">
+                      <button
+                        onClick={() => onOpenIndoorMap ? onOpenIndoorMap(loc) : onOpenIndoor(loc)}
+                        className="w-full py-1.5 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 shadow-md transition-all"
+                        title="BUTTON 1: Open Indoor Map"
+                      >
+                        <Layers className="w-3.5 h-3.5" /> Open Indoor Map
+                      </button>
+
+                      <button
+                        onClick={() => onStartIndoorNavigation ? onStartIndoorNavigation(loc) : onOpenIndoor(loc)}
+                        className="w-full py-1.5 px-3 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 shadow-md transition-all"
+                        title="BUTTON 2: Start Indoor Navigation"
+                      >
+                        <Navigation className="w-3.5 h-3.5" /> Start Indoor Navigation
+                      </button>
+
+                      {onOpenBuildingPopup && (
+                        <button
+                          onClick={() => onOpenBuildingPopup(loc)}
+                          className="w-full py-1 px-2.5 bg-slate-800 hover:bg-slate-750 text-slate-300 text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1 border border-slate-700 transition-colors"
+                        >
+                          <Building2 className="w-3 h-3 text-indigo-400" /> Building Info Card
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => onSelectLocation && onSelectLocation(loc)}
+                        className="w-full py-1 px-2.5 bg-slate-800 hover:bg-slate-750 text-slate-300 text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1 border border-slate-700 transition-colors"
+                      >
+                        <Compass className="w-3 h-3 text-sky-400" /> Walk to Building (GPS)
+                      </button>
+                    </div>
+                  ) : (
                     <button
-                      onClick={() => onOpenIndoor && onOpenIndoor(loc)}
-                      className="w-full mt-1.5 py-1.5 px-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                      onClick={() => onSelectLocation && onSelectLocation(loc)}
+                      className="w-full py-1.5 px-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors"
                     >
-                      <Layers className="w-3.5 h-3.5" /> Explore Indoor Floors & Rooms
+                      <Navigation className="w-3.5 h-3.5" /> Start Walking Navigation
                     </button>
                   )}
                 </div>

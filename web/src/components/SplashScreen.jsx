@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import DishaSetuLogo from './common/DishaSetuLogo';
 import { Compass, Sparkles, Navigation, ChevronRight, MapPin, Building2, CheckCircle2 } from 'lucide-react';
-import aerialCampusImg from '../assets/aerial_central_campus.png';
+import aerialCampusImg from '../assets/pu_aerial_central_campus.jpg';
 
 /**
  * DishaSetu Premium Professional Splash Screen
@@ -169,7 +169,7 @@ export default function SplashScreen({
             {/* Visual Image / High-End Fallback */}
             {!imageFailed ? (
               <img
-                src={aerialCampusImg || '/panoramas/aerial_central_campus.png'}
+                src={aerialCampusImg || '/panoramas/pu_aerial_central_campus.jpg'}
                 alt="Presidency University Bengaluru Aerial Campus View"
                 className="w-full h-full object-cover scale-100 group-hover:scale-105 transition-transform duration-7000 ease-out brightness-95 contrast-105"
                 onError={() => setImageFailed(true)}

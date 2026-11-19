@@ -34,4 +34,4 @@ const MapVersionSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-export default mongoose.models.MapVersion || mongoose.model('MapVersion', MapVersionSchema);
+export default mongoose.models.MapVersion || mongoose.model('MapVersion', MapVersionSchema, 'mapVersions');

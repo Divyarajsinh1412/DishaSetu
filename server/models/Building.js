@@ -99,4 +99,4 @@ const BuildingSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-export default mongoose.models.Building || mongoose.model('Building', BuildingSchema);
+export default mongoose.models.Building || mongoose.model('Building', BuildingSchema, 'buildings');

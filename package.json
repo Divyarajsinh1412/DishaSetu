@@ -1,0 +1,11 @@
+{
+  "name": "dishasetu",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DishaSetu - Smart Campus Navigation System for Presidency University Bengaluru",
+  "scripts": {
+    "db:init": "npm --prefix server run db:init",
+    "dev:server": "npm --prefix server run start",
+    "dev:web": "npm --prefix web run dev"
+  }
+}

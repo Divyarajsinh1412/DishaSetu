@@ -14,8 +14,8 @@ export const INITIAL_PANORAMA_SCENES = [
     initialZoom: 75,
     altitudeMeters: 140,
     description: 'Breathtaking 360° aerial vista overlooking Presidency University academic blocks, Central Fountain, and campus avenues.',
-    panoramaImage: '/panoramas/aerial_central_campus.png',
-    thumbnail: '/panoramas/thumbs/central_campus.png',
+    panoramaImage: '/panoramas/pu_aerial_central_campus.jpg',
+    thumbnail: '/panoramas/thumbs/central_campus.jpg',
     status: 'published',
     order: 1
   },
@@ -29,8 +29,8 @@ export const INITIAL_PANORAMA_SCENES = [
     initialZoom: 75,
     altitudeMeters: 110,
     description: 'High-altitude panoramic view of Presidency University official entrance portal, two-wheeler parking lot, and paved pedestrian avenue.',
-    panoramaImage: '/panoramas/aerial_main_gate.png',
-    thumbnail: '/panoramas/thumbs/main_gate.png',
+    panoramaImage: '/panoramas/pu_aerial_main_gate.jpg',
+    thumbnail: '/panoramas/thumbs/main_gate.jpg',
     status: 'published',
     order: 2
   },
@@ -44,8 +44,8 @@ export const INITIAL_PANORAMA_SCENES = [
     initialZoom: 75,
     altitudeMeters: 125,
     description: 'Panoramic vista across School of Management, School of Law, Moot Court Hall, and Central University Library quadrangle.',
-    panoramaImage: '/panoramas/aerial_academic_quad.png',
-    thumbnail: '/panoramas/thumbs/academic_quad.png',
+    panoramaImage: '/panoramas/pu_aerial_academic_quad.jpg',
+    thumbnail: '/panoramas/thumbs/academic_quad.jpg',
     status: 'published',
     order: 3
   },
@@ -59,8 +59,8 @@ export const INITIAL_PANORAMA_SCENES = [
     initialZoom: 75,
     altitudeMeters: 105,
     description: 'Aerial vista of basketball court, volleyball arena, cricket nets, University Gym, Open Air Theatre (OAT), and lush lawns.',
-    panoramaImage: '/panoramas/aerial_sports_complex.png',
-    thumbnail: '/panoramas/thumbs/sports_complex.png',
+    panoramaImage: '/panoramas/pu_aerial_sports_complex.jpg',
+    thumbnail: '/panoramas/thumbs/sports_complex.jpg',
     status: 'published',
     order: 4
   },
@@ -74,8 +74,8 @@ export const INITIAL_PANORAMA_SCENES = [
     initialZoom: 75,
     altitudeMeters: 95,
     description: 'Aerial hub covering Central Cafeteria, Campus Food Court plaza, dining pavilion, and landscaped student canopy.',
-    panoramaImage: '/panoramas/aerial_cafeteria_hub.png',
-    thumbnail: '/panoramas/thumbs/cafeteria_hub.png',
+    panoramaImage: '/panoramas/pu_aerial_cafeteria_hub.jpg',
+    thumbnail: '/panoramas/thumbs/cafeteria_hub.jpg',
     status: 'published',
     order: 5
   }

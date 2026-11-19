@@ -35,7 +35,7 @@ const RoomSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['Classroom', 'Laboratory', 'Faculty Office', 'Seminar Hall', 'Restroom', 'Stairs', 'Elevator', 'Utility', 'Corridor'],
+    enum: ['Classroom', 'Laboratory', 'Faculty room', 'Faculty Office', 'Office', 'Seminar room', 'Seminar Hall', 'Restroom', 'Stairs', 'Elevator', 'Utility', 'Corridor', 'Other'],
     default: 'Classroom'
   },
   department: {
