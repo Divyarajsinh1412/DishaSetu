@@ -36,6 +36,7 @@ export default function Header({
   onOpenCafeOwner,
   onOpenIssueReport,
   onOpenMapEditor,
+  onOpenRoutePlanning,
   locations = [],
   viewMode = 'immersive',
   onViewModeChange,
@@ -149,14 +150,31 @@ export default function Header({
           </button>
           <button
             type="button"
-            onClick={onOpenIndoor}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-emerald-300 hover:bg-slate-800/60"
+            onClick={() => {
+              if (onViewModeChange) onViewModeChange('indoor');
+              if (onOpenIndoor) onOpenIndoor();
+            }}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              viewMode === 'indoor'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md'
+                : 'text-slate-400 hover:text-emerald-300 hover:bg-slate-800/60'
+            }`}
             title="Open D Block & Academic Indoor Navigation"
           >
             <DoorOpen className="w-3.5 h-3.5 text-emerald-400" />
             <span className="hidden xl:inline">Indoor Plan</span>
           </button>
         </div>
+
+        {/* Directions / Route Planning Button */}
+        <button
+          onClick={onOpenRoutePlanning}
+          className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-gradient-to-r from-sky-600 via-indigo-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white text-xs font-black rounded-xl shadow-md border border-sky-400/50 transition-all hover:scale-105 active:scale-95 shrink-0"
+          title="Campus Wayfinding: Navigate from one place to another place"
+        >
+          <Navigation className="w-3.5 h-3.5 text-sky-200" />
+          <span className="hidden sm:inline">Directions</span>
+        </button>
 
         {/* Campus Survey Trigger */}
         <button

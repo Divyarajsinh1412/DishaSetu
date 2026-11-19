@@ -183,6 +183,66 @@ const D_BLOCK_ROOM_SUGGESTIONS = [
   { roomNumber: 'DG06', name: 'Metrology, Instrumentation & Quality Lab', floor: 0, buildingId: 'bld_d_block' }
 ];
 
+// Master Campus Map Node Normalized Coordinate System for Turn-by-Turn Wayfinding
+const MASTER_MAP_NODE_COORDS = {
+  // Gates & Entrances
+  'node_main_gate': { x: 0.5695, y: 0.2449 },
+  'node_avenue_origin': { x: 0.5400, y: 0.2800 },
+  'node_start_west': { x: 0.4900, y: 0.2650 },
+  'node_parking_entry': { x: 0.4850, y: 0.2650 },
+  'node_gate_2': { x: 0.7420, y: 0.1980 },
+  'node_visitor_parking': { x: 0.6550, y: 0.2200 },
+  'node_bus_point_2': { x: 0.7720, y: 0.2450 },
+  'node_parking_4w': { x: 0.7950, y: 0.3350 },
+
+  // Main Avenue & Lawn Spine
+  'node_avenue_mid_north': { x: 0.5300, y: 0.3600 },
+  'node_avenue_mid': { x: 0.5100, y: 0.4400 },
+  'node_bus_boarding': { x: 0.4950, y: 0.5150 },
+  'node_main_lawn': { x: 0.5850, y: 0.4200 },
+  'node_fountain': { x: 0.4666, y: 0.5995 },
+  'node_central_fountain': { x: 0.4666, y: 0.5995 },
+
+  // West Quad (D, E, F, L, H, J, K, N, P, Q, R, S, U)
+  'node_west_quad_junction': { x: 0.3800, y: 0.6050 },
+  'node_cafe_d_block': { x: 0.3150, y: 0.6200 },
+  'node_food_point_d': { x: 0.3150, y: 0.6200 },
+  'node_d_block_ent': { x: 0.2025, y: 0.6450 },
+  'node_e_block_ent': { x: 0.2025, y: 0.6975 },
+  'node_f_block_ent': { x: 0.2025, y: 0.7510 },
+  'node_l_block_ent': { x: 0.2000, y: 0.8035 },
+  'node_quad_avenue_mid': { x: 0.2200, y: 0.7200 },
+  'node_h_block_ent': { x: 0.3350, y: 0.7050 },
+  'node_j_block_ent': { x: 0.3050, y: 0.7400 },
+  'node_k_block_ent': { x: 0.3450, y: 0.7500 },
+  'node_n_block_ent': { x: 0.3100, y: 0.7950 },
+  'node_p_block_ent': { x: 0.3450, y: 0.8350 },
+  'node_q_block_ent': { x: 0.3100, y: 0.8700 },
+  'node_r_block_ent': { x: 0.3350, y: 0.9000 },
+  'node_s_block_ent': { x: 0.2400, y: 0.8700 },
+  'node_u_block_ent': { x: 0.3000, y: 0.9300 },
+
+  // South Central Plaza & Administration
+  'node_plaza_junction': { x: 0.4400, y: 0.6500 },
+  'node_hr_block_ent': { x: 0.4350, y: 0.6800 },
+  'node_coe_ent': { x: 0.4950, y: 0.7000 },
+  'node_dsa_ent': { x: 0.5400, y: 0.6850 },
+  'node_mba_som_ent': { x: 0.6300, y: 0.7200 },
+
+  // East Sector & Amenities
+  'node_east_road_junction': { x: 0.5800, y: 0.6300 },
+  'node_auditorium_ent': { x: 0.7300, y: 0.6750 },
+  'node_hostel_mess': { x: 0.7000, y: 0.5450 },
+
+  // Sports & Facilities
+  'node_football_court': { x: 0.4200, y: 0.3800 },
+  'node_volleyball_court': { x: 0.2600, y: 0.5200 },
+  'node_basketball_court': { x: 0.2000, y: 0.5500 },
+  'node_cricket_nets': { x: 0.3100, y: 0.5500 },
+  'node_medical_ent': { x: 0.6000, y: 0.6700 },
+  'node_library_ent': { x: 0.5450, y: 0.7250 }
+};
+
 export default function MasterCampusMap({
   markers = [],
   activeCategory = 'all',
@@ -190,6 +250,8 @@ export default function MasterCampusMap({
   selectedMarker = null,
   onSelectMarker,
   onStartNavigation,
+  onOpenRoutePlanning,
+  onClearRoute,
   onOpenIndoor,
   onOpenBuildingPopup,
   onOpenIndoorMap,
@@ -311,6 +373,81 @@ export default function MasterCampusMap({
     }
     return localSelectedFeature;
   }, [selectedMarker, localSelectedFeature, allCampusFeatures]);
+
+  // Map Active Route sequence to normalized coordinates on official campus map
+  const mapRoutePoints = useMemo(() => {
+    if (!activeRoute) return [];
+
+    const resolveNormalizedPoint = (nodeId, coords = null) => {
+      if (nodeId && MASTER_MAP_NODE_COORDS[nodeId]) {
+        return MASTER_MAP_NODE_COORDS[nodeId];
+      }
+      if (nodeId) {
+        const feat = MASTER_CAMPUS_FEATURES.find(
+          f => f.featureId === nodeId ||
+               f.buildingId === nodeId ||
+               f.code === nodeId ||
+               (f.associatedLocationId && f.associatedLocationId === nodeId)
+        );
+        if (feat) return { x: feat.normalizedX, y: feat.normalizedY };
+      }
+      if (coords) {
+        const lat = Array.isArray(coords) ? coords[0] : coords.lat;
+        const lng = Array.isArray(coords) ? coords[1] : coords.lng;
+        if (lat != null && lng != null) {
+          const minLat = 13.1688, maxLat = 13.1720;
+          const minLng = 77.5352, maxLng = 77.5372;
+          const clampedLat = Math.min(Math.max(lat, minLat), maxLat);
+          const clampedLng = Math.min(Math.max(lng, minLng), maxLng);
+          const normY = 0.22 + (maxLat - clampedLat) / (maxLat - minLat) * (0.93 - 0.22);
+          const normX = 0.18 + (clampedLng - minLng) / (maxLng - minLng) * (0.76 - 0.18);
+          return { x: normX, y: normY };
+        }
+      }
+      return null;
+    };
+
+    const pts = [];
+    if (activeRoute.nodeSequence && activeRoute.nodeSequence.length > 0) {
+      activeRoute.nodeSequence.forEach((nodeId, idx) => {
+        const geomCoord = activeRoute.geometry ? activeRoute.geometry[idx] : null;
+        const pt = resolveNormalizedPoint(nodeId, geomCoord);
+        if (pt) pts.push(pt);
+      });
+    } else if (activeRoute.geometry && activeRoute.geometry.length > 0) {
+      activeRoute.geometry.forEach(coord => {
+        const pt = resolveNormalizedPoint(null, coord);
+        if (pt) pts.push(pt);
+      });
+    }
+
+    if (pts.length < 2 && activeRoute.startLocation && activeRoute.endLocation) {
+      const p1 = resolveNormalizedPoint(null, [activeRoute.startLocation.lat, activeRoute.startLocation.lng]);
+      const p2 = resolveNormalizedPoint(null, [activeRoute.endLocation.lat, activeRoute.endLocation.lng]);
+      if (p1 && p2) return [p1, p2];
+    }
+
+    return pts;
+  }, [activeRoute]);
+
+  // Auto-frame route when active
+  useEffect(() => {
+    if (!activeRoute || mapRoutePoints.length < 2 || !containerRef.current) return;
+    const xs = mapRoutePoints.map(p => p.x);
+    const ys = mapRoutePoints.map(p => p.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const midX = (minX + maxX) / 2;
+    const midY = (minY + maxY) / 2;
+
+    const containerW = containerRef.current.clientWidth;
+    const containerH = containerRef.current.clientHeight;
+    const targetScale = 1.65;
+    setScale(targetScale);
+    const targetX = -(midX - 0.5) * (containerW * 0.75) * targetScale;
+    const targetY = -(midY - 0.5) * (containerH * 0.95) * targetScale;
+    setPosition({ x: targetX, y: targetY });
+  }, [activeRoute, mapRoutePoints]);
 
   // Handle Feature Selection & Auto-Focus
   const handleSelectFeature = useCallback((feature) => {
@@ -705,6 +842,16 @@ export default function MasterCampusMap({
                   <span className="text-[9px] underline">Reset North</span>
                 </button>
               )}
+              {activeRoute && (
+                <button
+                  onClick={onClearRoute}
+                  className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-mono font-bold border border-rose-500/40 hover:bg-rose-500/30 transition-colors flex items-center gap-1"
+                  title="Clear Active Walking Route"
+                >
+                  <span>Active Route</span>
+                  <span className="text-[9px] font-black underline">End ✕</span>
+                </button>
+              )}
             </div>
             <div className="text-[10px] text-slate-400">Presidency University Bengaluru · Itgalpur Campus</div>
           </div>
@@ -740,28 +887,39 @@ export default function MasterCampusMap({
           </button>
         </div>
 
-        {/* Right: Unified Search Bar with Autocomplete */}
-        <div className="pointer-events-auto relative w-full sm:w-80 md:w-96">
-          <div className="relative flex items-center bg-slate-900/95 backdrop-blur-md border border-slate-700/90 rounded-2xl shadow-2xl focus-within:border-emerald-400 transition-colors">
-            <Search className="w-4 h-4 text-slate-400 ml-3.5 shrink-0" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={localSearch}
-              onChange={(e) => setLocalSearch(e.target.value)}
-              onFocus={() => setIsSearchFocused(true)}
-              placeholder="Search buildings, rooms (DG01), facilities..."
-              className="w-full py-2.5 pl-2.5 pr-8 bg-transparent text-xs text-white placeholder-slate-400 outline-none font-medium"
-            />
-            {localSearch && (
-              <button
-                onClick={() => setLocalSearch('')}
-                className="p-1 mr-2 text-slate-400 hover:text-white"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
+        {/* Right: Wayfinding Directions & Unified Search Bar */}
+        <div className="pointer-events-auto flex items-center gap-2 w-full sm:w-auto">
+          {/* Main Navigation Directions Button */}
+          <button
+            onClick={() => onOpenRoutePlanning && onOpenRoutePlanning()}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 bg-gradient-to-r from-sky-600 via-indigo-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white rounded-2xl font-black text-xs shadow-xl shadow-sky-600/30 border border-sky-400/50 transition-all hover:scale-105 active:scale-95 shrink-0"
+            title="Directions: Select place and navigate from one place to another place"
+          >
+            <Navigation className="w-3.5 h-3.5 text-sky-200" />
+            <span>Directions</span>
+          </button>
+
+          <div className="relative w-full sm:w-72 md:w-80">
+            <div className="relative flex items-center bg-slate-900/95 backdrop-blur-md border border-slate-700/90 rounded-2xl shadow-2xl focus-within:border-emerald-400 transition-colors">
+              <Search className="w-4 h-4 text-slate-400 ml-3.5 shrink-0" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={localSearch}
+                onChange={(e) => setLocalSearch(e.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
+                placeholder="Search buildings, rooms (DG01), facilities..."
+                className="w-full py-2.5 pl-2.5 pr-8 bg-transparent text-xs text-white placeholder-slate-400 outline-none font-medium"
+              />
+              {localSearch && (
+                <button
+                  onClick={() => setLocalSearch('')}
+                  className="p-1 mr-2 text-slate-400 hover:text-white"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
 
           {/* Autocomplete Dropdown */}
           {isSearchFocused && searchSuggestions.length > 0 && (
@@ -911,12 +1069,12 @@ export default function MasterCampusMap({
           </svg>
 
           {/* ============================================================= */}
-          {/* 4. WALKING ROUTE OVERLAY LAYER                                */}
+          {/* 4. REAL DYNAMIC WALKING ROUTE OVERLAY LAYER                    */}
           {/* ============================================================= */}
-          {activeRoute && activeRoute.geometry && activeRoute.geometry.length > 1 && (
+          {activeRoute && mapRoutePoints.length > 1 && (
             <svg
               className="absolute inset-0 w-full h-full pointer-events-none z-20"
-              viewBox="0 0 100 100"
+              viewBox="0 0 1000 1422"
               preserveAspectRatio="none"
             >
               <defs>
@@ -925,26 +1083,73 @@ export default function MasterCampusMap({
                   <stop offset="50%" stopColor="#06b6d4" />
                   <stop offset="100%" stopColor="#3b82f6" />
                 </linearGradient>
-                <filter id="shadowGlow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#10b981" floodOpacity="0.8" />
+                <filter id="routeShadow" x="-30%" y="-30%" width="160%" height="160%">
+                  <feDropShadow dx="0" dy="2" stdDeviation="5" floodColor="#10b981" floodOpacity="0.8" />
                 </filter>
               </defs>
+
+              {/* Glowing Background Pathway */}
               <polyline
-                points={
-                  activeSelected
-                    ? `56.95,24.49 49.40,51.27 46.66,59.95 ${activeSelected.normalizedX * 100},${activeSelected.normalizedY * 100}`
-                    : '56.95,24.49 49.40,51.27 46.66,59.95 20.41,64.78'
-                }
+                points={mapRoutePoints.map(pt => `${(pt.x * 1000).toFixed(1)},${(pt.y * 1422).toFixed(1)}`).join(' ')}
                 fill="none"
-                stroke="url(#routeGlow)"
-                strokeWidth="2.8"
+                stroke="#047857"
+                strokeWidth="11"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeDasharray="4 2"
+                opacity="0.4"
+              />
+
+              {/* Animated Foreground Walking Dashed Ribbon */}
+              <polyline
+                points={mapRoutePoints.map(pt => `${(pt.x * 1000).toFixed(1)},${(pt.y * 1422).toFixed(1)}`).join(' ')}
+                fill="none"
+                stroke="url(#routeGlow)"
+                strokeWidth="5.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray="12 6"
                 className="animate-[dash_1.5s_linear_infinite]"
-                filter="url(#shadowGlow)"
+                filter="url(#routeShadow)"
               />
             </svg>
+          )}
+
+          {/* Start Origin Marker Pin (A) */}
+          {activeRoute && mapRoutePoints.length > 0 && (
+            <div
+              style={{
+                left: `${mapRoutePoints[0].x * 100}%`,
+                top: `${mapRoutePoints[0].y * 100}%`,
+                transform: 'translate(-50%, -100%)'
+              }}
+              className="absolute z-35 pointer-events-auto flex flex-col items-center animate-bounce"
+            >
+              <div className="px-2.5 py-0.5 rounded-full bg-emerald-950/95 border border-emerald-400 text-[10px] font-black text-emerald-300 shadow-xl whitespace-nowrap mb-1">
+                A · {activeRoute.startLocation?.name || 'Start'}
+              </div>
+              <div className="w-8 h-8 rounded-full bg-emerald-500 border-2 border-white shadow-xl flex items-center justify-center text-white font-black text-xs ring-4 ring-emerald-500/40">
+                A
+              </div>
+            </div>
+          )}
+
+          {/* End Destination Marker Pin (B) */}
+          {activeRoute && mapRoutePoints.length > 1 && (
+            <div
+              style={{
+                left: `${mapRoutePoints[mapRoutePoints.length - 1].x * 100}%`,
+                top: `${mapRoutePoints[mapRoutePoints.length - 1].y * 100}%`,
+                transform: 'translate(-50%, -100%)'
+              }}
+              className="absolute z-35 pointer-events-auto flex flex-col items-center"
+            >
+              <div className="px-2.5 py-0.5 rounded-full bg-rose-950/95 border border-rose-400 text-[10px] font-black text-rose-300 shadow-xl whitespace-nowrap mb-1 animate-pulse">
+                B · {activeRoute.endLocation?.name || 'Destination'}
+              </div>
+              <div className="w-8 h-8 rounded-full bg-rose-500 border-2 border-white shadow-xl flex items-center justify-center text-white font-black text-xs ring-4 ring-rose-500/40">
+                B
+              </div>
+            </div>
           )}
 
           {/* ============================================================= */}
@@ -1188,6 +1393,17 @@ export default function MasterCampusMap({
 
         <div className="h-px w-8 bg-slate-800" />
 
+        {/* Directions / Wayfinding Route Planner */}
+        <button
+          onClick={() => onOpenRoutePlanning && onOpenRoutePlanning()}
+          className="p-2.5 rounded-xl text-sky-400 hover:text-sky-300 hover:bg-sky-500/20 transition-all hover:scale-110 active:scale-95 font-bold"
+          title="Campus Wayfinding: Navigate between any two places"
+        >
+          <Navigation className="w-4 h-4" />
+        </button>
+
+        <div className="h-px w-8 bg-slate-800" />
+
         {/* 1. Zoom In */}
         <button
           onClick={handleZoomIn}
@@ -1326,8 +1542,18 @@ export default function MasterCampusMap({
             </div>
           </div>
 
-          {/* Quick Action Button */}
+          {/* Quick Action Buttons */}
           <div className="flex items-center gap-1.5 shrink-0">
+            {/* Quick Route To Here Trigger */}
+            <button
+              onClick={() => onOpenRoutePlanning && onOpenRoutePlanning(null, activeSelected.buildingId || activeSelected.featureId || activeSelected.code)}
+              className="py-2 px-2.5 bg-slate-850 hover:bg-sky-600/90 text-sky-300 hover:text-white border border-slate-700 hover:border-sky-400 font-bold text-xs rounded-xl shadow-md transition-all hover:scale-105 flex items-center gap-1"
+              title="Navigate to this location"
+            >
+              <Navigation className="w-3.5 h-3.5" />
+              <span>Route</span>
+            </button>
+
             {activeSelected.code === 'PU-CAFE-D-BLOCK' ? (
               <button
                 onClick={() => {
@@ -1357,5 +1583,6 @@ export default function MasterCampusMap({
         </div>
       )}
     </div>
-  );
+  </div>
+);
 }

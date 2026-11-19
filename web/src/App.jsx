@@ -15,6 +15,7 @@ import IssueReportModal from './components/issues/IssueReportModal';
 import AdminMapEditorModal from './components/admin/AdminMapEditorModal';
 import NavigationPanel from './components/NavigationPanel';
 import NavigationGuidanceBar from './components/NavigationGuidanceBar';
+import RoutePlanningModal from './components/navigation/RoutePlanningModal';
 import LocationDetailsModal from './components/LocationDetailsModal';
 import EmergencyModal from './components/EmergencyModal';
 import AdminLoginModal from './components/AdminLoginModal';
@@ -37,7 +38,7 @@ import {
   connectSyncStream
 } from './services/api';
 import { clientRoutingEngine } from './services/routingEngine';
-import { Menu, Navigation, Compass, Shield, Globe, Map, Crosshair, Box } from 'lucide-react';
+import { Menu, Navigation, Compass, Shield, Globe, Map, Crosshair, Box, DoorOpen } from 'lucide-react';
 
 export default function App() {
   const [campus, setCampus] = useState(null);
@@ -81,8 +82,18 @@ export default function App() {
   const [selectedCafeId, setSelectedCafeId] = useState(null);
   const [isCafeOwnerOpen, setIsCafeOwnerOpen] = useState(false);
   const [isIssueReportOpen, setIsIssueReportOpen] = useState(false);
+  const [isRoutePlanningOpen, setIsRoutePlanningOpen] = useState(false);
+  const [routePlanningStart, setRoutePlanningStart] = useState('node_main_gate');
+  const [routePlanningDest, setRoutePlanningDest] = useState('bld_d_block');
   const [language, setLanguage] = useState(() => localStorage.getItem('dishasetu_lang') || 'en');
   const [isLoading, setIsLoading] = useState(true);
+
+  // Open Wayfinding / Route Planning Modal
+  const handleOpenRoutePlanning = useCallback((start = null, dest = null) => {
+    if (start) setRoutePlanningStart(start);
+    if (dest) setRoutePlanningDest(dest);
+    setIsRoutePlanningOpen(true);
+  }, []);
 
   // Handle Cafe Opening (Universal click from Master Map, 3D Twin, or Directory)
   const handleOpenCafe = useCallback((cafe) => {
@@ -251,8 +262,13 @@ export default function App() {
     }
   };
 
-  // Handle start walking navigation to any campus location / building
+  // Handle start walking navigation to any campus location / building or pre-calculated route
   const handleStartNavigation = (destination) => {
+    if (!destination) return;
+    if (destination.routeId || (destination.geometry && destination.distanceMeters)) {
+      setActiveRoute(destination);
+      return;
+    }
     const destId = destination.locationId || destination.shortCode || destination.nodeId || destination.name;
     const destCoords = destination.coordinates || destination.entranceCoordinates;
     handleCalculateRoute({
@@ -338,12 +354,13 @@ export default function App() {
         onOpenIndoor={(bld) => {
           const dBlock = buildings.find(b => b.shortCode === 'PU-D-BLOCK' || /d[-_]?block/i.test(b.name)) || { name: 'D Block', shortCode: 'PU-D-BLOCK', buildingId: 'bld_d_block' };
           setTargetIndoorBuilding(bld || dBlock);
-          setIsIndoorModalOpen(true);
+          setViewMode('indoor');
         }}
         onOpenCafes={() => setIsCafeModalOpen(true)}
         onOpenCafeOwner={() => setIsCafeOwnerOpen(true)}
         onOpenIssueReport={() => setIsIssueReportOpen(true)}
         onOpenMapEditor={() => setIsMapEditorOpen(true)}
+        onOpenRoutePlanning={handleOpenRoutePlanning}
         locations={filteredLocations}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
@@ -353,6 +370,15 @@ export default function App() {
           localStorage.setItem('dishasetu_lang', lang);
         }}
       />
+
+      {/* Live Turn-by-Turn Walking Guidance Bar (Floats across all map views) */}
+      {activeRoute && (
+        <NavigationGuidanceBar
+          route={activeRoute}
+          onClose={() => setActiveRoute(null)}
+          userLocation={userLocation}
+        />
+      )}
 
       {/* Main Workspace Viewport: Official Master Campus Map vs 3D Campus vs 360° Aerial vs 2D GPS Map */}
       {viewMode === 'master' ? (
@@ -364,6 +390,8 @@ export default function App() {
             selectedMarker={selectedLocation}
             onSelectMarker={(m) => setSelectedLocation(m)}
             onStartNavigation={handleStartNavigation}
+            onOpenRoutePlanning={handleOpenRoutePlanning}
+            onClearRoute={() => setActiveRoute(null)}
             onOpenIndoor={handleOpenIndoorMap}
             onOpenBuildingPopup={handleOpenBuildingPopup}
             onOpenIndoorMap={handleOpenIndoorMap}
@@ -409,6 +437,19 @@ export default function App() {
             onSwitchToMap={() => setViewMode('map')}
             activeRoute={activeRoute}
             onClearRoute={() => setActiveRoute(null)}
+          />
+        </div>
+      ) : viewMode === 'indoor' ? (
+        <div className="flex-1 relative w-full h-full overflow-hidden bg-[#0d0f14]">
+          <IndoorNavigationModal
+            isOpen={true}
+            isEmbedded={true}
+            onClose={() => setViewMode('master')}
+            initialBuilding={targetIndoorBuilding || buildings.find(b => b.shortCode === 'PU-D-BLOCK') || { name: 'D Block', shortCode: 'PU-D-BLOCK', buildingId: 'bld_d_block' }}
+            initialMode={indoorModalMode}
+            buildings={buildings}
+            onStartOutdoorNavigation={handleStartNavigation}
+            onOpenRoutePlanning={handleOpenRoutePlanning}
           />
         </div>
       ) : (
@@ -541,17 +582,34 @@ export default function App() {
         onClose={() => setSelectedBuildingForPopup(null)}
         onOpenIndoorMap={handleOpenIndoorMap}
         onStartIndoorNavigation={handleStartIndoorNavigation}
-        onStartOutdoorNavigation={handleStartNavigation}
+        onStartOutdoorNavigation={(bld) => handleOpenRoutePlanning(null, bld?.buildingId || bld?.shortCode || bld?.name)}
+      />
+
+      {/* CAMPUS WAYFINDING & DIRECTIONS: Select place and navigate from one place to another place */}
+      <RoutePlanningModal
+        isOpen={isRoutePlanningOpen}
+        onClose={() => setIsRoutePlanningOpen(false)}
+        onStartNavigation={(route) => {
+          setActiveRoute(route);
+          if (viewMode !== 'master' && viewMode !== '3d') {
+            setViewMode('master');
+          }
+        }}
+        initialStart={routePlanningStart}
+        initialDestination={routePlanningDest}
+        userLocation={userLocation}
       />
 
       {/* PHASE 6, 7, 8 & 10: Multi-Floor Indoor Navigation & Floor Plan Modal */}
       <IndoorNavigationModal
-        isOpen={isIndoorModalOpen}
+        isOpen={isIndoorModalOpen && viewMode !== 'indoor'}
+        isEmbedded={false}
         onClose={() => setIsIndoorModalOpen(false)}
         initialBuilding={targetIndoorBuilding}
         initialMode={indoorModalMode}
         buildings={buildings}
         onStartOutdoorNavigation={handleStartNavigation}
+        onOpenRoutePlanning={handleOpenRoutePlanning}
       />
 
       {/* RULE 3 & PHASE 6: Student & Visitor Campus Dining & Live Menus Modal */}
@@ -609,12 +667,21 @@ export default function App() {
             setViewMode('master');
             setIsSidebarOpen(false);
           }}
-          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
+          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition-all ${
             viewMode === 'master' ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
           }`}
         >
           <Map className="w-4 h-4 text-emerald-400" />
           <span className="text-[10px]">Official Map</span>
+        </button>
+
+        <button
+          onClick={() => handleOpenRoutePlanning()}
+          className="flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl text-sky-400 hover:text-sky-300 transition-all font-bold"
+          title="Directions: Select place and navigate from one place to another place"
+        >
+          <Navigation className="w-4 h-4 text-sky-400" />
+          <span className="text-[10px]">Directions</span>
         </button>
 
         <button
@@ -654,6 +721,19 @@ export default function App() {
         >
           <Compass className="w-4 h-4 text-emerald-400" />
           <span className="text-[10px]">2D Map</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setViewMode('indoor');
+            setIsSidebarOpen(false);
+          }}
+          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
+            viewMode === 'indoor' ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <DoorOpen className="w-4 h-4 text-emerald-400" />
+          <span className="text-[10px]">Indoor</span>
         </button>
 
         <button

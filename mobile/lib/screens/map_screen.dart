@@ -95,6 +95,169 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     });
   }
 
+  void _showRoutePlanningDialog([CampusLocation? initialDest]) {
+    if (_markers.isEmpty) return;
+
+    CampusLocation startLoc = _markers.firstWhere(
+      (m) => m.shortCode == 'PU-GATE-01' || m.name.contains('Main Gate'),
+      orElse: () => _markers.first,
+    );
+    CampusLocation destLoc = initialDest ?? _markers.firstWhere(
+      (m) => m.shortCode == 'PU-D-BLOCK' || m.name.contains('D Block'),
+      orElse: () => _markers.length > 1 ? _markers[1] : _markers.first,
+    );
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xFF0B132B),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0284C7).withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.directions, color: Color(0xFF38BDF8), size: 22),
+                          ),
+                          const SizedBox(width: 10),
+                          const Text(
+                            'Campus Directions',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white70),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Start Location Dropdown
+                  const Text('FROM (START PLACE)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF334155)),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<CampusLocation>(
+                        value: startLoc,
+                        isExpanded: true,
+                        dropdownColor: const Color(0xFF1E293B),
+                        items: _markers.map((m) {
+                          return DropdownMenuItem(
+                            value: m,
+                            child: Text(m.name, style: const TextStyle(color: Colors.white, fontSize: 13), overflow: TextOverflow.ellipsis),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) setModalState(() => startLoc = val);
+                        },
+                      ),
+                    ),
+                  ),
+
+                  // Swap Button
+                  Center(
+                    child: IconButton(
+                      icon: const Icon(Icons.swap_vert, color: Color(0xFF38BDF8)),
+                      tooltip: 'Swap Start and Destination',
+                      onPressed: () {
+                        setModalState(() {
+                          final temp = startLoc;
+                          startLoc = destLoc;
+                          destLoc = temp;
+                        });
+                      },
+                    ),
+                  ),
+
+                  // Destination Dropdown
+                  const Text('TO (DESTINATION PLACE)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFF43F5E))),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF334155)),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<CampusLocation>(
+                        value: destLoc,
+                        isExpanded: true,
+                        dropdownColor: const Color(0xFF1E293B),
+                        items: _markers.map((m) {
+                          return DropdownMenuItem(
+                            value: m,
+                            child: Text(m.name, style: const TextStyle(color: Colors.white, fontSize: 13), overflow: TextOverflow.ellipsis),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) setModalState(() => destLoc = val);
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Start Navigation Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0284C7),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      icon: const Icon(Icons.navigation, color: Colors.white, size: 18),
+                      label: const Text('START NAVIGATION', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        setState(() => _isLoading = true);
+                        final route = await _apiService.calculateRoute(
+                          start: startLoc.shortCode ?? startLoc.id,
+                          destination: destLoc.shortCode ?? destLoc.id,
+                        );
+                        setState(() {
+                          _activeRoute = route;
+                          _selectedMarker = destLoc;
+                          _isLoading = false;
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showIndoorMapDialog(CampusLocation loc) {
     final isDBlock = loc.name.contains('D Block') || loc.shortCode?.contains('D-BLOCK') == true;
 
@@ -318,6 +481,11 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.directions, color: Color(0xFF38BDF8)),
+            tooltip: 'Directions',
+            onPressed: () => _showRoutePlanningDialog(),
+          ),
           IconButton(
             icon: const Icon(Icons.center_focus_strong, color: Color(0xFF10B981)),
             tooltip: 'Fit Campus',
