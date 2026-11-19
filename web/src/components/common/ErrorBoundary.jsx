@@ -24,6 +24,19 @@ export default class ErrorBoundary extends React.Component {
     this.setState({ hasError: false, error: null, errorInfo: null, showDetails: false });
   };
 
+  handleReturnOverview = () => {
+    try {
+      localStorage.removeItem('dishasetu_active_route');
+      window.history.pushState(null, '', '/');
+    } catch {}
+    this.setState({ hasError: false, error: null, errorInfo: null, showDetails: false });
+    if (this.props.onResetToOverview) {
+      this.props.onResetToOverview();
+    } else {
+      window.location.href = '/';
+    }
+  };
+
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) {
@@ -43,16 +56,22 @@ export default class ErrorBoundary extends React.Component {
             The application encountered a temporary display state change. Your session and verified campus coordinates remain completely preserved.
           </p>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={this.handleReset}
-              className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-semibold transition-all border border-slate-700"
+              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-semibold transition-all border border-slate-700 active:scale-95"
             >
               Resume Session
             </button>
             <button
+              onClick={this.handleReturnOverview}
+              className="px-4 py-2.5 rounded-xl bg-[#0e2a47] hover:bg-[#143a61] text-[#d4af37] text-xs sm:text-sm font-semibold transition-all border border-[#1d4670] active:scale-95"
+            >
+              Return to Campus Overview
+            </button>
+            <button
               onClick={this.handleReload}
-              className="px-5 py-2.5 rounded-xl bg-[#1d4ed8] hover:bg-[#2563eb] text-white text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 shadow-lg shadow-[#1d4ed8]/30"
+              className="px-4 py-2.5 rounded-xl bg-[#1d4ed8] hover:bg-[#2563eb] text-white text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 shadow-lg shadow-[#1d4ed8]/30 active:scale-95"
             >
               <RefreshCw className="w-4 h-4" />
               Reload Campus Map

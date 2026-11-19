@@ -11,7 +11,7 @@ import {
   Edit2,
   X,
   Crosshair,
-  Navigation,
+  Navigation as NavigationIcon,
   Accessibility,
   Eye,
   History,
@@ -963,7 +963,7 @@ export default function AdminDashboard({
                         onClick={handleCaptureCurrentGps}
                         className="py-2 px-3 bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/50 rounded-xl text-xs font-semibold text-amber-300 flex items-center justify-center gap-1.5 transition-colors"
                       >
-                        <Navigation className="w-3.5 h-3.5 text-amber-400" /> Use My GPS
+                        <NavigationIcon className="w-3.5 h-3.5 text-amber-400" /> Use My GPS
                       </button>
                     </div>
 
@@ -1700,7 +1700,7 @@ export default function AdminDashboard({
                     }}
                     className="py-2 px-3 bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/50 rounded-xl text-xs font-semibold text-amber-300 flex items-center justify-center gap-1.5 transition-colors"
                   >
-                    <Navigation className="w-3.5 h-3.5 text-amber-400" /> Mobile GPS
+                    <NavigationIcon className="w-3.5 h-3.5 text-amber-400" /> Mobile GPS
                   </button>
                 </div>
               </div>

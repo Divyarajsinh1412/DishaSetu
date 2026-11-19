@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  Navigation,
+  Navigation as NavigationIcon,
   Compass,
   ArrowRight,
   ArrowUpDown,
@@ -34,8 +34,8 @@ const CAMPUS_PLACES = [
   { id: 'node_gate_2', code: 'PU-GATE-02', name: 'Gate 2 (Upper-Right Entrance)', category: 'Gate', group: 'Gates & Entrances', icon: Compass },
   { id: 'node_parking_entry', code: 'PU-PARK-2W', name: 'Student 2-Wheeler Parking', category: 'Parking', group: 'Parking & Transit', icon: Car },
   { id: 'node_visitor_parking', code: 'PU-PARK-VIS', name: 'Visitor Parking', category: 'Parking', group: 'Parking & Transit', icon: Car },
-  { id: 'node_bus_point_2', code: 'PU-BUS-02', name: 'Bus Point 2', category: 'Transport', group: 'Parking & Transit', icon: Navigation },
-  { id: 'node_bus_boarding', code: 'PU-BUS-BAY', name: 'Bus Boarding Bay', category: 'Transport', group: 'Parking & Transit', icon: Navigation },
+  { id: 'node_bus_point_2', code: 'PU-BUS-02', name: 'Bus Point 2', category: 'Transport', group: 'Parking & Transit', icon: NavigationIcon },
+  { id: 'node_bus_boarding', code: 'PU-BUS-BAY', name: 'Bus Boarding Bay', category: 'Transport', group: 'Parking & Transit', icon: NavigationIcon },
   { id: 'node_parking_4w', code: 'PU-PARK-4W', name: '4 Wheeler Parking', category: 'Parking', group: 'Parking & Transit', icon: Car },
 
   // 2. Academic Blocks
@@ -292,7 +292,7 @@ export default function RoutePlanningModal({
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-500 to-emerald-400 p-0.5 shadow-lg shadow-sky-500/20 flex items-center justify-center">
               <div className="w-full h-full bg-[#0b1328] rounded-[14px] flex items-center justify-center">
-                <Navigation className="w-5 h-5 text-sky-400" />
+                <NavigationIcon className="w-5 h-5 text-sky-400" />
               </div>
             </div>
             <div>
@@ -623,7 +623,7 @@ export default function RoutePlanningModal({
                 : 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
             }`}
           >
-            <Navigation className="w-4 h-4" />
+            <NavigationIcon className="w-4 h-4" />
             <span>START NAVIGATION</span>
             <ArrowRight className="w-4 h-4" />
           </button>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   X,
   MapPin,
-  Navigation,
+  Navigation as NavigationIcon,
   Compass,
   CheckCircle2,
   Clock,
@@ -137,7 +137,7 @@ export default function LocationDetailsModal({
                 className="py-2.5 px-3 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 shadow-md transition-all hover:scale-[1.02]"
                 title="BUTTON 2: Start Indoor Navigation"
               >
-                <Navigation className="w-4 h-4" /> Start Indoor Nav
+                <NavigationIcon className="w-4 h-4" /> Start Indoor Nav
               </button>
             </div>
           )}
@@ -150,7 +150,7 @@ export default function LocationDetailsModal({
               }}
               className="flex-1 py-2 px-3 bg-slate-800 hover:bg-slate-750 text-slate-200 font-semibold text-xs rounded-xl flex items-center justify-center gap-1.5 border border-slate-700 transition-colors"
             >
-              <Navigation className="w-3.5 h-3.5 text-sky-400" /> Walk via GPS
+              <NavigationIcon className="w-3.5 h-3.5 text-sky-400" /> Walk via GPS
             </button>
             <button
               onClick={onClose}

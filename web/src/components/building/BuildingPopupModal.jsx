@@ -3,7 +3,7 @@ import {
   Building2,
   MapPin,
   Map as MapIcon,
-  Navigation,
+  Navigation as NavigationIcon,
   Compass,
   Layers,
   CheckCircle2,
@@ -235,7 +235,7 @@ export default function BuildingPopupModal({
               className="py-3 px-4 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-extrabold text-xs sm:text-sm rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-sky-950/50 transition-all hover:scale-[1.02] active:scale-[0.98]"
               title="Open indoor navigation and search for rooms in this building"
             >
-              <Navigation className="w-4 h-4 text-sky-200" />
+              <NavigationIcon className="w-4 h-4 text-sky-200" />
               <span>START INDOOR NAVIGATION</span>
             </button>
           </div>

@@ -13,7 +13,7 @@ import {
   FlaskConical,
   Layers,
   MapPin,
-  Navigation,
+  Navigation as NavigationIcon,
   ZoomIn,
   ZoomOut,
   RotateCcw,
@@ -1003,7 +1003,7 @@ export default function CampusDigitalTwin3D({
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-bold rounded-lg shadow-md transition-all hover:scale-105"
                 title="BUTTON 2: Start Indoor Navigation"
               >
-                <Navigation className="w-3.5 h-3.5 text-sky-200" />
+                <NavigationIcon className="w-3.5 h-3.5 text-sky-200" />
                 <span>Indoor Nav</span>
               </button>
             )}

@@ -27,7 +27,8 @@ import {
   ArrowRight,
   Sparkles,
   MoreVertical,
-  Check
+  Check,
+  Calendar
 } from 'lucide-react';
 import { getTranslation } from '../services/localization';
 import { COMPLETE_CAMPUS_CATALOG } from '../services/campusCatalog';
@@ -47,6 +48,8 @@ export default function Header({
   onOpenIssueReport,
   onOpenMapEditor,
   onOpenRoutePlanning,
+  onOpenAIAssistant,
+  onOpenEvents,
   onSelectLocation,
   locations = [],
   viewMode = 'master',
@@ -357,6 +360,17 @@ export default function Header({
             <span className="hidden md:inline">Food & Dining</span>
           </button>
 
+          {/* AI Campus Assistant Trigger */}
+          <button
+            type="button"
+            onClick={onOpenAIAssistant}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-gradient-to-r from-[#0d223d] to-[#122e54] hover:from-[#133056] hover:to-[#1a4073] text-slate-100 text-xs font-bold rounded-xl border border-[#234673] shadow-sm transition-all hover:scale-105 active:scale-95 shrink-0"
+            title="DishaSetu AI Assistant: Search locations, routes, and campus questions"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#d4af37]" />
+            <span className="hidden lg:inline">AI Assistant</span>
+          </button>
+
           {/* Campus Field Survey Trigger */}
           <button
             type="button"
@@ -419,6 +433,15 @@ export default function Header({
                 >
                   <HelpCircle className="w-4 h-4 text-sky-400" />
                   <span>Report Obstacle / Issue</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { if (onOpenEvents) onOpenEvents(); setIsMoreMenuOpen(false); }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-semibold text-slate-200 hover:bg-[#132847] flex items-center gap-2.5 transition-colors"
+                >
+                  <Calendar className="w-4 h-4 text-sky-400" />
+                  <span>Campus Events & Calendar</span>
                 </button>
 
                 <div className="h-px bg-[#1b3152] my-1" />

@@ -3,7 +3,6 @@ import {
   Building2,
   Layers,
   MapPin,
-  Navigation,
   Accessibility,
   ArrowRight,
   ArrowDown,

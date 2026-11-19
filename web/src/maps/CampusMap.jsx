@@ -14,7 +14,7 @@ import L from 'leaflet';
 import {
   Compass,
   Maximize2,
-  Navigation,
+  Navigation as NavigationIcon,
   Layers,
   MapPin,
   Trees,
@@ -790,7 +790,7 @@ export default function CampusMap({
                         className="w-full py-1.5 px-3 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 shadow-md transition-all"
                         title="BUTTON 2: Start Indoor Navigation"
                       >
-                        <Navigation className="w-3.5 h-3.5" /> Start Indoor Navigation
+                        <NavigationIcon className="w-3.5 h-3.5" /> Start Indoor Navigation
                       </button>
 
                       {onOpenBuildingPopup && (
@@ -814,7 +814,7 @@ export default function CampusMap({
                       onClick={() => onSelectLocation && onSelectLocation(loc)}
                       className="w-full py-1.5 px-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors"
                     >
-                      <Navigation className="w-3.5 h-3.5" /> Start Walking Navigation
+                      <NavigationIcon className="w-3.5 h-3.5" /> Start Walking Navigation
                     </button>
                   )}
                 </div>
@@ -958,7 +958,7 @@ export default function CampusMap({
                 </label>
                 <label className="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5">
                   <span className="flex items-center gap-2">
-                    <Navigation className="w-3.5 h-3.5 text-sky-400" /> Walking Route
+                    <NavigationIcon className="w-3.5 h-3.5 text-sky-400" /> Walking Route
                   </span>
                   <input
                     type="checkbox"
@@ -1007,7 +1007,7 @@ export default function CampusMap({
           title="Locate Me (Current GPS Position)"
           className="w-11 h-11 bg-[#1e293b]/95 hover:bg-[#334155] border border-slate-700/80 rounded-xl text-slate-200 shadow-xl backdrop-blur-md flex items-center justify-center transition-all hover:scale-105 active:scale-95"
         >
-          <Navigation className="w-5 h-5 text-amber-400" />
+          <NavigationIcon className="w-5 h-5 text-amber-400" />
         </button>
       </div>
 

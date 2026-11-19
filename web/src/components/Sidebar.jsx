@@ -3,7 +3,7 @@ import {
   Compass,
   MapPin,
   Building2,
-  Navigation,
+  Navigation as NavigationIcon,
   Car,
   Trees,
   Droplets,
@@ -182,7 +182,7 @@ export default function Sidebar({
               : 'text-slate-400 hover:text-white'
           }`}
         >
-          <Navigation className="w-3 h-3" /> Route
+          <NavigationIcon className="w-3 h-3" /> Route
         </button>
         <button
           onClick={() => setActiveTab('saved')}
@@ -281,7 +281,7 @@ export default function Sidebar({
                 onClick={() => handleRunDirections()}
                 className="w-full py-2.5 px-4 bg-gradient-to-r from-blue-600 to-sky-600 hover:from-blue-500 hover:to-sky-500 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all"
               >
-                <Navigation className="w-4 h-4" /> Get Walking Directions
+                <NavigationIcon className="w-4 h-4" /> Get Walking Directions
               </button>
             </div>
 
@@ -454,7 +454,7 @@ export default function Sidebar({
                           className="px-2 py-1 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 font-bold border border-sky-500/30 flex items-center gap-1 transition-all"
                           title="BUTTON 2: Start Indoor Navigation"
                         >
-                          <Navigation className="w-3 h-3" /> Nav
+                          <NavigationIcon className="w-3 h-3" /> Nav
                         </button>
                       )}
                       <button
@@ -584,7 +584,7 @@ export default function Sidebar({
                           onClick={() => onStartNavigation && onStartNavigation(loc)}
                           className="px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-semibold flex items-center gap-1 transition-colors text-[11px]"
                         >
-                          <Navigation className="w-3 h-3" /> Navigate
+                          <NavigationIcon className="w-3 h-3" /> Navigate
                         </button>
                       </div>
                     </div>

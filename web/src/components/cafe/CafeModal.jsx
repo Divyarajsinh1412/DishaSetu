@@ -5,7 +5,7 @@ import {
   Star,
   Clock,
   MapPin,
-  Navigation,
+  Navigation as NavigationIcon,
   Utensils,
   Calendar,
   MessageSquare,
@@ -285,7 +285,7 @@ export default function CafeModal({
               }}
               className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-500/20 transition-all hover:scale-105 shrink-0"
             >
-              <Navigation className="w-4 h-4" />
+              <NavigationIcon className="w-4 h-4" />
               <span>Navigate to Cafe</span>
             </button>
           </div>

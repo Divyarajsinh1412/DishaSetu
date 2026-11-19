@@ -6,7 +6,7 @@ import {
   ChevronRight,
   ChevronLeft,
   Eye,
-  Navigation,
+  Navigation as NavigationIcon,
   Building2,
   BookOpen,
   Coffee,
@@ -423,7 +423,7 @@ function HotspotMenuItem({ hotspot, onFocus, onNavigate }) {
           className="p-1.5 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white transition-colors"
           title="Walk Here (Outdoor Navigation)"
         >
-          <Navigation className="w-3.5 h-3.5" />
+          <NavigationIcon className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>

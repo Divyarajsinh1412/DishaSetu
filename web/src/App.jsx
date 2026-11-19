@@ -20,6 +20,8 @@ import LocationDetailsModal from './components/LocationDetailsModal';
 import EmergencyModal from './components/EmergencyModal';
 import AdminLoginModal from './components/AdminLoginModal';
 import AdminDashboard from './components/admin/AdminDashboard';
+import CampusAIAssistantModal from './components/assistant/CampusAIAssistantModal';
+import CampusEventsModal from './components/events/CampusEventsModal';
 import {
   fetchCampusData,
   fetchCampusFeatures,
@@ -85,6 +87,8 @@ export default function App() {
   const [isRoutePlanningOpen, setIsRoutePlanningOpen] = useState(false);
   const [routePlanningStart, setRoutePlanningStart] = useState('node_main_gate');
   const [routePlanningDest, setRoutePlanningDest] = useState('bld_d_block');
+  const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
+  const [isEventsModalOpen, setIsEventsModalOpen] = useState(false);
   const [language, setLanguage] = useState(() => localStorage.getItem('dishasetu_lang') || 'en');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -373,6 +377,8 @@ export default function App() {
         onOpenIssueReport={() => setIsIssueReportOpen(true)}
         onOpenMapEditor={() => setIsMapEditorOpen(true)}
         onOpenRoutePlanning={handleOpenRoutePlanning}
+        onOpenAIAssistant={() => setIsAIAssistantOpen(true)}
+        onOpenEvents={() => setIsEventsModalOpen(true)}
         onSelectLocation={(loc) => setSelectedLocation(loc)}
         locations={filteredLocations}
         viewMode={viewMode}
@@ -672,6 +678,56 @@ export default function App() {
         buildings={buildings}
         onRefreshMarkers={loadData}
       />
+
+      {/* PHASE 7: DishaSetu AI Campus Assistant Modal */}
+      <CampusAIAssistantModal
+        isOpen={isAIAssistantOpen}
+        onClose={() => setIsAIAssistantOpen(false)}
+        onStartNavigation={(route) => {
+          setActiveRoute(route);
+          if (viewMode !== 'master' && viewMode !== 'map') setViewMode('master');
+        }}
+        onLocateOnMap={(placeId) => {
+          setViewMode('master');
+          const target = mapMarkers.find(m => m._id === placeId || m.featureId === placeId || m.code === placeId);
+          if (target) setSelectedLocation(target);
+        }}
+        onOpenIndoorRoom={(roomNumber) => {
+          const dBlock = buildings.find(b => b.shortCode === 'PU-D-BLOCK') || { name: 'D Block', shortCode: 'PU-D-BLOCK' };
+          setTargetIndoorBuilding(dBlock);
+          setViewMode('indoor');
+        }}
+        onOpenCafe={(cafe) => {
+          handleOpenCafe(cafe);
+        }}
+      />
+
+      {/* PHASE 6: Presidency University Campus Events & Workshops Modal */}
+      <CampusEventsModal
+        isOpen={isEventsModalOpen}
+        onClose={() => setIsEventsModalOpen(false)}
+        onStartNavigation={(route) => {
+          setActiveRoute(route);
+          if (viewMode !== 'master' && viewMode !== 'map') setViewMode('master');
+        }}
+      />
+
+      {/* Floating AI Assistant Trigger Pill (Persistent across all map views) */}
+      {!isAIAssistantOpen && (
+        <button
+          type="button"
+          onClick={() => setIsAIAssistantOpen(true)}
+          className="fixed bottom-5 right-20 sm:bottom-6 sm:right-24 z-40 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-[#0d223d] via-[#102d52] to-[#1e3a8a] hover:from-[#133056] hover:to-[#2563eb] text-white text-xs font-bold border border-[#2d568c]/80 shadow-2xl shadow-blue-900/40 flex items-center gap-2 transition-all hover:scale-105 active:scale-95 group"
+          title="Ask DishaSetu AI Assistant"
+        >
+          <div className="w-5 h-5 rounded-lg bg-[#d4af37]/20 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37]">
+            <Sparkles className="w-3.5 h-3.5" />
+          </div>
+          <span className="hidden sm:inline tracking-wide font-extrabold text-slate-100 group-hover:text-white">
+            Ask AI Assistant
+          </span>
+        </button>
+      )}
 
       {/* Mobile Bottom Navigation Bar (Visible on mobile/tablet screens < 768px) */}
       <nav className="md:hidden h-14 bg-[#0f172a]/95 backdrop-blur-xl border-t border-slate-800 flex items-center justify-around px-2 z-30 shrink-0 shadow-2xl">

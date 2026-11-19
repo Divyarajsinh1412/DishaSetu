@@ -10,7 +10,7 @@ import {
   Camera,
   Layers,
   MapPin,
-  Navigation,
+  Navigation as NavigationIcon,
   Sparkles,
   Info,
   X,
@@ -708,7 +708,7 @@ export default function ImmersiveViewer({
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
-                <Navigation className="w-4 h-4 animate-pulse" />
+                <NavigationIcon className="w-4 h-4 animate-pulse" />
               </div>
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
@@ -849,7 +849,7 @@ export default function ImmersiveViewer({
                 className="flex items-center justify-center gap-1.5 py-2 px-3 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-md transition-all hover:scale-105"
                 title="BUTTON 2: Start Indoor Navigation"
               >
-                <Navigation className="w-3.5 h-3.5 text-sky-200" />
+                <NavigationIcon className="w-3.5 h-3.5 text-sky-200" />
                 <span>Indoor Nav</span>
               </button>
             )}
@@ -861,7 +861,7 @@ export default function ImmersiveViewer({
               }}
               className="flex items-center justify-center gap-1.5 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition-all hover:scale-105"
             >
-              <Navigation className="w-3.5 h-3.5 text-sky-400" />
+              <NavigationIcon className="w-3.5 h-3.5 text-sky-400" />
               <span>Walk Here</span>
             </button>
           </div>
