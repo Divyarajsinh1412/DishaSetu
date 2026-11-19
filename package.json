@@ -6,9 +6,10 @@
   "main": "server/server.js",
   "type": "module",
   "scripts": {
-    "build": "cd server && npm install && cd ../web && npm install --install-links && npm run build && cd ..",
-    "build:web": "cd web && npm install --install-links && npm run build && cd ..",
-    "build:server": "cd server && npm install && cd ..",
+    "build": "npm --prefix server install && npm --prefix web install --install-links && npm --prefix web run build",
+    "postinstall": "npm --prefix web install --install-links && npm --prefix web run build",
+    "build:web": "npm --prefix web install --install-links && npm --prefix web run build",
+    "build:server": "npm --prefix server install",
     "start": "node server/server.js",
     "server": "npm --prefix server start",
     "dev": "npm --prefix server run dev",

@@ -3,9 +3,9 @@
  * Presidency University Bengaluru Campus Navigation Platform
  */
 
-// Read VITE_API_URL from environment variables
-const envApiUrl = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL
-  ? import.meta.env.VITE_API_URL.trim()
+// Read VITE_API_BASE_URL or VITE_API_URL from environment variables
+const envApiUrl = typeof import.meta !== 'undefined' && import.meta.env
+  ? (import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '').trim()
   : '';
 
 /**
@@ -31,6 +31,8 @@ export const API_BASE_URL = (() => {
   // Fallback to official deployed Render backend
   return 'https://dishasetu-jx71.onrender.com';
 })();
+
+export const VITE_API_BASE_URL = API_BASE_URL;
 
 /**
  * Builds a fully qualified API endpoint URL

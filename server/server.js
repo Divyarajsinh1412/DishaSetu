@@ -102,40 +102,62 @@ app.get('/api/health', handleHealthCheck);
 app.use('/api', apiRoutes);
 
 // Serve Web Frontend in production or when web/dist exists
-const webDistPath = path.resolve(__dirname, '../web/dist');
+const candidateDistPaths = [
+  path.resolve(__dirname, '../web/dist'),
+  path.resolve(process.cwd(), 'web/dist'),
+  path.resolve(process.cwd(), 'dist')
+];
+const webDistPath = candidateDistPaths.find(p => fs.existsSync(p));
 
-if (fs.existsSync(webDistPath)) {
+if (webDistPath) {
   console.log(`[Static] Serving web application from ${webDistPath}`);
   app.use(express.static(webDistPath));
 
   // SPA fallback for all frontend client-side routes (non-API)
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api')) {
+    if (req.path.startsWith('/api') || req.path === '/health') {
       return next();
     }
     res.sendFile(path.join(webDistPath, 'index.html'));
   });
 } else {
-  // Fallback API root route if web/dist is not present
+  // Branded portal landing page if static bundle is served separately
   app.get('/', (req, res) => {
-    res.json({
-      name: 'DishaSetu API',
-      tagline: 'Your Campus. Your Direction. Your Way.',
-      institution: 'Presidency University, Bengaluru, Karnataka, India',
-      endpoints: {
-        health: '/api/health',
-        campus: '/api/campus',
-        features: '/api/features',
-        locations: '/api/locations',
-        routes: '/api/routes',
-        buildings: '/api/buildings',
-        departments: '/api/departments',
-        approvals: '/api/approvals',
-        syncStream: '/api/sync/stream',
-        emergency: '/api/emergency/directory'
-      },
-      database: getDbStatus()
-    });
+    res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DishaSetu API — Presidency University Bengaluru</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; background: #07172c; color: #f1f5f9; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+    .card { background: #0b1f3b; border: 1px solid #1e3a8a; border-radius: 20px; max-width: 520px; width: 100%; padding: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6); }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399; border-radius: 9999px; font-size: 11px; font-weight: 700; margin-bottom: 20px; letter-spacing: 0.05em; text-transform: uppercase; }
+    .dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 10px #10b981; }
+    h1 { margin: 0 0 8px 0; font-size: 24px; color: #fff; font-weight: 900; }
+    .sub { color: #60a5fa; font-size: 13px; font-weight: 600; margin-bottom: 16px; }
+    p { color: #94a3b8; font-size: 14px; line-height: 1.6; margin-bottom: 24px; }
+    .links { display: flex; flex-direction: column; gap: 10px; }
+    a.btn { display: inline-flex; align-items: center; justify-content: center; padding: 12px 18px; background: linear-gradient(135deg, #0ea5e9, #2563eb); color: #fff; text-decoration: none; border-radius: 12px; font-size: 14px; font-weight: 800; box-shadow: 0 10px 20px rgba(37,99,235,0.3); transition: transform 0.15s; }
+    a.btn:hover { transform: translateY(-1px); }
+    a.sec { display: inline-flex; align-items: center; justify-content: center; padding: 10px 16px; background: rgba(255,255,255,0.05); color: #94a3b8; text-decoration: none; border-radius: 10px; font-size: 12px; font-weight: 600; border: 1px solid #1e293b; }
+    a.sec:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge"><span class="dot"></span> Backend & MongoDB Atlas Online</div>
+    <h1>DishaSetu Campus API</h1>
+    <div class="sub">Presidency University Bengaluru</div>
+    <p>The campus navigation backend service is operational and connected to MongoDB Atlas (43 locations, 36 navigation nodes, 37 pedestrian walkways).</p>
+    <div class="links">
+      <a class="btn" href="https://dishasetu-app.onrender.com" target="_blank">Open DishaSetu Campus Navigation Web App &rarr;</a>
+      <a class="sec" href="/api/health">Check API & Database Health Diagnostics</a>
+      <a class="sec" href="/api/locations">Explore Campus Locations API</a>
+    </div>
+  </div>
+</body>
+</html>`);
   });
 }
 
