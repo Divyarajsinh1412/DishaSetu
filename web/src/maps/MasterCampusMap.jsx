@@ -954,6 +954,7 @@ export default function MasterCampusMap({
           )}
         </div>
       </div>
+    </div>
 
       {/* ================================================================= */}
       {/* 2. INTERACTIVE TRANSFORMED CANVAS CONTAINER (PAN, ZOOM, ROTATE)   */}
@@ -1583,6 +1584,5 @@ export default function MasterCampusMap({
         </div>
       )}
     </div>
-  </div>
-);
+  );
 }
