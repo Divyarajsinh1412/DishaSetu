@@ -3,13 +3,10 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-// Fail fast when disconnected from MongoDB instead of buffering for 10000ms
-mongoose.set('bufferCommands', false);
-
 const TARGET_DB_NAME = process.env.DB_NAME || 'dishasetu_db';
 
 /**
- * Helper to mask credentials in MongoDB URI for safe logging
+ * Safely masks credentials in MongoDB URI for logs and diagnostics
  */
 export const maskMongoUri = (uri) => {
   if (!uri) return 'undefined';
@@ -18,6 +15,7 @@ export const maskMongoUri = (uri) => {
 
 let isConnected = false;
 let isShuttingDown = false;
+let connectionPromise = null;
 
 // Attach persistent connection event listeners once
 mongoose.connection.on('connected', () => {
@@ -27,6 +25,9 @@ mongoose.connection.on('connected', () => {
 
 mongoose.connection.on('error', (err) => {
   console.error(`[MongoDB Atlas] Connection error: ${err.message}`);
+  if (err.message && (err.message.includes('alert number 80') || err.message.includes('SSL') || err.message.includes('tlsv1'))) {
+    console.error('[MongoDB Atlas Tip] SSL Alert 80 detected. This indicates MongoDB Atlas dropped the TLS handshake because the client IP is not in Atlas Network Access. Add 0.0.0.0/0 (Allow Access from Anywhere) in MongoDB Atlas -> Security -> Network Access.');
+  }
 });
 
 mongoose.connection.on('disconnected', () => {
@@ -45,34 +46,61 @@ mongoose.connection.on('reconnected', () => {
  * Centralized MongoDB Atlas connection initializer
  */
 export const connectDB = async () => {
+  // Return existing active connection
   if (mongoose.connection.readyState === 1) {
+    isConnected = true;
     return mongoose.connection;
   }
 
-  const rawUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+  // If already connecting, return the existing in-flight promise
+  if (mongoose.connection.readyState === 2 && connectionPromise) {
+    return connectionPromise;
+  }
+
+  const rawUri = process.env.MONGODB_URI || process.env.MONGO_URI;
 
   if (!rawUri) {
-    console.warn('[MongoDB Atlas] MONGO_URI / MONGODB_URI environment variable not defined. Operating with resilient in-memory fallback.');
+    console.warn('[MongoDB Atlas] Neither MONGODB_URI nor MONGO_URI is defined. Backend running with read-only verified campus dataset.');
     return null;
   }
 
-  try {
-    const conn = await mongoose.connect(rawUri, {
-      dbName: TARGET_DB_NAME,
-      serverSelectionTimeoutMS: 10000,
-      connectTimeoutMS: 10000,
-      autoIndex: process.env.NODE_ENV !== 'production',
-      maxPoolSize: 10,
-      minPoolSize: 1
-    });
+  const maskedUri = maskMongoUri(rawUri);
+  console.log(`[MongoDB Atlas] Initiating connection to cluster: ${maskedUri}`);
 
-    isConnected = conn.connection.readyState === 1;
-    return conn;
-  } catch (error) {
-    console.error(`[MongoDB Atlas] Initial connection failed: ${error.message}`);
-    console.warn('[MongoDB Atlas] Server will continue running using in-memory campus fallback data.');
-    return null;
-  }
+  connectionPromise = (async () => {
+    try {
+      const conn = await mongoose.connect(rawUri, {
+        dbName: TARGET_DB_NAME,
+        serverSelectionTimeoutMS: 10000,
+        connectTimeoutMS: 10000,
+        socketTimeoutMS: 45000,
+        family: 4, // Prefer IPv4 for consistent cloud container DNS resolution
+        retryWrites: true,
+        maxPoolSize: 10,
+        minPoolSize: 1,
+        autoIndex: process.env.NODE_ENV !== 'production'
+      });
+
+      isConnected = conn.connection.readyState === 1;
+      return conn;
+    } catch (error) {
+      isConnected = false;
+      console.error(`[MongoDB Atlas] Initial connection failed: ${error.message}`);
+      if (error.message && (error.message.includes('alert number 80') || error.message.includes('whitelist') || error.message.includes('SSL') || error.message.includes('timed out'))) {
+        console.error('[MongoDB Atlas Configuration Guide] To resolve Atlas SSL Alert 80 / IP whitelist errors on Render:');
+        console.error('1. Log in to cloud.mongodb.com');
+        console.error('2. Navigate to: Security -> Network Access');
+        console.error('3. Click "Add IP Address" -> Select "Allow Access from Anywhere" (0.0.0.0/0)');
+        console.error('4. Confirm changes and save.');
+      }
+      console.warn('[MongoDB Atlas] Read requests will serve verified campus fallback geometry. Write operations will be rejected until MongoDB is connected.');
+      return null;
+    } finally {
+      connectionPromise = null;
+    }
+  })();
+
+  return connectionPromise;
 };
 
 /**
@@ -90,7 +118,7 @@ export const closeDB = async () => {
   }
 };
 
-// Handle process termination signals for graceful shutdown
+// Process termination signal handlers
 if (typeof process !== 'undefined') {
   process.on('SIGINT', async () => {
     await closeDB();
@@ -114,9 +142,11 @@ export const getDbStatus = () => {
     3: 'disconnecting'
   };
   const stateCode = mongoose.connection.readyState;
+  const isConn = stateCode === 1;
   return {
+    status: isConn ? 'connected' : 'disconnected',
     state: states[stateCode] || 'unknown',
-    connected: stateCode === 1,
+    connected: isConn,
     database: mongoose.connection.name || TARGET_DB_NAME,
     host: mongoose.connection.host || null
   };

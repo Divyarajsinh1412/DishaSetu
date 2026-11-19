@@ -282,16 +282,20 @@ export default function MasterCampusMap({
   const [localSelectedFeature, setLocalSelectedFeature] = useState(null);
 
   // Dynamic Cafe Ratings & Reviews from MongoDB
-  const [liveCafes, setLiveCafes] = useState([]);
+  const [liveCafes, setLiveCafes] = useState(() => (Array.isArray(cafes) && cafes.length > 0 ? cafes : []));
   useEffect(() => {
+    if (Array.isArray(cafes) && cafes.length > 0) {
+      setLiveCafes(cafes);
+      return;
+    }
     let isMounted = true;
     fetchCafes().then(data => {
-      if (isMounted && Array.isArray(data)) {
+      if (isMounted && Array.isArray(data) && data.length > 0) {
         setLiveCafes(data);
       }
     }).catch(() => {});
     return () => { isMounted = false; };
-  }, [cafes]);
+  }, [cafes?.length]);
 
   const hattiKappiCafe = useMemo(() => {
     return liveCafes.find(c => c.shortCode === 'PU-CAFE-D-BLOCK' || c.name === 'Hatti Kappi');

@@ -42,7 +42,8 @@ export const createDepartment = async (req, res) => {
 
     res.status(201).json({ success: true, data: dept });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const isDbUnavailable = error.message && error.message.includes('Database write operation unavailable');
+    res.status(isDbUnavailable ? 503 : 500).json({ success: false, message: error.message });
   }
 };
 
@@ -55,7 +56,8 @@ export const updateDepartment = async (req, res) => {
     }
     res.json({ success: true, data: updated });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const isDbUnavailable = error.message && error.message.includes('Database write operation unavailable');
+    res.status(isDbUnavailable ? 503 : 500).json({ success: false, message: error.message });
   }
 };
 
@@ -65,6 +67,7 @@ export const deleteDepartment = async (req, res) => {
     await CampusService.deleteDepartment(id, req.user);
     res.json({ success: true, message: 'Department deleted successfully.' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const isDbUnavailable = error.message && error.message.includes('Database write operation unavailable');
+    res.status(isDbUnavailable ? 503 : 500).json({ success: false, message: error.message });
   }
 };

@@ -40,7 +40,8 @@ export const createLocation = async (req, res) => {
 
     res.status(201).json({ success: true, data: newLocation });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const isDbUnavailable = error.message && error.message.includes('Database write operation unavailable');
+    res.status(isDbUnavailable ? 503 : 500).json({ success: false, message: error.message });
   }
 };
 
@@ -79,6 +80,7 @@ export const updateLocationSurvey = async (req, res) => {
       data: updated
     });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    const isDbUnavailable = error.message && error.message.includes('Database write operation unavailable');
+    res.status(isDbUnavailable ? 503 : 400).json({ success: false, message: error.message });
   }
 };

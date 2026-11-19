@@ -37,6 +37,30 @@ app.use((req, res, next) => {
   next();
 });
 
+// Dedicated Health Check Handler for Render & Load Balancers (returns 200 to prevent boot loops)
+const handleHealthCheck = (req, res) => {
+  const db = getDbStatus();
+  const isHealthy = db.connected;
+  res.status(200).json({
+    status: isHealthy ? 'healthy' : 'degraded',
+    service: 'DishaSetu Campus Navigation API',
+    institution: 'Presidency University Bengaluru',
+    environment: process.env.NODE_ENV || 'production',
+    uptime: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+    database: {
+      status: db.connected ? 'connected' : 'disconnected',
+      state: db.state,
+      database: db.database,
+      host: db.host
+    }
+  });
+};
+
+// Mount root and API health routes before static / SPA fallback
+app.get('/health', handleHealthCheck);
+app.get('/api/health', handleHealthCheck);
+
 // Mount API routes
 app.use('/api', apiRoutes);
 

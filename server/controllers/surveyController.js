@@ -92,6 +92,14 @@ export const captureGpsSurvey = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Valid latitude and longitude coordinates are required.' });
     }
 
+    const dbStatus = getDbStatus();
+    if (!dbStatus.connected) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database write operation unavailable: MongoDB Atlas is currently offline. Survey capture cannot be saved.'
+      });
+    }
+
     // Update in memory catalog
     const idx = memoryCatalog.findIndex(i => i.locationId === locationId);
     let targetRecord = null;
@@ -113,8 +121,7 @@ export const captureGpsSurvey = async (req, res) => {
       targetRecord = memoryCatalog[idx];
     }
 
-    // Persist to MongoDB Atlas if connected
-    const dbStatus = getDbStatus();
+    // Persist to MongoDB Atlas
     if (dbStatus.connected) {
       await Location.findOneAndUpdate(
         { $or: [{ locationId }, { name: targetRecord?.name }] },
@@ -169,6 +176,14 @@ export const captureGpsSurvey = async (req, res) => {
  */
 export const verifySurveyRecord = async (req, res) => {
   try {
+    const dbStatus = getDbStatus();
+    if (!dbStatus.connected) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database write operation unavailable: MongoDB Atlas is currently offline. Survey verification cannot be saved.'
+      });
+    }
+
     const { id } = req.params;
     const { verifiedBy = 'Super Admin' } = req.body;
 
@@ -179,6 +194,11 @@ export const verifySurveyRecord = async (req, res) => {
       memoryCatalog[idx].verifiedBy = verifiedBy;
       memoryCatalog[idx].verificationDate = new Date().toISOString();
     }
+
+    await Location.findOneAndUpdate(
+      { locationId: id },
+      { $set: { verificationStatus: 'Verified', approvalStatus: 'Approved' } }
+    );
 
     syncService.broadcast('survey:record_verified', memoryCatalog[idx]);
     res.json({ success: true, message: `Record ${id} verified.`, data: memoryCatalog[idx] });
@@ -192,6 +212,14 @@ export const verifySurveyRecord = async (req, res) => {
  */
 export const publishSurveyRecord = async (req, res) => {
   try {
+    const dbStatus = getDbStatus();
+    if (!dbStatus.connected) {
+      return res.status(503).json({
+        success: false,
+        message: 'Database write operation unavailable: MongoDB Atlas is currently offline. Survey record cannot be published.'
+      });
+    }
+
     const { id } = req.params;
 
     const idx = memoryCatalog.findIndex(i => i.locationId === id);
@@ -199,6 +227,11 @@ export const publishSurveyRecord = async (req, res) => {
       memoryCatalog[idx].verificationStatus = 'Published';
       memoryCatalog[idx].approvalStatus = 'Published';
     }
+
+    await Location.findOneAndUpdate(
+      { locationId: id },
+      { $set: { verificationStatus: 'Published', approvalStatus: 'Published', status: 'published' } }
+    );
 
     syncService.broadcast('survey:record_published', memoryCatalog[idx]);
     res.json({ success: true, message: `Record ${id} published to live campus map.`, data: memoryCatalog[idx] });

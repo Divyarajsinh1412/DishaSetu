@@ -42,7 +42,8 @@ export const createBuilding = async (req, res) => {
 
     res.status(201).json({ success: true, data: building });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const isDbUnavailable = error.message && error.message.includes('Database write operation unavailable');
+    res.status(isDbUnavailable ? 503 : 500).json({ success: false, message: error.message });
   }
 };
 
@@ -55,7 +56,8 @@ export const updateBuilding = async (req, res) => {
     }
     res.json({ success: true, data: updated });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const isDbUnavailable = error.message && error.message.includes('Database write operation unavailable');
+    res.status(isDbUnavailable ? 503 : 500).json({ success: false, message: error.message });
   }
 };
 
@@ -65,7 +67,8 @@ export const deleteBuilding = async (req, res) => {
     await CampusService.deleteBuilding(id, req.user);
     res.json({ success: true, message: 'Building deleted successfully.' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const isDbUnavailable = error.message && error.message.includes('Database write operation unavailable');
+    res.status(isDbUnavailable ? 503 : 500).json({ success: false, message: error.message });
   }
 };
 
@@ -90,7 +93,8 @@ export const addBuildingEntrance = async (req, res) => {
 
     res.status(201).json({ success: true, data: updatedBuilding });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    const isDbUnavailable = error.message && error.message.includes('Database write operation unavailable');
+    res.status(isDbUnavailable ? 503 : 400).json({ success: false, message: error.message });
   }
 };
 
@@ -100,6 +104,7 @@ export const deleteBuildingEntrance = async (req, res) => {
     const updatedBuilding = await CampusService.deleteBuildingEntrance(id, entranceId, req.user);
     res.json({ success: true, data: updatedBuilding });
   } catch (error) {
-    res.status(400).json({ success: false, message: error.message });
+    const isDbUnavailable = error.message && error.message.includes('Database write operation unavailable');
+    res.status(isDbUnavailable ? 503 : 400).json({ success: false, message: error.message });
   }
 };

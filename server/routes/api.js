@@ -109,12 +109,20 @@ router.get('/sync/stream', (req, res) => {
 // Health Check
 router.get('/health', (req, res) => {
   const db = getDbStatus();
-  res.json({
-    status: 'healthy',
+  const isHealthy = db.connected;
+  res.status(200).json({
+    status: isHealthy ? 'healthy' : 'degraded',
     service: 'DishaSetu Campus Navigation API',
     institution: 'Presidency University Bengaluru',
+    environment: process.env.NODE_ENV || 'production',
+    uptime: Math.floor(process.uptime()),
     timestamp: new Date().toISOString(),
-    database: db,
+    database: {
+      status: db.connected ? 'connected' : 'disconnected',
+      state: db.state,
+      database: db.database,
+      host: db.host
+    },
     syncListeners: syncService.getConnectedCount(),
     version: '1.2.0'
   });

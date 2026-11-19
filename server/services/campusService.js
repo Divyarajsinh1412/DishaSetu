@@ -487,7 +487,6 @@ export const CampusService = {
   },
 
   async createBuilding(buildingData, user) {
-    const dbStatus = getDbStatus();
     const newBuilding = {
       _id: `bld_${Date.now()}`,
       name: buildingData.name,
@@ -504,63 +503,39 @@ export const CampusService = {
       updatedAt: new Date()
     };
 
-    if (dbStatus.connected) {
-      try {
-        const created = await Building.create(newBuilding);
-        this.logAudit('create', user.email, user.role, 'building', created._id.toString(), { name: created.name });
-        syncService.broadcast('building:created', created);
-        return created;
-      } catch (err) {
-        console.warn('[CampusService] Create building DB error:', err.message);
-      }
+    const dbStatus = getDbStatus();
+    if (!dbStatus.connected) {
+      throw new Error('Database write operation unavailable: MongoDB Atlas is disconnected. Building cannot be saved.');
     }
 
-    memoryStore.buildings.push(newBuilding);
-    this.logAudit('create', user.email, user.role, 'building', newBuilding._id, { name: newBuilding.name });
-    syncService.broadcast('building:created', newBuilding);
-    return newBuilding;
+    const created = await Building.create(newBuilding);
+    this.logAudit('create', user.email, user.role, 'building', created._id.toString(), { name: created.name });
+    syncService.broadcast('building:created', created);
+    return created;
   },
 
   async updateBuilding(id, updateData, user) {
     const dbStatus = getDbStatus();
-    if (dbStatus.connected) {
-      try {
-        const updated = await Building.findByIdAndUpdate(id, { $set: updateData }, { new: true });
-        if (updated) {
-          this.logAudit('update', user.email, user.role, 'building', id, updateData);
-          syncService.broadcast('building:updated', updated);
-          return updated;
-        }
-      } catch (err) {
-        console.warn('[CampusService] Update building DB error:', err.message);
-      }
+    if (!dbStatus.connected) {
+      throw new Error('Database write operation unavailable: MongoDB Atlas is disconnected. Building updates cannot be persisted.');
     }
 
-    const index = memoryStore.buildings.findIndex(b => b._id.toString() === id.toString() || b.shortCode === id);
-    if (index !== -1) {
-      memoryStore.buildings[index] = {
-        ...memoryStore.buildings[index],
-        ...updateData,
-        updatedAt: new Date()
-      };
-      const updated = memoryStore.buildings[index];
-      this.logAudit('update', user.email, user.role, 'building', id, updateData);
-      syncService.broadcast('building:updated', updated);
-      return updated;
+    const updated = await Building.findByIdAndUpdate(id, { $set: updateData }, { new: true });
+    if (!updated) {
+      throw new Error(`Building ${id} not found.`);
     }
-    return null;
+    this.logAudit('update', user.email, user.role, 'building', id, updateData);
+    syncService.broadcast('building:updated', updated);
+    return updated;
   },
 
   async deleteBuilding(id, user) {
     const dbStatus = getDbStatus();
-    if (dbStatus.connected) {
-      try {
-        await Building.findByIdAndDelete(id);
-      } catch (err) {
-        console.warn('[CampusService] Delete building DB error:', err.message);
-      }
+    if (!dbStatus.connected) {
+      throw new Error('Database write operation unavailable: MongoDB Atlas is disconnected. Building deletion cannot be persisted.');
     }
-    memoryStore.buildings = memoryStore.buildings.filter(b => b._id.toString() !== id.toString() && b.shortCode !== id);
+
+    await Building.findByIdAndDelete(id);
     this.logAudit('delete', user.email, user.role, 'building', id, {});
     syncService.broadcast('building:deleted', { id });
     return true;
@@ -672,59 +647,38 @@ export const CampusService = {
     };
 
     const dbStatus = getDbStatus();
-    if (dbStatus.connected) {
-      try {
-        const created = await Department.create(newDept);
-        this.logAudit('create', user.email, user.role, 'department', created._id.toString(), { name: created.name });
-        syncService.broadcast('department:created', created);
-        return created;
-      } catch (err) {
-        console.warn('[CampusService] Create department DB error:', err.message);
-      }
+    if (!dbStatus.connected) {
+      throw new Error('Database write operation unavailable: MongoDB Atlas is disconnected. Department cannot be saved.');
     }
 
-    memoryStore.departments.push(newDept);
-    this.logAudit('create', user.email, user.role, 'department', newDept._id, { name: newDept.name });
-    syncService.broadcast('department:created', newDept);
-    return newDept;
+    const created = await Department.create(newDept);
+    this.logAudit('create', user.email, user.role, 'department', created._id.toString(), { name: created.name });
+    syncService.broadcast('department:created', created);
+    return created;
   },
 
   async updateDepartment(id, updateData, user) {
     const dbStatus = getDbStatus();
-    if (dbStatus.connected) {
-      try {
-        const updated = await Department.findByIdAndUpdate(id, { $set: updateData }, { new: true });
-        if (updated) {
-          this.logAudit('update', user.email, user.role, 'department', id, updateData);
-          syncService.broadcast('department:updated', updated);
-          return updated;
-        }
-      } catch (err) {
-        console.warn('[CampusService] Update department DB error:', err.message);
-      }
+    if (!dbStatus.connected) {
+      throw new Error('Database write operation unavailable: MongoDB Atlas is disconnected. Department updates cannot be persisted.');
     }
 
-    const index = memoryStore.departments.findIndex(d => d._id.toString() === id.toString() || d.code === id);
-    if (index !== -1) {
-      memoryStore.departments[index] = { ...memoryStore.departments[index], ...updateData, updatedAt: new Date() };
-      const updated = memoryStore.departments[index];
-      this.logAudit('update', user.email, user.role, 'department', id, updateData);
-      syncService.broadcast('department:updated', updated);
-      return updated;
+    const updated = await Department.findByIdAndUpdate(id, { $set: updateData }, { new: true });
+    if (!updated) {
+      throw new Error(`Department ${id} not found.`);
     }
-    return null;
+    this.logAudit('update', user.email, user.role, 'department', id, updateData);
+    syncService.broadcast('department:updated', updated);
+    return updated;
   },
 
   async deleteDepartment(id, user) {
     const dbStatus = getDbStatus();
-    if (dbStatus.connected) {
-      try {
-        await Department.findByIdAndDelete(id);
-      } catch (err) {
-        console.warn('[CampusService] Delete department DB error:', err.message);
-      }
+    if (!dbStatus.connected) {
+      throw new Error('Database write operation unavailable: MongoDB Atlas is disconnected. Department deletion cannot be persisted.');
     }
-    memoryStore.departments = memoryStore.departments.filter(d => d._id.toString() !== id.toString() && d.code !== id);
+
+    await Department.findByIdAndDelete(id);
     this.logAudit('delete', user.email, user.role, 'department', id, {});
     syncService.broadcast('department:deleted', { id });
     return true;
@@ -822,24 +776,12 @@ export const CampusService = {
   // ADD LOCATION
   async addLocation(locationData) {
     const dbStatus = getDbStatus();
-    const newLoc = {
-      _id: `loc_${Date.now()}`,
-      ...locationData,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
-    if (dbStatus.connected) {
-      try {
-        const created = await Location.create(locationData);
-        syncService.broadcast('location:created', created);
-        return created;
-      } catch (err) {
-        console.warn('[CampusService] Add location DB error:', err.message);
-      }
+    if (!dbStatus.connected) {
+      throw new Error('Database write operation unavailable: MongoDB Atlas is disconnected. Location cannot be saved.');
     }
-    memoryStore.locations.push(newLoc);
-    syncService.broadcast('location:created', newLoc);
-    return newLoc;
+    const created = await Location.create(locationData);
+    syncService.broadcast('location:created', created);
+    return created;
   },
 
   // ========================================================
@@ -890,6 +832,11 @@ export const CampusService = {
   },
 
   async updateLocationSurvey(locationId, surveyData, adminUser = { email: 'admin@presidency.ac.in', role: 'super_admin' }) {
+    const dbStatus = getDbStatus();
+    if (!dbStatus.connected) {
+      throw new Error('Database write operation unavailable: MongoDB Atlas is disconnected. GPS survey changes cannot be saved.');
+    }
+
     const item = memoryStore.catalog.find(c => c.locationId === locationId || c._id === locationId);
     if (!item) {
       throw new Error(`Location ${locationId} not found in campus catalog.`);
@@ -939,7 +886,6 @@ export const CampusService = {
     item.surveyDate = new Date().toISOString().split('T')[0];
     item.surveyedBy = adminUser.name || adminUser.email;
 
-    const dbStatus = getDbStatus();
     if (dbStatus.connected) {
       try {
         const updateDoc = {
@@ -1018,6 +964,11 @@ export const CampusService = {
   },
 
   async addWalkingPath(pathData, adminUser = { email: 'admin@presidency.ac.in', role: 'super_admin' }) {
+    const dbStatus = getDbStatus();
+    if (!dbStatus.connected) {
+      throw new Error('Database write operation unavailable: MongoDB Atlas is disconnected. Walking path cannot be saved.');
+    }
+
     if (!pathData.startNode || !pathData.endNode) {
       throw new Error('Both startNode and endNode are required for a walking path.');
     }
@@ -1036,15 +987,7 @@ export const CampusService = {
       createdAt: new Date()
     };
 
-    const dbStatus = getDbStatus();
-    if (dbStatus.connected) {
-      try {
-        await WalkingPath.create(newPath);
-      } catch (err) {
-        console.warn('[CampusService] Create WalkingPath DB error:', err.message);
-      }
-    }
-
+    await WalkingPath.create(newPath);
     memoryStore.walkingPaths.push(newPath);
     routingServiceInstance.updateGraph(null, memoryStore.walkingPaths);
 
@@ -1062,6 +1005,11 @@ export const CampusService = {
   },
 
   async updateWalkingPath(pathId, updates, adminUser = { email: 'admin@presidency.ac.in', role: 'super_admin' }) {
+    const dbStatus = getDbStatus();
+    if (!dbStatus.connected) {
+      throw new Error('Database write operation unavailable: MongoDB Atlas is disconnected. Walking path updates cannot be saved.');
+    }
+
     const path = memoryStore.walkingPaths.find(p => p.pathId === pathId);
     if (!path) {
       throw new Error(`Walking path ${pathId} not found.`);
@@ -1072,15 +1020,7 @@ export const CampusService = {
     if (updates.name) path.name = updates.name;
     if (updates.distanceMeters != null) path.distanceMeters = Number(updates.distanceMeters);
 
-    const dbStatus = getDbStatus();
-    if (dbStatus.connected) {
-      try {
-        await WalkingPath.findOneAndUpdate({ pathId }, { $set: updates }, { new: true });
-      } catch (err) {
-        console.warn('[CampusService] Update WalkingPath DB error:', err.message);
-      }
-    }
-
+    await WalkingPath.findOneAndUpdate({ pathId }, { $set: updates }, { new: true });
     routingServiceInstance.updateGraph(null, memoryStore.walkingPaths);
 
     this.logAudit(
@@ -1097,21 +1037,18 @@ export const CampusService = {
   },
 
   async deleteWalkingPath(pathId, adminUser = { email: 'admin@presidency.ac.in', role: 'super_admin' }) {
+    const dbStatus = getDbStatus();
+    if (!dbStatus.connected) {
+      throw new Error('Database write operation unavailable: MongoDB Atlas is disconnected. Walking path deletion cannot be saved.');
+    }
+
     const idx = memoryStore.walkingPaths.findIndex(p => p.pathId === pathId);
     if (idx === -1) {
       throw new Error(`Walking path ${pathId} not found.`);
     }
 
     const removed = memoryStore.walkingPaths.splice(idx, 1)[0];
-
-    const dbStatus = getDbStatus();
-    if (dbStatus.connected) {
-      try {
-        await WalkingPath.findOneAndDelete({ pathId });
-      } catch (err) {
-        console.warn('[CampusService] Delete WalkingPath DB error:', err.message);
-      }
-    }
+    await WalkingPath.findOneAndDelete({ pathId });
 
     routingServiceInstance.updateGraph(null, memoryStore.walkingPaths);
 
