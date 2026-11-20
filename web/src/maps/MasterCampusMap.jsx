@@ -865,15 +865,15 @@ export default function MasterCampusMap({
       {/* ================================================================= */}
       {/* 1. TOP FLOATING GOOGLE MAPS-STYLE SEARCH & STATUS BAR             */}
       {/* ================================================================= */}
-      <div className="absolute top-4 left-4 right-4 z-40 flex flex-col md:flex-row items-center justify-between gap-3 pointer-events-none">
+      <div className="absolute top-3 left-3 right-3 sm:top-4 sm:left-4 sm:right-4 z-40 flex items-center justify-between gap-2 pointer-events-none">
         
         {/* Left: Map Title & Status Pill with Heading Telemetry */}
-        <div className="pointer-events-auto flex items-center gap-3 px-4 py-2.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl text-slate-200">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-          <div>
+        <div className="pointer-events-auto flex items-center gap-2 sm:gap-3 px-3 py-1.5 sm:px-4 sm:py-2.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl text-slate-200">
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+          <div className="min-w-0">
             <div className="text-xs font-black text-white flex items-center gap-1.5 flex-wrap">
-              <span>Official Presidency Campus Map</span>
-              <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold border border-emerald-500/30">
+              <span>Campus Master Map</span>
+              <span className="hidden sm:inline-block text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold border border-emerald-500/30">
                 Interactive Layer Live
               </span>
               {Math.round((rotation % 360 + 360) % 360) !== 0 && (
@@ -897,11 +897,11 @@ export default function MasterCampusMap({
                 </button>
               )}
             </div>
-            <div className="text-[10px] text-slate-400">Presidency University Bengaluru · Itgalpur Campus</div>
+            <div className="hidden sm:block text-[10px] text-slate-400">Presidency University Bengaluru · Itgalpur Campus</div>
           </div>
         </div>
 
-        {/* Center: Quick GIS View Mode Presets */}
+        {/* Center: Quick GIS View Mode Presets (Desktop) */}
         <div className="pointer-events-auto hidden lg:flex items-center gap-1.5 px-2 py-1.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-xl">
           <button
             onClick={handleFitCampus}
@@ -931,8 +931,8 @@ export default function MasterCampusMap({
           </button>
         </div>
 
-        {/* Right: Wayfinding Directions & Unified Search Bar */}
-        <div className="pointer-events-auto flex items-center gap-2 w-full sm:w-auto">
+        {/* Right: Wayfinding Directions & Unified Search Bar (Desktop / Tablet >= 640px) */}
+        <div className="pointer-events-auto hidden sm:flex items-center gap-2 w-auto">
           {/* Main Navigation Directions Button */}
           <button
             onClick={() => onOpenRoutePlanning && onOpenRoutePlanning()}
@@ -943,7 +943,7 @@ export default function MasterCampusMap({
             <span>Directions</span>
           </button>
 
-          <div className="relative w-full sm:w-72 md:w-80">
+          <div className="relative w-72 md:w-80">
             <div className="relative flex items-center bg-slate-900/95 backdrop-blur-md border border-slate-700/90 rounded-2xl shadow-2xl focus-within:border-emerald-400 transition-colors">
               <Search className="w-4 h-4 text-slate-400 ml-3.5 shrink-0" />
               <input
@@ -1389,7 +1389,7 @@ export default function MasterCampusMap({
       {/* ================================================================= */}
       {/* 6. RIGHT FLOATING GOOGLE MAPS & COMPASS CONTROLS BOX              */}
       {/* ================================================================= */}
-      <div className="absolute right-4 bottom-24 z-40 flex flex-col items-center gap-1.5 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 p-1.5 rounded-2xl shadow-2xl no-dblclick">
+      <div className="absolute right-2.5 sm:right-4 bottom-20 sm:bottom-24 z-40 flex flex-col items-center gap-1 sm:gap-1.5 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 p-1 sm:p-1.5 rounded-2xl shadow-2xl no-dblclick scale-90 sm:scale-100 origin-bottom-right">
         {/* Interactive Calibrated Compass Rose (Always points North, Click to Align North) */}
         <button
           onClick={handleResetNorth}
@@ -1559,7 +1559,7 @@ export default function MasterCampusMap({
       {/* 7. BOTTOM DYNAMIC SELECTED FEATURE PREVIEW CARD                   */}
       {/* ================================================================= */}
       {activeSelected && (
-        <div className="absolute bottom-4 left-4 right-20 sm:right-auto sm:max-w-md z-40 bg-[#0e1730]/95 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl p-3.5 flex items-center justify-between gap-3 animate-in slide-in-from-bottom-3 duration-200">
+        <div className="absolute bottom-20 sm:bottom-4 left-3 right-16 sm:left-4 sm:right-auto sm:max-w-md z-40 bg-[#0e1730]/95 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl p-2.5 sm:p-3.5 flex items-center justify-between gap-2.5 sm:gap-3 animate-in slide-in-from-bottom-3 duration-200">
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
               activeSelected.code === 'PU-CAFE-D-BLOCK'

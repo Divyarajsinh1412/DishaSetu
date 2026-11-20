@@ -8,12 +8,12 @@ export default class ErrorBoundary extends React.Component {
   }
 
   static getDerivedStateFromError(error) {
-    return { hasError: true, error };
+    return { hasError: true, error, showDetails: true };
   }
 
   componentDidCatch(error, errorInfo) {
     console.error('[DishaSetu ErrorBoundary caught error]:', error, errorInfo);
-    this.setState({ errorInfo });
+    this.setState({ errorInfo, showDetails: true });
   }
 
   handleReload = () => {
@@ -21,7 +21,10 @@ export default class ErrorBoundary extends React.Component {
   };
 
   handleReset = () => {
-    this.setState({ hasError: false, error: null, errorInfo: null, showDetails: false });
+    try {
+      localStorage.removeItem('dishasetu_active_route');
+    } catch {}
+    this.setState({ hasError: false, error: null, errorInfo: null, showDetails: true });
   };
 
   handleReturnOverview = () => {
@@ -29,7 +32,7 @@ export default class ErrorBoundary extends React.Component {
       localStorage.removeItem('dishasetu_active_route');
       window.history.pushState(null, '', '/');
     } catch {}
-    this.setState({ hasError: false, error: null, errorInfo: null, showDetails: false });
+    this.setState({ hasError: false, error: null, errorInfo: null, showDetails: true });
     if (this.props.onResetToOverview) {
       this.props.onResetToOverview();
     } else {
@@ -78,24 +81,36 @@ export default class ErrorBoundary extends React.Component {
             </button>
           </div>
 
-          <div className="mt-8">
-            <button
-              type="button"
-              onClick={() => this.setState(prev => ({ showDetails: !prev.showDetails }))}
-              className="text-[11px] text-slate-500 hover:text-slate-400 underline"
-            >
-              {this.state.showDetails ? 'Hide Diagnostic Info' : 'Technical Diagnostics'}
-            </button>
-
-            {this.state.showDetails && this.state.error && (
-              <div className="mt-3 p-4 bg-slate-950/90 rounded-xl border border-slate-800 text-left max-w-xl w-full overflow-auto text-xs font-mono text-slate-400">
-                <div className="font-bold text-amber-400 mb-1">{this.state.error.toString()}</div>
-                <div className="text-slate-500 text-[10px] whitespace-pre-wrap">
-                  {this.state.errorInfo?.componentStack}
-                </div>
+          {this.state.error && (
+            <div className="mt-6 p-4 bg-slate-950/95 rounded-xl border border-amber-500/40 text-left max-w-2xl w-full overflow-hidden text-xs font-mono text-slate-300 shadow-2xl">
+              <div className="font-bold text-amber-400 mb-1 text-sm flex items-center justify-between">
+                <span>⚠️ Diagnostic Details:</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = `${this.state.error?.toString()}\n${this.state.error?.stack || ''}\n${this.state.errorInfo?.componentStack || ''}`;
+                    navigator.clipboard?.writeText(text);
+                  }}
+                  className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-300"
+                >
+                  Copy Error
+                </button>
               </div>
-            )}
-          </div>
+              <div className="text-red-300 font-semibold mb-2 break-words">
+                {this.state.error?.toString()}
+              </div>
+              {this.state.error?.stack && (
+                <div className="text-slate-400 text-[10px] whitespace-pre-wrap font-mono p-2 bg-slate-900 rounded border border-slate-800 max-h-36 overflow-y-auto">
+                  {this.state.error.stack}
+                </div>
+              )}
+              {this.state.errorInfo?.componentStack && (
+                <div className="text-slate-500 text-[9px] whitespace-pre-wrap font-mono mt-2 p-2 bg-slate-900/60 rounded max-h-36 overflow-y-auto">
+                  {this.state.errorInfo.componentStack}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       );
     }

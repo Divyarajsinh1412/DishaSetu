@@ -28,7 +28,9 @@ import {
   Sparkles,
   MoreVertical,
   Check,
-  Calendar
+  Calendar,
+  Menu,
+  ChevronRight
 } from 'lucide-react';
 import { getTranslation } from '../services/localization';
 import { COMPLETE_CAMPUS_CATALOG } from '../services/campusCatalog';
@@ -60,8 +62,11 @@ export default function Header({
   const t = (key) => getTranslation(language, key);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const searchContainerRef = useRef(null);
   const moreMenuRef = useRef(null);
+  const mobileSearchRef = useRef(null);
 
   // Close search suggestions and more menu on outside click
   useEffect(() => {
@@ -72,10 +77,13 @@ export default function Header({
       if (moreMenuRef.current && !moreMenuRef.current.contains(e.target)) {
         setIsMoreMenuOpen(false);
       }
+      if (mobileSearchRef.current && !mobileSearchRef.current.contains(e.target)) {
+        if (!searchQuery) setIsMobileSearchOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, []);
+  }, [searchQuery]);
 
   // Official Institutional Campus Categories
   const categories = [
@@ -187,8 +195,8 @@ export default function Header({
           </div>
         </div>
 
-        {/* Central Search Bar with Instant Results Dropdown */}
-        <div ref={searchContainerRef} className="flex-1 max-w-md lg:max-w-xl relative min-w-0">
+        {/* Central Search Bar with Instant Results Dropdown (Desktop / Tablet >= 640px) */}
+        <div ref={searchContainerRef} className="hidden sm:block flex-1 max-w-md lg:max-w-xl relative min-w-0">
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
@@ -266,6 +274,40 @@ export default function Header({
               </div>
             </div>
           )}
+        </div>
+
+        {/* Mobile Navigation Controls (< 640px) */}
+        <div className="flex sm:hidden items-center gap-1.5 shrink-0">
+          {/* Mobile Search Toggle Icon */}
+          <button
+            type="button"
+            onClick={() => setIsMobileSearchOpen(true)}
+            className="p-2 rounded-xl bg-[#0e223d] hover:bg-[#15345d] border border-[#1b365c] text-slate-300 hover:text-white transition-all shadow-sm active:scale-95"
+            title="Search campus"
+          >
+            <Search className="w-4 h-4 text-sky-400" />
+          </button>
+
+          {/* Quick Directions Button */}
+          <button
+            type="button"
+            onClick={() => onOpenRoutePlanning && onOpenRoutePlanning()}
+            className="flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-[#1d4ed8] to-[#1e40af] text-white text-xs font-black rounded-xl shadow-md border border-[#3b82f6]/50 transition-all active:scale-95"
+            title="Campus Directions"
+          >
+            <NavigationIcon className="w-3.5 h-3.5 text-sky-200" />
+            <span>Go</span>
+          </button>
+
+          {/* Hamburger Drawer Menu Button */}
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-2 rounded-xl bg-[#0e223d] hover:bg-[#15345d] border border-[#1b365c] text-slate-300 hover:text-white transition-all shadow-sm active:scale-95"
+            title="Open Campus Menu"
+          >
+            <Menu className="w-4 h-4 text-[#d4af37]" />
+          </button>
         </div>
 
         {/* View Mode Switcher Toolbar */}
@@ -512,6 +554,278 @@ export default function Header({
           );
         })}
       </div>
+
+      {/* Full-Width Mobile Search Bar Overlay */}
+      {isMobileSearchOpen && (
+        <div ref={mobileSearchRef} className="sm:hidden fixed inset-x-0 top-0 h-16 z-50 bg-[#081528] px-3 flex items-center gap-2 border-b border-[#23426e] shadow-2xl animate-in slide-in-from-top duration-150">
+          <button
+            type="button"
+            onClick={() => setIsMobileSearchOpen(false)}
+            className="p-2 text-slate-400 hover:text-white"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <div className="flex-1 relative">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              autoFocus
+              value={searchQuery}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Search buildings, rooms (DG01), cafes..."
+              className="w-full pl-9 pr-8 py-2 bg-[#0c1e36] border border-[#23426e] rounded-xl text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#d4af37]"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => onSearchChange('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-white"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          {/* Instant mobile dropdown */}
+          {searchQuery && searchResults.length > 0 && (
+            <div className="absolute top-full left-0 right-0 bg-[#081528] border-b border-[#23426e] shadow-2xl max-h-80 overflow-y-auto p-2 space-y-1 z-50">
+              {searchResults.map((hit) => (
+                <div
+                  key={hit.id}
+                  onClick={() => {
+                    handleSelectSearchResult(hit);
+                    setIsMobileSearchOpen(false);
+                  }}
+                  className="p-2.5 rounded-xl bg-[#0c1e36] flex items-center justify-between text-xs"
+                >
+                  <div className="truncate mr-2">
+                    <div className="font-bold text-white truncate">{hit.name}</div>
+                    <div className="text-[10px] text-slate-400">{hit.category} · {hit.code || ''}</div>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      handleDirectNavigate(hit, e);
+                      setIsMobileSearchOpen(false);
+                    }}
+                    className="px-2.5 py-1 rounded bg-[#1e3a8a] text-white text-[10px] font-bold shrink-0"
+                  >
+                    Go
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Slide-Over Mobile Drawer */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-[9999] lg:hidden flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+
+          {/* Drawer Panel */}
+          <div className="relative ml-auto w-full max-w-xs sm:max-w-sm h-full bg-[#081528] border-l border-[#1b3152] shadow-2xl flex flex-col z-10 animate-in slide-in-from-right duration-250 text-slate-100 overflow-y-auto">
+            {/* Drawer Header */}
+            <div className="p-4 border-b border-[#1b3152] flex items-center justify-between bg-[#0b1a30] shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#1d4ed8] via-[#0f3460] to-[#b48c26] p-0.5 flex items-center justify-center">
+                  <div className="w-full h-full bg-[#08172c] rounded-[6px] flex items-center justify-center">
+                    <Compass className="w-4 h-4 text-[#d4af37]" />
+                  </div>
+                </div>
+                <div>
+                  <div className="font-extrabold text-sm text-white">DishaSetu</div>
+                  <div className="text-[10px] text-slate-400">Presidency University Bengaluru</div>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-1.5 rounded-lg bg-[#0e223d] hover:bg-[#15345d] text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* View Switchers Section */}
+            <div className="p-4 border-b border-[#1b3152]/60 space-y-2 shrink-0">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Campus Views
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { mode: 'master', label: 'Official Map', icon: MapIcon },
+                  { mode: '3d', label: '3D Campus', icon: Box },
+                  { mode: 'immersive', label: '360° Aerial', icon: Globe },
+                  { mode: 'map', label: '2D GPS Map', icon: Compass },
+                  { mode: 'indoor', label: 'Indoor Maps', icon: DoorOpen }
+                ].map((item) => {
+                  const Icon = item.icon;
+                  const isActive = viewMode === item.mode;
+                  return (
+                    <button
+                      key={item.mode}
+                      onClick={() => {
+                        onViewModeChange(item.mode);
+                        if (item.mode === 'indoor' && onOpenIndoor) onOpenIndoor();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`p-2.5 rounded-xl text-left flex items-center gap-2 border transition-all ${
+                        isActive
+                          ? 'bg-[#1e3a8a] border-[#3b82f6] text-white shadow-md'
+                          : 'bg-[#0d1e36] border-[#182e4e] text-slate-300 hover:text-white hover:bg-[#122847]'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 ${isActive ? 'text-sky-300' : 'text-slate-400'}`} />
+                      <span className="text-xs font-bold truncate">{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* University Services */}
+            <div className="p-4 border-b border-[#1b3152]/60 space-y-1 shrink-0">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                Campus Navigation & Services
+              </div>
+              <button
+                onClick={() => { onOpenRoutePlanning && onOpenRoutePlanning(); setIsMobileMenuOpen(false); }}
+                className="w-full p-2.5 rounded-xl bg-gradient-to-r from-blue-900/40 to-indigo-900/40 hover:from-blue-800/60 hover:to-indigo-800/60 border border-blue-500/30 text-white flex items-center justify-between text-xs font-bold transition-all"
+              >
+                <div className="flex items-center gap-2.5">
+                  <NavigationIcon className="w-4 h-4 text-sky-400" />
+                  <span>Directions & Route Planner</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              </button>
+
+              <button
+                onClick={() => { onOpenCafes(); setIsMobileMenuOpen(false); }}
+                className="w-full p-2.5 rounded-xl hover:bg-[#132847] text-slate-200 flex items-center justify-between text-xs font-semibold transition-all"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Coffee className="w-4 h-4 text-[#d4af37]" />
+                  <span>Food & Dining (Hatti Kappi)</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-500" />
+              </button>
+
+              <button
+                onClick={() => { onOpenAIAssistant(); setIsMobileMenuOpen(false); }}
+                className="w-full p-2.5 rounded-xl hover:bg-[#132847] text-slate-200 flex items-center justify-between text-xs font-semibold transition-all"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span>DishaSetu AI Assistant</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-500" />
+              </button>
+
+              <button
+                onClick={() => { if (onOpenEvents) onOpenEvents(); setIsMobileMenuOpen(false); }}
+                className="w-full p-2.5 rounded-xl hover:bg-[#132847] text-slate-200 flex items-center justify-between text-xs font-semibold transition-all"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Calendar className="w-4 h-4 text-sky-400" />
+                  <span>Campus Events & Calendar</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-500" />
+              </button>
+
+              <button
+                onClick={() => { onOpenSurvey(); setIsMobileMenuOpen(false); }}
+                className="w-full p-2.5 rounded-xl hover:bg-[#132847] text-slate-200 flex items-center justify-between text-xs font-semibold transition-all"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Crosshair className="w-4 h-4 text-emerald-400" />
+                  <span>Campus GPS Field Survey</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-500" />
+              </button>
+
+              <button
+                onClick={() => { onOpenIssueReport(); setIsMobileMenuOpen(false); }}
+                className="w-full p-2.5 rounded-xl hover:bg-[#132847] text-slate-200 flex items-center justify-between text-xs font-semibold transition-all"
+              >
+                <div className="flex items-center gap-2.5">
+                  <HelpCircle className="w-4 h-4 text-sky-400" />
+                  <span>Report Obstacle / Issue</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-slate-500" />
+              </button>
+            </div>
+
+            {/* Admin Management Portals */}
+            <div className="p-4 border-b border-[#1b3152]/60 space-y-1 shrink-0">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
+                Administration
+              </div>
+              <button
+                onClick={() => { onOpenAdmin(); setIsMobileMenuOpen(false); }}
+                className="w-full p-2.5 rounded-xl hover:bg-[#132847] text-slate-300 flex items-center gap-2.5 text-xs font-semibold"
+              >
+                <Shield className="w-4 h-4 text-sky-400" />
+                <span>Admin GIS Portal</span>
+              </button>
+              <button
+                onClick={() => { onOpenMapEditor(); setIsMobileMenuOpen(false); }}
+                className="w-full p-2.5 rounded-xl hover:bg-[#132847] text-slate-300 flex items-center gap-2.5 text-xs font-semibold"
+              >
+                <Crosshair className="w-4 h-4 text-emerald-400" />
+                <span>Map Marker Editor</span>
+              </button>
+              <button
+                onClick={() => { onOpenCafeOwner(); setIsMobileMenuOpen(false); }}
+                className="w-full p-2.5 rounded-xl hover:bg-[#132847] text-slate-300 flex items-center gap-2.5 text-xs font-semibold"
+              >
+                <Utensils className="w-4 h-4 text-amber-400" />
+                <span>Dining Partner Portal</span>
+              </button>
+            </div>
+
+            {/* Language Selection */}
+            <div className="p-4 border-b border-[#1b3152]/60 shrink-0">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
+                <Languages className="w-3.5 h-3.5 text-[#d4af37]" />
+                <span>Language / ಭಾಷೆ / भाषा</span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5">
+                {[
+                  { code: 'en', label: 'English' },
+                  { code: 'kn', label: 'ಕನ್ನಡ' },
+                  { code: 'hi', label: 'हिंदी' }
+                ].map(lang => (
+                  <button
+                    key={lang.code}
+                    onClick={() => { onLanguageChange(lang.code); }}
+                    className={`py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      language === lang.code
+                        ? 'bg-[#1e3a8a] text-white border border-[#3b82f6]'
+                        : 'bg-[#0d1e36] text-slate-400 hover:text-white border border-transparent'
+                    }`}
+                  >
+                    {lang.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Emergency SOS Button */}
+            <div className="p-4 mt-auto shrink-0 pb-8">
+              <button
+                onClick={() => { onOpenSOS(); setIsMobileMenuOpen(false); }}
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white font-extrabold text-xs shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 transition-all active:scale-95"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                <span>EMERGENCY DIRECTORY (SOS)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

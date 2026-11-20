@@ -12,17 +12,22 @@ const envApiUrl = typeof import.meta !== 'undefined' && import.meta.env
  * Resolves the active backend API base URL
  */
 export const API_BASE_URL = (() => {
+  if (typeof window !== 'undefined' && window.location) {
+    // When running locally on Vite dev server (port 5173) or local backend (port 5000),
+    // use relative path so requests go through local Vite proxy or local server
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      if (envApiUrl && (envApiUrl.includes('localhost') || envApiUrl.includes('127.0.0.1'))) {
+        return envApiUrl.replace(/\/+$/, '');
+      }
+      return '';
+    }
+  }
+
   if (envApiUrl && envApiUrl !== '') {
     return envApiUrl.replace(/\/+$/, '');
   }
 
   if (typeof window !== 'undefined' && window.location) {
-    // If running in development on Vite port 5173 without explicit VITE_API_URL,
-    // use relative paths so Vite's dev server proxies to http://localhost:5000
-    if (window.location.port === '5173') {
-      return '';
-    }
-    // If served directly by the backend in production (Render), origin is the backend
     if (window.location.origin) {
       return window.location.origin;
     }

@@ -739,125 +739,85 @@ export default function App() {
         </button>
       )}
 
-      {/* Mobile Bottom Navigation Bar (Visible on mobile/tablet screens < 768px) */}
-      <nav className="md:hidden h-14 bg-[#0f172a]/95 backdrop-blur-xl border-t border-slate-800 flex items-center justify-around px-2 z-30 shrink-0 shadow-2xl">
+      {/* Professional Mobile Bottom Navigation Bar (< 768px) with 5 Primary Thumb-Friendly Actions */}
+      <nav className="md:hidden h-16 bg-[#081528]/95 backdrop-blur-xl border-t border-[#1b3152] grid grid-cols-5 items-center px-1 z-30 shrink-0 shadow-2xl pb-[env(safe-area-inset-bottom)]">
+        {/* 1. Official Map */}
         <button
           onClick={() => {
             setViewMode('master');
             setIsSidebarOpen(false);
           }}
-          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl transition-all ${
-            viewMode === 'master' ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+          className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all h-full active:scale-95 ${
+            viewMode === 'master' && !isSidebarOpen
+              ? 'text-[#d4af37] font-bold'
+              : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Map className="w-4 h-4 text-emerald-400" />
-          <span className="text-[10px]">Official Map</span>
+          <div className={`p-1 rounded-lg ${viewMode === 'master' && !isSidebarOpen ? 'bg-[#d4af37]/20 border border-[#d4af37]/40' : ''}`}>
+            <Map className="w-4 h-4" />
+          </div>
+          <span className="text-[10px] tracking-tight leading-none">Map</span>
         </button>
 
+        {/* 2. Directions / Route Planner (Primary Accent) */}
         <button
           onClick={() => handleOpenRoutePlanning()}
-          className="flex flex-col items-center justify-center gap-0.5 py-1 px-2 rounded-xl text-sky-400 hover:text-sky-300 transition-all font-bold"
-          title="Directions: Select place and navigate from one place to another place"
+          className="flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl text-sky-400 hover:text-sky-300 transition-all font-bold h-full active:scale-95"
+          title="Campus Directions"
         >
-          <NavigationIcon className="w-4 h-4 text-sky-400" />
-          <span className="text-[10px]">Directions</span>
+          <div className="p-1 rounded-lg bg-sky-500/20 border border-sky-400/40">
+            <NavigationIcon className="w-4 h-4 text-sky-300" />
+          </div>
+          <span className="text-[10px] tracking-tight leading-none">Directions</span>
         </button>
 
-        <button
-          onClick={() => {
-            setViewMode('3d');
-            setIsSidebarOpen(false);
-          }}
-          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
-            viewMode === '3d' ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Box className="w-4 h-4 text-emerald-400" />
-          <span className="text-[10px]">3D Campus</span>
-        </button>
-
-        <button
-          onClick={() => {
-            setViewMode('immersive');
-            setIsSidebarOpen(false);
-          }}
-          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
-            viewMode === 'immersive' ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Globe className="w-4 h-4 text-amber-400" />
-          <span className="text-[10px]">360° Aerial</span>
-        </button>
-
-        <button
-          onClick={() => {
-            setViewMode('map');
-            setIsSidebarOpen(false);
-          }}
-          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition-all ${
-            viewMode === 'map' && !isSidebarOpen ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Compass className="w-4 h-4 text-emerald-400" />
-          <span className="text-[10px]">2D Map</span>
-        </button>
-
+        {/* 3. Multi-Floor Indoor Navigation */}
         <button
           onClick={() => {
             setViewMode('indoor');
             setIsSidebarOpen(false);
           }}
-          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-2.5 rounded-xl transition-all ${
-            viewMode === 'indoor' ? 'text-emerald-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+          className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all h-full active:scale-95 ${
+            viewMode === 'indoor'
+              ? 'text-emerald-400 font-bold'
+              : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <DoorOpen className="w-4 h-4 text-emerald-400" />
-          <span className="text-[10px]">Indoor</span>
+          <div className={`p-1 rounded-lg ${viewMode === 'indoor' ? 'bg-emerald-500/20 border border-emerald-500/40' : ''}`}>
+            <DoorOpen className="w-4 h-4" />
+          </div>
+          <span className="text-[10px] tracking-tight leading-none">Indoor</span>
         </button>
 
+        {/* 4. Campus Directory */}
         <button
           onClick={() => {
             setViewMode('map');
             setSidebarTab('places');
             setIsSidebarOpen(true);
           }}
-          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition-all ${
-            isSidebarOpen && sidebarTab === 'places' ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-slate-200'
+          className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all h-full active:scale-95 ${
+            isSidebarOpen && sidebarTab === 'places'
+              ? 'text-indigo-400 font-bold'
+              : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          <Menu className="w-4 h-4" />
-          <span className="text-[10px]">Directory</span>
+          <div className={`p-1 rounded-lg ${isSidebarOpen && sidebarTab === 'places' ? 'bg-indigo-500/20 border border-indigo-400/40' : ''}`}>
+            <Menu className="w-4 h-4" />
+          </div>
+          <span className="text-[10px] tracking-tight leading-none">Directory</span>
         </button>
 
-        <button
-          onClick={() => {
-            setViewMode('map');
-            setSidebarTab('directions');
-            setIsSidebarOpen(true);
-          }}
-          className={`flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl transition-all ${
-            isSidebarOpen && sidebarTab === 'directions' ? 'text-sky-400 font-bold' : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <NavigationIcon className="w-4 h-4" />
-          <span className="text-[10px]">Route</span>
-        </button>
-
-        <button
-          onClick={() => setIsSurveyModalOpen(true)}
-          className="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl text-amber-400 hover:text-amber-300 transition-all font-semibold"
-          title="Open Campus GPS Field Survey"
-        >
-          <Crosshair className="w-4 h-4 text-amber-400" />
-          <span className="text-[10px]">Survey</span>
-        </button>
-
+        {/* 5. Campus Emergency / SOS */}
         <button
           onClick={() => setIsSOSOpen(true)}
-          className="flex flex-col items-center justify-center gap-0.5 py-1 px-3 rounded-xl text-rose-400 hover:text-rose-300 transition-all font-semibold"
+          className="flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl text-rose-400 hover:text-rose-300 transition-all font-bold h-full active:scale-95"
+          title="Emergency Help (SOS)"
         >
-          <Shield className="w-4 h-4" />
-          <span className="text-[10px]">SOS</span>
+          <div className="p-1 rounded-lg bg-rose-500/20 border border-rose-500/40">
+            <Shield className="w-4 h-4 text-rose-400" />
+          </div>
+          <span className="text-[10px] tracking-tight leading-none text-rose-400">SOS</span>
         </button>
       </nav>
 
