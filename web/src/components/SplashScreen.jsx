@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import DishaSetuLogo from './common/DishaSetuLogo';
+import campusSplashPhoto from '../assets/presidency-university-splash.jpg';
 import {
   Compass,
   Sparkles,
@@ -14,7 +15,9 @@ import {
   Cpu,
   ShieldCheck,
   Zap,
-  Globe2
+  Globe2,
+  Camera,
+  Image as ImageIcon
 } from 'lucide-react';
 
 /**
@@ -34,6 +37,7 @@ export default function SplashScreen({
   const [activeStep, setActiveStep] = useState(0);
   const [isFadingOut, setIsFadingOut] = useState(false);
   const [activeBeacon, setActiveBeacon] = useState('d_block');
+  const [displayMode, setDisplayMode] = useState('photo'); // 'photo' | 'vector'
 
   const onFinishRef = useRef(onFinish);
   useEffect(() => {
@@ -120,8 +124,19 @@ export default function SplashScreen({
       }`}
     >
       {/* ================================================================= */}
-      {/* 1. BACKGROUND GEOMETRIC BLUEPRINT MESH & RADIAL GLOWS             */}
+      {/* 1. BACKGROUND REAL CAMPUS PHOTO BACKDROP & GEOMETRIC MESH         */}
       {/* ================================================================= */}
+      {/* Real Campus Photo Background Canvas (Ambient Vignette Backdrop) */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+        <img
+          src={campusSplashPhoto}
+          alt="Presidency University Bengaluru Campus"
+          className="w-full h-full object-cover object-center opacity-20 filter blur-[2px] scale-105"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#040C1A] via-[#040C1A]/85 to-[#040C1A]/70" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_0%,#040C1A_80%)]" />
+      </div>
+
       {/* Architectural Isometric Grid lines */}
       <div 
         className="absolute inset-0 pointer-events-none opacity-25"
@@ -275,205 +290,277 @@ export default function SplashScreen({
           </div>
         </div>
 
-        {/* Right Column: Holographic Vector Campus Twin (Zero Real Image) (~54%) */}
+        {/* Right Column: Official Campus Photograph & Holographic GIS Showcase (~58%) */}
         <div className="w-full lg:w-7/12 flex flex-col items-center justify-center">
-          <div className="relative w-full aspect-[16/10] sm:aspect-[16/10] max-h-[380px] sm:max-h-[460px] rounded-3xl overflow-hidden shadow-2xl border-2 border-[#00A878]/40 bg-gradient-to-br from-[#07172C] via-[#051122] to-[#040C1A] p-4 sm:p-6 flex flex-col justify-between group">
+          <div className="relative w-full aspect-[16/10] sm:aspect-[16/10] max-h-[380px] sm:max-h-[460px] rounded-3xl overflow-hidden shadow-2xl border-2 border-emerald-500/40 bg-[#07172C] p-4 sm:p-5 flex flex-col justify-between group">
             
             {/* Top HUD Telemetry Strip */}
-            <div className="flex items-center justify-between z-10">
-              <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-slate-900/90 border border-slate-700/80 text-xs font-mono text-slate-200 backdrop-blur-md shadow-lg">
-                <Globe2 className="w-3.5 h-3.5 text-sky-400" />
-                <span className="font-bold text-white">PRESIDENCY 3D VECTOR TWIN</span>
+            <div className="flex items-center justify-between z-20">
+              <div className="flex items-center gap-2 px-3 py-1 rounded-xl bg-slate-900/95 border border-slate-700/80 text-xs font-mono text-slate-200 backdrop-blur-md shadow-lg">
+                {displayMode === 'photo' ? (
+                  <Camera className="w-3.5 h-3.5 text-emerald-400" />
+                ) : (
+                  <Globe2 className="w-3.5 h-3.5 text-sky-400" />
+                )}
+                <span className="font-bold text-white tracking-wide">
+                  {displayMode === 'photo' ? 'PRESIDENCY CAMPUS PHOTOGRAPHY' : 'PRESIDENCY 3D VECTOR TWIN'}
+                </span>
               </div>
-              <div className="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-emerald-950/80 border border-emerald-500/40 text-[10px] font-mono text-emerald-300">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>60+ ACRES ACTIVE</span>
-              </div>
+              
+              {/* Interactive View Mode Switcher Pill */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDisplayMode(m => m === 'photo' ? 'vector' : 'photo');
+                }}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900/95 hover:bg-slate-800 border border-emerald-500/40 text-[10px] font-mono text-emerald-300 transition-all shadow-md active:scale-95"
+                title="Toggle between Campus Photo and 3D Vector Twin"
+              >
+                {displayMode === 'photo' ? (
+                  <>
+                    <Globe2 className="w-3 h-3 text-sky-400" />
+                    <span>View GIS Blueprint</span>
+                  </>
+                ) : (
+                  <>
+                    <Camera className="w-3 h-3 text-emerald-400" />
+                    <span>View Campus Photo</span>
+                  </>
+                )}
+              </button>
             </div>
 
-            {/* Central Holographic Campus Blueprint Vector Canvas */}
-            <div className="relative w-full flex-1 flex items-center justify-center my-2">
-              <svg
-                viewBox="0 0 600 360"
-                className="w-full h-full drop-shadow-[0_0_20px_rgba(0,168,120,0.25)]"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <defs>
-                  <linearGradient id="vectorLawn" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#059669" stopOpacity="0.4" />
-                    <stop offset="100%" stopColor="#10B981" stopOpacity="0.15" />
-                  </linearGradient>
-
-                  <linearGradient id="laserPath" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#10B981" />
-                    <stop offset="50%" stopColor="#38BDF8" />
-                    <stop offset="100%" stopColor="#F59E0B" />
-                  </linearGradient>
-
-                  <filter id="vectorGlow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur stdDeviation="3" result="blur" />
-                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                  </filter>
-                </defs>
-
-                {/* Radar Range Rings (Concentric cartographic guides) */}
-                <circle cx="300" cy="190" r="140" stroke="#38BDF8" strokeWidth="0.75" strokeDasharray="3 4" strokeOpacity="0.3" />
-                <circle cx="300" cy="190" r="95" stroke="#00A878" strokeWidth="0.75" strokeDasharray="2 3" strokeOpacity="0.35" />
-                <circle cx="300" cy="190" r="50" stroke="#38BDF8" strokeWidth="0.5" strokeOpacity="0.25" />
-
-                {/* Grid Crosshairs */}
-                <line x1="300" y1="30" x2="300" y2="330" stroke="#38BDF8" strokeWidth="0.5" strokeDasharray="2 4" strokeOpacity="0.2" />
-                <line x1="100" y1="190" x2="500" y2="190" stroke="#38BDF8" strokeWidth="0.5" strokeDasharray="2 4" strokeOpacity="0.2" />
-
-                {/* Main Campus Road Network & Walking Avenues */}
-                <path
-                  d="M 300 45 L 300 130 L 265 190 L 160 210 L 140 310"
-                  stroke="#38BDF8"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                  strokeOpacity="0.35"
+            {/* View Mode 1: Official Presidency University Campus Photo Showcase */}
+            {displayMode === 'photo' ? (
+              <div className="absolute inset-0 z-10 overflow-hidden">
+                <img
+                  src={campusSplashPhoto}
+                  alt="Presidency University Bengaluru Campus Central Pavilion & Amphitheater"
+                  className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
                 />
-                <path
-                  d="M 300 130 L 335 190 L 440 220 L 460 300"
-                  stroke="#38BDF8"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                  strokeOpacity="0.35"
-                />
+                
+                {/* Vignette Gradients for Legibility */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#040C1A]/95 via-[#040C1A]/20 to-[#040C1A]/60 pointer-events-none" />
+                <div className="absolute inset-0 ring-1 ring-inset ring-white/10 rounded-3xl pointer-events-none" />
 
-                {/* Central Main Lawn Polygon */}
-                <polygon
-                  points="285,70 315,70 330,170 270,170"
-                  fill="url(#vectorLawn)"
-                  stroke="#10B981"
-                  strokeWidth="1.5"
-                  strokeOpacity="0.7"
-                />
+                {/* Floating Institutional Badge */}
+                <div className="absolute top-14 left-4 z-20 hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950/85 backdrop-blur-md border border-slate-700/80 shadow-xl">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  <span className="text-[11px] font-bold text-white tracking-wider uppercase font-mono">
+                    Official University Architecture
+                  </span>
+                </div>
 
-                {/* Sports Complex Vector Polygons (Left) */}
-                <rect x="80" y="90" width="75" height="50" rx="4" fill="#047857" fillOpacity="0.2" stroke="#10B981" strokeWidth="1" strokeOpacity="0.5" />
-                <line x1="117.5" y1="90" x2="117.5" y2="140" stroke="#10B981" strokeWidth="0.75" strokeOpacity="0.5" />
-                <circle cx="117.5" cy="115" r="10" stroke="#10B981" strokeWidth="0.75" strokeOpacity="0.5" />
+                {/* Bottom Photo Telemetry & Landmark Details */}
+                <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 z-20 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-2 p-3 sm:p-3.5 rounded-2xl bg-[#081528]/92 backdrop-blur-xl border border-slate-700/80 shadow-2xl">
+                  <div>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        Central Landmark
+                      </span>
+                      <span className="text-[10px] font-mono text-slate-400">PU-CAMPUS-CENTRAL</span>
+                    </div>
+                    <div className="text-sm sm:text-base font-black text-white leading-tight">
+                      Amphitheater, Central Pavilion & Lawns
+                    </div>
+                    <div className="text-[11px] text-slate-300 flex items-center gap-1.5 mt-0.5">
+                      <MapPin className="w-3 h-3 text-emerald-400 shrink-0" />
+                      <span>Presidency University · Itgalpur, Rajankunte, Bengaluru</span>
+                    </div>
+                  </div>
 
-                {/* Academic Blocks Cluster (Left Bottom - D, E, F, L Blocks) */}
-                <g className="transition-all duration-300">
-                  {/* D Block Building Box */}
-                  <rect
-                    x="110"
-                    y="190"
-                    width="65"
-                    height="32"
-                    rx="5"
-                    fill={activeBeacon === 'd_block' || activeBeacon === 'all' ? '#0284C7' : '#0F2744'}
-                    fillOpacity={activeBeacon === 'd_block' ? '0.75' : '0.4'}
-                    stroke={activeBeacon === 'd_block' ? '#38BDF8' : '#0284C7'}
-                    strokeWidth={activeBeacon === 'd_block' ? '2.5' : '1.2'}
-                    filter={activeBeacon === 'd_block' ? 'url(#vectorGlow)' : undefined}
+                  <div className="shrink-0 flex items-center gap-2 text-[10px] font-mono text-slate-300">
+                    <span className="px-2.5 py-1 rounded-xl bg-slate-900/90 border border-slate-700 text-sky-300 font-bold">
+                      13.1714°N, 77.5361°E
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* View Mode 2: Holographic Vector Campus Twin */
+              <div className="relative w-full flex-1 flex items-center justify-center my-2">
+                <svg
+                  viewBox="0 0 600 360"
+                  className="w-full h-full drop-shadow-[0_0_20px_rgba(0,168,120,0.25)]"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <defs>
+                    <linearGradient id="vectorLawn" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#059669" stopOpacity="0.4" />
+                      <stop offset="100%" stopColor="#10B981" stopOpacity="0.15" />
+                    </linearGradient>
+
+                    <linearGradient id="laserPath" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#10B981" />
+                      <stop offset="50%" stopColor="#38BDF8" />
+                      <stop offset="100%" stopColor="#F59E0B" />
+                    </linearGradient>
+
+                    <filter id="vectorGlow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur stdDeviation="3" result="blur" />
+                      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                    </filter>
+                  </defs>
+
+                  {/* Radar Range Rings (Concentric cartographic guides) */}
+                  <circle cx="300" cy="190" r="140" stroke="#38BDF8" strokeWidth="0.75" strokeDasharray="3 4" strokeOpacity="0.3" />
+                  <circle cx="300" cy="190" r="95" stroke="#00A878" strokeWidth="0.75" strokeDasharray="2 3" strokeOpacity="0.35" />
+                  <circle cx="300" cy="190" r="50" stroke="#38BDF8" strokeWidth="0.5" strokeOpacity="0.25" />
+
+                  {/* Grid Crosshairs */}
+                  <line x1="300" y1="30" x2="300" y2="330" stroke="#38BDF8" strokeWidth="0.5" strokeDasharray="2 4" strokeOpacity="0.2" />
+                  <line x1="100" y1="190" x2="500" y2="190" stroke="#38BDF8" strokeWidth="0.5" strokeDasharray="2 4" strokeOpacity="0.2" />
+
+                  {/* Main Campus Road Network & Walking Avenues */}
+                  <path
+                    d="M 300 45 L 300 130 L 265 190 L 160 210 L 140 310"
+                    stroke="#38BDF8"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeOpacity="0.35"
                   />
-                  <text x="142" y="210" fill="#FFFFFF" fontSize="10" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">
-                    D BLOCK
-                  </text>
+                  <path
+                    d="M 300 130 L 335 190 L 440 220 L 460 300"
+                    stroke="#38BDF8"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeOpacity="0.35"
+                  />
 
-                  {/* Multi-floor 6-level badge indicator */}
-                  <rect x="156" y="185" width="22" height="11" rx="3" fill="#059669" />
-                  <text x="167" y="193" fill="#FFFFFF" fontSize="7" fontWeight="bold" textAnchor="middle" fontFamily="mono">
-                    6 FL
-                  </text>
+                  {/* Central Main Lawn Polygon */}
+                  <polygon
+                    points="285,70 315,70 330,170 270,170"
+                    fill="url(#vectorLawn)"
+                    stroke="#10B981"
+                    strokeWidth="1.5"
+                    strokeOpacity="0.7"
+                  />
 
-                  {/* E Block */}
-                  <rect x="110" y="230" width="65" height="26" rx="4" fill="#0F2744" fillOpacity="0.4" stroke="#0284C7" strokeWidth="1" strokeOpacity="0.5" />
-                  <text x="142" y="247" fill="#94A3B8" fontSize="9" fontWeight="bold" textAnchor="middle">E BLOCK</text>
+                  {/* Sports Complex Vector Polygons (Left) */}
+                  <rect x="80" y="90" width="75" height="50" rx="4" fill="#047857" fillOpacity="0.2" stroke="#10B981" strokeWidth="1" strokeOpacity="0.5" />
+                  <line x1="117.5" y1="90" x2="117.5" y2="140" stroke="#10B981" strokeWidth="0.75" strokeOpacity="0.5" />
+                  <circle cx="117.5" cy="115" r="10" stroke="#10B981" strokeWidth="0.75" strokeOpacity="0.5" />
 
-                  {/* F Block */}
-                  <rect x="110" y="264" width="65" height="26" rx="4" fill="#0F2744" fillOpacity="0.4" stroke="#0284C7" strokeWidth="1" strokeOpacity="0.5" />
-                  <text x="142" y="281" fill="#94A3B8" fontSize="9" fontWeight="bold" textAnchor="middle">F BLOCK</text>
-                </g>
+                  {/* Academic Blocks Cluster (Left Bottom - D, E, F, L Blocks) */}
+                  <g className="transition-all duration-300">
+                    {/* D Block Building Box */}
+                    <rect
+                      x="110"
+                      y="190"
+                      width="65"
+                      height="32"
+                      rx="5"
+                      fill={activeBeacon === 'd_block' || activeBeacon === 'all' ? '#0284C7' : '#0F2744'}
+                      fillOpacity={activeBeacon === 'd_block' ? '0.75' : '0.4'}
+                      stroke={activeBeacon === 'd_block' ? '#38BDF8' : '#0284C7'}
+                      strokeWidth={activeBeacon === 'd_block' ? '2.5' : '1.2'}
+                      filter={activeBeacon === 'd_block' ? 'url(#vectorGlow)' : undefined}
+                    />
+                    <text x="142" y="210" fill="#FFFFFF" fontSize="10" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">
+                      D BLOCK
+                    </text>
 
-                {/* Administrative & Central Blocks (Right Bottom - HR, Library, Auditorium) */}
-                <g>
-                  {/* HR Block */}
-                  <rect x="270" y="220" width="55" height="30" rx="4" fill="#1E1B4B" fillOpacity="0.5" stroke="#6366F1" strokeWidth="1.2" />
-                  <text x="297" y="238" fill="#C7D2FE" fontSize="9" fontWeight="bold" textAnchor="middle">HR BLOCK</text>
+                    {/* Multi-floor 6-level badge indicator */}
+                    <rect x="156" y="185" width="22" height="11" rx="3" fill="#059669" />
+                    <text x="167" y="193" fill="#FFFFFF" fontSize="7" fontWeight="bold" textAnchor="middle" fontFamily="mono">
+                      6 FL
+                    </text>
 
-                  {/* Central Library */}
-                  <rect x="335" y="220" width="50" height="26" rx="4" fill="#0F2744" fillOpacity="0.5" stroke="#38BDF8" strokeWidth="1.2" />
-                  <text x="360" y="236" fill="#BAE6FD" fontSize="8" fontWeight="bold" textAnchor="middle">LIBRARY</text>
+                    {/* E Block */}
+                    <rect x="110" y="230" width="65" height="26" rx="4" fill="#0F2744" fillOpacity="0.4" stroke="#0284C7" strokeWidth="1" strokeOpacity="0.5" />
+                    <text x="142" y="247" fill="#94A3B8" fontSize="9" fontWeight="bold" textAnchor="middle">E BLOCK</text>
 
-                  {/* Auditorium */}
-                  <rect x="420" y="225" width="70" height="32" rx="5" fill="#1E1B4B" fillOpacity="0.5" stroke="#818CF8" strokeWidth="1.2" />
-                  <text x="455" y="245" fill="#E0E7FF" fontSize="9" fontWeight="bold" textAnchor="middle">AUDITORIUM</text>
-                </g>
+                    {/* F Block */}
+                    <rect x="110" y="264" width="65" height="26" rx="4" fill="#0F2744" fillOpacity="0.4" stroke="#0284C7" strokeWidth="1" strokeOpacity="0.5" />
+                    <text x="142" y="281" fill="#94A3B8" fontSize="9" fontWeight="bold" textAnchor="middle">F BLOCK</text>
+                  </g>
 
-                {/* Animated Pedestrian Laser Guidance Route */}
-                <path
-                  d="M 300 45 L 300 130 L 285 190 L 195 206"
-                  stroke="url(#laserPath)"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                  strokeDasharray="6 4"
-                  className="animate-[dash_1.5s_linear_infinite]"
-                  filter="url(#vectorGlow)"
-                />
+                  {/* Administrative & Central Blocks (Right Bottom - HR, Library, Auditorium) */}
+                  <g>
+                    {/* HR Block */}
+                    <rect x="270" y="220" width="55" height="30" rx="4" fill="#1E1B4B" fillOpacity="0.5" stroke="#6366F1" strokeWidth="1.2" />
+                    <text x="297" y="238" fill="#C7D2FE" fontSize="9" fontWeight="bold" textAnchor="middle">HR BLOCK</text>
 
-                {/* 1. Beacon: Main Gate (North) */}
-                <g transform="translate(300, 45)">
-                  <circle r="14" fill="#10B981" fillOpacity="0.2" className="animate-ping" />
-                  <circle r="8" fill="#10B981" stroke="#FFFFFF" strokeWidth="2" />
-                  <circle r="3" fill="#FFFFFF" />
-                  <rect x="-38" y="-24" width="76" height="16" rx="4" fill="#064E3B" stroke="#10B981" strokeWidth="1" />
-                  <text x="0" y="-13" fill="#ECFDF5" fontSize="8" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">
-                    MAIN GATE (GPS)
-                  </text>
-                </g>
+                    {/* Central Library */}
+                    <rect x="335" y="220" width="50" height="26" rx="4" fill="#0F2744" fillOpacity="0.5" stroke="#38BDF8" strokeWidth="1.2" />
+                    <text x="360" y="236" fill="#BAE6FD" fontSize="8" fontWeight="bold" textAnchor="middle">LIBRARY</text>
 
-                {/* 2. Beacon: Central Fountain (Roundabout) */}
-                <g transform="translate(285, 190)">
-                  <circle r="18" fill="#38BDF8" fillOpacity="0.15" />
-                  <circle r="11" fill="#0284C7" stroke="#38BDF8" strokeWidth="2" />
-                  <circle r="4" fill="#FFFFFF" />
-                  <text x="0" y="24" fill="#7DD3FC" fontSize="8" fontWeight="bold" textAnchor="middle">
-                    FOUNTAIN
-                  </text>
-                </g>
+                    {/* Auditorium */}
+                    <rect x="420" y="225" width="70" height="32" rx="5" fill="#1E1B4B" fillOpacity="0.5" stroke="#818CF8" strokeWidth="1.2" />
+                    <text x="455" y="245" fill="#E0E7FF" fontSize="9" fontWeight="bold" textAnchor="middle">AUDITORIUM</text>
+                  </g>
 
-                {/* 3. Beacon: Hatti Kappi Cafe (PU-CAFE-D-BLOCK) */}
-                <g transform="translate(195, 206)">
-                  <circle r="14" fill="#F59E0B" fillOpacity="0.25" className="animate-pulse" />
-                  <circle r="9" fill="#D97706" stroke="#FDE68A" strokeWidth="2" />
-                  {/* Coffee Icon Shape */}
-                  <circle r="3.5" fill="#FFFFFF" />
-                  
-                  {/* Floating Hatti Kappi Pill */}
-                  <g transform="translate(0, -22)">
-                    <rect x="-36" y="-7" width="72" height="15" rx="4" fill="#451A03" stroke="#F59E0B" strokeWidth="1" />
-                    <text x="0" y="4" fill="#FEF3C7" fontSize="8" fontWeight="black" textAnchor="middle" fontFamily="sans-serif">
-                      ☕ HATTI KAPPI
+                  {/* Animated Pedestrian Laser Guidance Route */}
+                  <path
+                    d="M 300 45 L 300 130 L 285 190 L 195 206"
+                    stroke="url(#laserPath)"
+                    strokeWidth="3.5"
+                    strokeLinecap="round"
+                    strokeDasharray="6 4"
+                    className="animate-[dash_1.5s_linear_infinite]"
+                    filter="url(#vectorGlow)"
+                  />
+
+                  {/* 1. Beacon: Main Gate (North) */}
+                  <g transform="translate(300, 45)">
+                    <circle r="14" fill="#10B981" fillOpacity="0.2" className="animate-ping" />
+                    <circle r="8" fill="#10B981" stroke="#FFFFFF" strokeWidth="2" />
+                    <circle r="3" fill="#FFFFFF" />
+                    <rect x="-38" y="-24" width="76" height="16" rx="4" fill="#064E3B" stroke="#10B981" strokeWidth="1" />
+                    <text x="0" y="-13" fill="#ECFDF5" fontSize="8" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">
+                      MAIN GATE (GPS)
                     </text>
                   </g>
-                </g>
-              </svg>
 
-              {/* Bottom Left Live Landmark Label */}
-              <div className="absolute bottom-1 left-2 z-10 flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900/90 border border-slate-700/80 text-[11px] font-mono text-slate-300 backdrop-blur-md">
-                <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>Navigating to: <strong className="text-white">D Block & Hatti Kappi</strong></span>
-              </div>
+                  {/* 2. Beacon: Central Fountain (Roundabout) */}
+                  <g transform="translate(285, 190)">
+                    <circle r="18" fill="#38BDF8" fillOpacity="0.15" />
+                    <circle r="11" fill="#0284C7" stroke="#38BDF8" strokeWidth="2" />
+                    <circle r="4" fill="#FFFFFF" />
+                    <text x="0" y="24" fill="#7DD3FC" fontSize="8" fontWeight="bold" textAnchor="middle">
+                      FOUNTAIN
+                    </text>
+                  </g>
 
-              {/* Bottom Right Distance HUD */}
-              <div className="absolute bottom-1 right-2 z-10 flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900/90 border border-slate-700/80 text-[11px] font-mono text-emerald-400 backdrop-blur-md font-bold">
-                <Zap className="w-3.5 h-3.5 text-amber-400" />
-                <span>210m · 3 MIN WALK</span>
+                  {/* 3. Beacon: Hatti Kappi Cafe (PU-CAFE-D-BLOCK) */}
+                  <g transform="translate(195, 206)">
+                    <circle r="14" fill="#F59E0B" fillOpacity="0.25" className="animate-pulse" />
+                    <circle r="9" fill="#D97706" stroke="#FDE68A" strokeWidth="2" />
+                    <circle r="3.5" fill="#FFFFFF" />
+                    
+                    {/* Floating Hatti Kappi Pill */}
+                    <g transform="translate(0, -22)">
+                      <rect x="-36" y="-7" width="72" height="15" rx="4" fill="#451A03" stroke="#F59E0B" strokeWidth="1" />
+                      <text x="0" y="4" fill="#FEF3C7" fontSize="8" fontWeight="black" textAnchor="middle" fontFamily="sans-serif">
+                        ☕ HATTI KAPPI
+                      </text>
+                    </g>
+                  </g>
+                </svg>
+
+                {/* Bottom Left Live Landmark Label */}
+                <div className="absolute bottom-1 left-2 z-10 flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900/90 border border-slate-700/80 text-[11px] font-mono text-slate-300 backdrop-blur-md">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span>Navigating to: <strong className="text-white">D Block & Hatti Kappi</strong></span>
+                </div>
+
+                {/* Bottom Right Distance HUD */}
+                <div className="absolute bottom-1 right-2 z-10 flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-900/90 border border-slate-700/80 text-[11px] font-mono text-emerald-400 backdrop-blur-md font-bold">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  <span>210m · 3 MIN WALK</span>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Bottom Cyber Status Line */}
-            <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-1 border-t border-slate-800/80 z-10">
+            <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 pt-1 border-t border-slate-800/80 z-20">
               <span className="flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>All 12 Blocks & Walkways Verified</span>
+                <span>Presidency University Campus Verified</span>
               </span>
-              <span className="text-sky-400">Dijkstra Shortest Path · Active</span>
+              <span className="text-sky-400 font-bold">WGS-84 GIS · Active</span>
             </div>
           </div>
 
