@@ -28,7 +28,8 @@ import {
   RotateCcw,
   Sliders,
   Radio,
-  FileSpreadsheet
+  FileSpreadsheet,
+  LocateFixed
 } from 'lucide-react';
 import {
   createBuildingApi,
@@ -60,7 +61,8 @@ export default function AdminDashboard({
   walkingPaths = [],
   onRefreshData,
   onStartMapPick,
-  pickedCoordinates
+  pickedCoordinates,
+  onOpenIndoorSurvey = null
 }) {
   const [activeTab, setActiveTab] = useState('buildings'); // 'buildings' | 'departments' | 'survey' | 'paths' | 'approvals' | 'audit'
 
@@ -741,6 +743,16 @@ export default function AdminDashboard({
                   >
                     Building Entrances
                   </button>
+                  {onOpenIndoorSurvey && (
+                    <button
+                      onClick={() => onOpenIndoorSurvey()}
+                      className="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600/30 hover:bg-emerald-600 text-emerald-300 hover:text-white border border-emerald-500/40 transition-all flex items-center gap-1.5 shadow"
+                      title="Open Indoor Classroom Survey & Coordinate Capture"
+                    >
+                      <LocateFixed className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Indoor Survey & GPS</span>
+                    </button>
+                  )}
                 </div>
               </div>
 

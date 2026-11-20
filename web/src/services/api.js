@@ -1249,6 +1249,106 @@ export const deleteMapMarkerApi = async (id, token) => {
   return data;
 };
 
+// ========================================================
+// INDOOR LOCATION SURVEY & GPS COORDINATE CAPTURE APIS
+// ========================================================
+export const fetchIndoorLocations = async (params = {}) => {
+  try {
+    const query = new URLSearchParams();
+    if (params.building) query.set('building', params.building);
+    if (params.floor) query.set('floor', params.floor);
+    if (params.floorNumber !== undefined) query.set('floorNumber', params.floorNumber);
+    if (params.type && params.type !== 'all') query.set('type', params.type);
+    if (params.department && params.department !== 'all') query.set('department', params.department);
+    if (params.status && params.status !== 'all') query.set('status', params.status);
+    if (params.verified !== undefined) query.set('verified', params.verified);
+    if (params.search) query.set('search', params.search);
+
+    const queryString = query.toString();
+    const url = queryString ? `/api/indoor-locations?${queryString}` : '/api/indoor-locations';
+    const res = await appFetch(url);
+    if (!res.ok) throw new Error('Failed to fetch indoor locations');
+    const json = await res.json();
+    return json.data || [];
+  } catch (err) {
+    console.warn('[API] fetchIndoorLocations error:', err.message);
+    return [];
+  }
+};
+
+export const fetchIndoorLocationById = async (id) => {
+  try {
+    const res = await appFetch(`/api/indoor-locations/${encodeURIComponent(id)}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.data || null;
+  } catch (err) {
+    return null;
+  }
+};
+
+export const createIndoorLocationApi = async (locationData, token) => {
+  const res = await appFetch('/api/indoor-locations', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(locationData)
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to create indoor location');
+  }
+  return data;
+};
+
+export const captureIndoorGpsApi = async (captureData, token) => {
+  const res = await appFetch('/api/indoor-locations/capture', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(captureData)
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to capture indoor GPS coordinates');
+  }
+  return data;
+};
+
+export const updateIndoorLocationApi = async (id, updates, token) => {
+  const res = await appFetch(`/api/indoor-locations/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(updates)
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to update indoor location');
+  }
+  return data;
+};
+
+export const deleteIndoorLocationApi = async (id, token) => {
+  const res = await appFetch(`/api/indoor-locations/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || 'Failed to delete indoor location');
+  }
+  return data;
+};
+
 
 /**
  * Health check endpoint integration

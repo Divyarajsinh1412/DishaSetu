@@ -30,7 +30,8 @@ import {
   Check,
   Calendar,
   Menu,
-  ChevronRight
+  ChevronRight,
+  LocateFixed
 } from 'lucide-react';
 import { getTranslation } from '../services/localization';
 import { COMPLETE_CAMPUS_CATALOG } from '../services/campusCatalog';
@@ -44,6 +45,7 @@ export default function Header({
   onOpenSOS,
   onOpenAdmin,
   onOpenSurvey,
+  onOpenIndoorSurvey,
   onOpenIndoor,
   onOpenCafes,
   onOpenCafeOwner,
@@ -461,6 +463,15 @@ export default function Header({
 
                 <button
                   type="button"
+                  onClick={() => { if (onOpenIndoorSurvey) onOpenIndoorSurvey(); setIsMoreMenuOpen(false); }}
+                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-semibold text-emerald-300 hover:bg-[#132847] flex items-center gap-2.5 transition-colors font-bold"
+                >
+                  <LocateFixed className="w-4 h-4 text-emerald-400" />
+                  <span>Indoor GPS Survey</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => { onOpenCafeOwner(); setIsMoreMenuOpen(false); }}
                   className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-semibold text-slate-200 hover:bg-[#132847] flex items-center gap-2.5 transition-colors"
                 >
@@ -776,6 +787,13 @@ export default function Header({
               >
                 <Crosshair className="w-4 h-4 text-emerald-400" />
                 <span>Map Marker Editor</span>
+              </button>
+              <button
+                onClick={() => { if (onOpenIndoorSurvey) onOpenIndoorSurvey(); setIsMobileMenuOpen(false); }}
+                className="w-full p-2.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-500/30 text-emerald-300 flex items-center gap-2.5 text-xs font-bold"
+              >
+                <LocateFixed className="w-4 h-4 text-emerald-400" />
+                <span>Indoor GPS Survey & Coordinates</span>
               </button>
               <button
                 onClick={() => { onOpenCafeOwner(); setIsMobileMenuOpen(false); }}

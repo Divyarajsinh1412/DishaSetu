@@ -13,6 +13,7 @@ import CafeModal from './components/cafe/CafeModal';
 import CafeOwnerDashboard from './components/cafe/CafeOwnerDashboard';
 import IssueReportModal from './components/issues/IssueReportModal';
 import AdminMapEditorModal from './components/admin/AdminMapEditorModal';
+import AdminIndoorSurveyModal from './components/admin/AdminIndoorSurveyModal';
 import NavigationPanel from './components/NavigationPanel';
 import NavigationGuidanceBar from './components/NavigationGuidanceBar';
 import RoutePlanningModal from './components/navigation/RoutePlanningModal';
@@ -77,6 +78,8 @@ export default function App() {
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
   const [isSurveyModalOpen, setIsSurveyModalOpen] = useState(false);
+  const [isIndoorSurveyOpen, setIsIndoorSurveyOpen] = useState(false);
+  const [targetIndoorSurveyRoom, setTargetIndoorSurveyRoom] = useState(null);
   const [isIndoorModalOpen, setIsIndoorModalOpen] = useState(false);
   const [targetIndoorBuilding, setTargetIndoorBuilding] = useState(null);
   const [selectedBuildingForPopup, setSelectedBuildingForPopup] = useState(null);
@@ -386,6 +389,10 @@ export default function App() {
         onOpenCafeOwner={() => setIsCafeOwnerOpen(true)}
         onOpenIssueReport={() => setIsIssueReportOpen(true)}
         onOpenMapEditor={() => setIsMapEditorOpen(true)}
+        onOpenIndoorSurvey={(room) => {
+          setTargetIndoorSurveyRoom(room || null);
+          setIsIndoorSurveyOpen(true);
+        }}
         onOpenRoutePlanning={handleOpenRoutePlanning}
         onOpenAIAssistant={() => setIsAIAssistantOpen(true)}
         onOpenEvents={() => setIsEventsModalOpen(true)}
@@ -479,6 +486,10 @@ export default function App() {
             buildings={buildings}
             onStartOutdoorNavigation={handleStartNavigation}
             onOpenRoutePlanning={handleOpenRoutePlanning}
+            onOpenIndoorSurvey={(room) => {
+              setTargetIndoorSurveyRoom(room || null);
+              setIsIndoorSurveyOpen(true);
+            }}
           />
         </div>
       ) : (
@@ -593,6 +604,7 @@ export default function App() {
         onRefreshData={loadData}
         onStartMapPick={handleStartMapPick}
         pickedCoordinates={pickedCoordinates}
+        onOpenIndoorSurvey={() => setIsIndoorSurveyOpen(true)}
       />
 
       {/* PHASE 4 & 15: Tomorrow's Guided GPS Field Survey Checklist Modal */}
@@ -639,6 +651,20 @@ export default function App() {
         buildings={buildings}
         onStartOutdoorNavigation={handleStartNavigation}
         onOpenRoutePlanning={handleOpenRoutePlanning}
+        onOpenIndoorSurvey={(room) => {
+          setTargetIndoorSurveyRoom(room || null);
+          setIsIndoorSurveyOpen(true);
+        }}
+      />
+
+      {/* Admin Indoor Location Survey & GPS Coordinate Capture Modal */}
+      <AdminIndoorSurveyModal
+        isOpen={isIndoorSurveyOpen}
+        onClose={() => setIsIndoorSurveyOpen(false)}
+        initialBuilding={targetIndoorSurveyRoom?.building || targetIndoorBuilding}
+        initialFloorNumber={targetIndoorSurveyRoom?.floorNumber || 0}
+        onStartNavigation={handleStartNavigation}
+        onRefreshData={loadData}
       />
 
       {/* RULE 3 & PHASE 6: Student & Visitor Campus Dining & Live Menus Modal */}

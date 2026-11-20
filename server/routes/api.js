@@ -59,6 +59,14 @@ import {
   calculateIndoorRoute
 } from '../controllers/indoorController.js';
 import {
+  getIndoorLocations,
+  getIndoorLocationById,
+  createIndoorLocation,
+  captureIndoorGpsCoordinates,
+  updateIndoorLocation,
+  deleteIndoorLocation
+} from '../controllers/indoorLocationController.js';
+import {
   getSurveyChecklist,
   captureGpsSurvey,
   verifySurveyRecord,
@@ -208,6 +216,16 @@ router.put('/indoor/floors/:floorId/rooms/:roomId', requireAuth, updateRoom);
 
 router.get('/indoor/graph', getIndoorGraph);
 router.post('/indoor/route', calculateIndoorRoute);
+
+// ==========================================
+// INDOOR LOCATION SURVEY & GPS COORDINATE CAPTURE APIS
+// ==========================================
+router.get('/indoor-locations', getIndoorLocations);
+router.get('/indoor-locations/:id', getIndoorLocationById);
+router.post('/indoor-locations', requireAuth, requireRole(['super_admin', 'campus_admin']), createIndoorLocation);
+router.post('/indoor-locations/capture', requireAuth, requireRole(['super_admin', 'campus_admin']), captureIndoorGpsCoordinates);
+router.put('/indoor-locations/:id', requireAuth, requireRole(['super_admin', 'campus_admin']), updateIndoorLocation);
+router.delete('/indoor-locations/:id', requireAuth, requireRole(['super_admin', 'campus_admin']), deleteIndoorLocation);
 
 // ==========================================
 // PHASE 4 & 15: Tomorrow's GPS Survey Management & Checklist APIs

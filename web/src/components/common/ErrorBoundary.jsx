@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, AlertTriangle } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Home, RotateCcw } from 'lucide-react';
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -27,6 +27,15 @@ export default class ErrorBoundary extends React.Component {
     this.setState({ hasError: false, error: null, errorInfo: null, showDetails: true });
   };
 
+  handleHardReset = () => {
+    try {
+      localStorage.removeItem('dishasetu_active_route');
+      sessionStorage.clear();
+    } catch {}
+    this.setState({ hasError: false, error: null, errorInfo: null, showDetails: true });
+    window.location.href = '/?t=' + Date.now();
+  };
+
   handleReturnOverview = () => {
     try {
       localStorage.removeItem('dishasetu_active_route');
@@ -47,7 +56,7 @@ export default class ErrorBoundary extends React.Component {
       }
 
       return (
-        <div className="fixed inset-0 z-[99999] bg-[#07172c] text-white flex flex-col items-center justify-center p-6 text-center select-none">
+        <div className="fixed inset-0 z-[99999] bg-[#07172c] text-white flex flex-col items-center justify-center p-6 text-center select-none overflow-y-auto">
           <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mb-6 text-amber-400">
             <AlertTriangle className="w-8 h-8" />
           </div>
@@ -62,55 +71,55 @@ export default class ErrorBoundary extends React.Component {
           <div className="flex flex-wrap items-center justify-center gap-3">
             <button
               onClick={this.handleReset}
-              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-semibold transition-all border border-slate-700 active:scale-95"
+              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm font-semibold transition-all border border-slate-700 active:scale-95 flex items-center gap-1.5"
             >
-              Resume Session
+              <RotateCcw className="w-4 h-4 text-emerald-400" />
+              <span>Resume Session</span>
             </button>
             <button
               onClick={this.handleReturnOverview}
-              className="px-4 py-2.5 rounded-xl bg-[#0e2a47] hover:bg-[#143a61] text-[#d4af37] text-xs sm:text-sm font-semibold transition-all border border-[#1d4670] active:scale-95"
+              className="px-4 py-2.5 rounded-xl bg-[#0e2a47] hover:bg-[#143a61] text-[#d4af37] text-xs sm:text-sm font-semibold transition-all border border-[#1d4670] active:scale-95 flex items-center gap-1.5"
             >
-              Return to Campus Overview
+              <Home className="w-4 h-4 text-[#d4af37]" />
+              <span>Return to Campus Overview</span>
             </button>
             <button
-              onClick={this.handleReload}
+              onClick={this.handleHardReset}
               className="px-4 py-2.5 rounded-xl bg-[#1d4ed8] hover:bg-[#2563eb] text-white text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 shadow-lg shadow-[#1d4ed8]/30 active:scale-95"
             >
               <RefreshCw className="w-4 h-4" />
-              Reload Campus Map
+              <span>Clean Reload</span>
             </button>
           </div>
 
-          {this.state.error && (
-            <div className="mt-6 p-4 bg-slate-950/95 rounded-xl border border-amber-500/40 text-left max-w-2xl w-full overflow-hidden text-xs font-mono text-slate-300 shadow-2xl">
-              <div className="font-bold text-amber-400 mb-1 text-sm flex items-center justify-between">
-                <span>⚠️ Diagnostic Details:</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const text = `${this.state.error?.toString()}\n${this.state.error?.stack || ''}\n${this.state.errorInfo?.componentStack || ''}`;
-                    navigator.clipboard?.writeText(text);
-                  }}
-                  className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-300"
-                >
-                  Copy Error
-                </button>
-              </div>
-              <div className="text-red-300 font-semibold mb-2 break-words">
-                {this.state.error?.toString()}
-              </div>
-              {this.state.error?.stack && (
-                <div className="text-slate-400 text-[10px] whitespace-pre-wrap font-mono p-2 bg-slate-900 rounded border border-slate-800 max-h-36 overflow-y-auto">
-                  {this.state.error.stack}
-                </div>
-              )}
-              {this.state.errorInfo?.componentStack && (
-                <div className="text-slate-500 text-[9px] whitespace-pre-wrap font-mono mt-2 p-2 bg-slate-900/60 rounded max-h-36 overflow-y-auto">
-                  {this.state.errorInfo.componentStack}
-                </div>
-              )}
+          <div className="mt-6 p-4 bg-slate-950/95 rounded-xl border border-amber-500/40 text-left max-w-2xl w-full overflow-hidden text-xs font-mono text-slate-300 shadow-2xl">
+            <div className="font-bold text-amber-400 mb-1 text-sm flex items-center justify-between">
+              <span>⚠️ Diagnostic Details:</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const text = `${this.state.error?.toString() || 'Active session interruption'}\n${this.state.error?.stack || ''}\n${this.state.errorInfo?.componentStack || ''}`;
+                  navigator.clipboard?.writeText(text);
+                }}
+                className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-[10px] text-slate-300"
+              >
+                Copy Error
+              </button>
             </div>
-          )}
+            <div className="text-red-300 font-semibold mb-2 break-words">
+              {this.state.error?.toString() || 'Display state interrupted. Click "Clean Reload" above.'}
+            </div>
+            {this.state.error?.stack && (
+              <div className="text-slate-400 text-[10px] whitespace-pre-wrap font-mono p-2 bg-slate-900 rounded border border-slate-800 max-h-36 overflow-y-auto">
+                {this.state.error.stack}
+              </div>
+            )}
+            {this.state.errorInfo?.componentStack && (
+              <div className="text-slate-500 text-[9px] whitespace-pre-wrap font-mono mt-2 p-2 bg-slate-900/60 rounded max-h-36 overflow-y-auto">
+                {this.state.errorInfo.componentStack}
+              </div>
+            )}
+          </div>
         </div>
       );
     }

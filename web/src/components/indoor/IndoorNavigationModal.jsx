@@ -56,6 +56,7 @@ export default function IndoorNavigationModal({
   buildings = [],
   onStartOutdoorNavigation,
   onOpenRoutePlanning,
+  onOpenIndoorSurvey = null,
   isEmbedded = false
 }) {
   // Building Selection (defaults to D Block)
@@ -681,10 +682,27 @@ export default function IndoorNavigationModal({
                   <div className="text-xs text-slate-400 mt-0.5">
                     {activeFloor?.floorName || 'Ground Floor'} · {currentBuilding.name}
                   </div>
-                  <div className="mt-2">
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className="text-[11px] font-semibold text-sky-400 bg-sky-950/60 border border-sky-500/30 px-3 py-0.5 rounded-full inline-block">
                       Illustrative layout – awaiting survey
                     </span>
+                    {onOpenIndoorSurvey && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenIndoorSurvey({
+                          building: currentBuilding.name,
+                          floorNumber: currentFloorNumber,
+                          roomNumber: selectedRoom.roomNumber,
+                          name: selectedRoom.name,
+                          department: selectedRoom.department
+                        })}
+                        className="text-[11px] font-bold text-emerald-300 hover:text-white bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1 transition-all active:scale-95 shadow-sm"
+                        title="Survey coordinates for this room"
+                      >
+                        <LocateFixed className="w-3 h-3 text-emerald-400" />
+                        <span>Survey GPS</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
