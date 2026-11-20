@@ -64,8 +64,18 @@ export default function BuildingPopupModal({
   const coords = building.coordinates || building.entranceCoordinates || { lat: 13.1706, lng: 77.5358 };
 
   return (
-    <div className="fixed inset-0 z-[550] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-[#0b132b] border border-slate-700/80 rounded-3xl shadow-2xl overflow-hidden text-slate-100 animate-in zoom-in-95 duration-200">
+    <div
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      data-prevent-map-zoom="true"
+      className="fixed inset-0 z-[550] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
+    >
+      <div
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        data-prevent-map-zoom="true"
+        className="relative w-full max-w-lg bg-[#0b132b] border border-slate-700/80 rounded-3xl shadow-2xl overflow-hidden text-slate-100 animate-in zoom-in-95 duration-200 overscroll-contain isolate-scroll"
+      >
         
         {/* Top Header with Presidency Accent Gradient */}
         <div className="relative px-5 py-4 bg-gradient-to-r from-emerald-950/70 via-slate-900 to-indigo-950/70 border-b border-slate-800 flex items-start justify-between gap-3">
@@ -114,7 +124,12 @@ export default function BuildingPopupModal({
         </div>
 
         {/* Modal Body */}
-        <div className="p-5 space-y-4 max-h-[65vh] overflow-y-auto custom-scrollbar">
+        <div
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          data-prevent-map-zoom="true"
+          className="p-5 space-y-4 max-h-[65vh] overflow-y-auto custom-scrollbar overscroll-contain isolate-scroll"
+        >
           
           {/* Quick Metrics Strip */}
           <div className="grid grid-cols-3 gap-2.5">

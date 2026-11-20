@@ -294,8 +294,18 @@ export default function CafeOwnerDashboard({ isOpen, onClose }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-5xl h-[90vh] bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-200">
+    <div
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      data-prevent-map-zoom="true"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
+    >
+      <div
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        data-prevent-map-zoom="true"
+        className="relative w-full max-w-5xl h-[90vh] bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-200 overscroll-contain isolate-scroll"
+      >
         
         {/* Top Header */}
         <div className="p-4 sm:p-5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
@@ -362,7 +372,12 @@ export default function CafeOwnerDashboard({ isOpen, onClose }) {
           /* ============================================================
              1. CAFE OWNER AUTHENTICATION VIEW
              ============================================================ */
-          <div className="flex-1 overflow-y-auto flex items-center justify-center p-6 bg-slate-900/60">
+          <div
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            data-prevent-map-zoom="true"
+            className="flex-1 overflow-y-auto flex items-center justify-center p-6 bg-slate-900/60 overscroll-contain isolate-scroll"
+          >
             <div className="w-full max-w-md bg-slate-950/90 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
               <div className="text-center mb-6">
                 <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-600 flex items-center justify-center text-white mb-3 shadow-lg shadow-orange-500/20">
@@ -556,7 +571,12 @@ export default function CafeOwnerDashboard({ isOpen, onClose }) {
             </div>
 
             {/* Right Main Management Pane */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-900/40">
+            <div
+              onWheel={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
+              data-prevent-map-zoom="true"
+              className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-900/40 overscroll-contain isolate-scroll"
+            >
               
               {/* TAB 1: REGULAR MENU ITEMS */}
               {activeTab === 'menu' && (

@@ -220,8 +220,18 @@ export default function SurveyChecklistModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[600] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-hidden animate-in fade-in">
-      <div className="relative w-full max-w-6xl h-[92vh] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
+    <div
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      data-prevent-map-zoom="true"
+      className="fixed inset-0 z-[600] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-hidden animate-in fade-in"
+    >
+      <div
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        data-prevent-map-zoom="true"
+        className="relative w-full max-w-6xl h-[92vh] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100 overscroll-contain isolate-scroll"
+      >
         {/* Header Bar */}
         <div className="p-4 bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 border-b border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
@@ -360,7 +370,12 @@ export default function SurveyChecklistModal({
         {/* Master Workspace: Left Checklist List + Right Interactive Survey Form */}
         <div className="flex-1 flex overflow-hidden">
           {/* Left Checklist List */}
-          <div className="w-full md:w-1/2 border-r border-slate-800 overflow-y-auto divide-y divide-slate-800/60 custom-scrollbar">
+          <div
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            data-prevent-map-zoom="true"
+            className="w-full md:w-1/2 border-r border-slate-800 overflow-y-auto divide-y divide-slate-800/60 custom-scrollbar overscroll-contain isolate-scroll"
+          >
             {checklist.map((item) => {
               const isSelected = activeItem?.locationId === item.locationId;
               const hasGps = item.coordinates && item.coordinates.lat && item.coordinates.lng;
@@ -434,7 +449,12 @@ export default function SurveyChecklistModal({
           </div>
 
           {/* Right Interactive Survey Form */}
-          <div className="hidden md:flex flex-1 flex-col overflow-y-auto bg-slate-950/40 p-4 custom-scrollbar">
+          <div
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            data-prevent-map-zoom="true"
+            className="hidden md:flex flex-1 flex-col overflow-y-auto bg-slate-950/40 p-4 custom-scrollbar overscroll-contain isolate-scroll"
+          >
             {activeItem ? (
               <div className="space-y-4">
                 {/* Target Header */}

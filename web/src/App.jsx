@@ -43,7 +43,7 @@ import {
   connectSyncStream
 } from './services/api';
 import { clientRoutingEngine } from './services/routingEngine';
-import { Menu, Navigation as NavigationIcon, Compass, Shield, Globe, Map, Crosshair, Box, DoorOpen, Sparkles } from 'lucide-react';
+import { Menu, Navigation as NavigationIcon, Compass, Shield, Globe, Map, Crosshair, Box, DoorOpen, Sparkles, Layers } from 'lucide-react';
 
 export default function App() {
   const [campus, setCampus] = useState(null);
@@ -58,8 +58,9 @@ export default function App() {
   const [walkingPaths, setWalkingPaths] = useState([]);
   const [userLocation, setUserLocation] = useState(null);
 
-  // View Mode: 'map' (Full-Screen Google Maps Geographic Engine), 'master' (Official Master Map), '3d' (3D Digital Twin), 'immersive' (360° Aerial Tour), or 'indoor' (Multi-Floor Floorplans)
-  const [viewMode, setViewMode] = useState('map');
+  // View Mode: 'master' (Official Expanded High-Res Illustrated Map - Default), 'map' (Geographic Google Map Engine), '3d' (3D Digital Twin), 'immersive' (360° Aerial Tour), or 'indoor' (Multi-Floor Floorplans)
+  const [viewMode, setViewMode] = useState('master');
+  const [mapType, setMapType] = useState('google_roadmap');
   const [showSplash, setShowSplash] = useState(true);
   const [mapMarkers, setMapMarkers] = useState([]);
   const [isMapEditorOpen, setIsMapEditorOpen] = useState(false);
@@ -97,9 +98,26 @@ export default function App() {
   const [language, setLanguage] = useState(() => localStorage.getItem('dishasetu_lang') || 'en');
   const [isLoading, setIsLoading] = useState(true);
 
+  // Compute whether any overlay dialog or modal is currently open
+  const isAnyModalOpen = Boolean(
+    isCafeModalOpen ||
+    isSOSOpen ||
+    isAdminLoginOpen ||
+    isAdminDashboardOpen ||
+    isSurveyModalOpen ||
+    isIndoorSurveyOpen ||
+    (isIndoorModalOpen && viewMode !== 'indoor') ||
+    selectedBuildingForPopup ||
+    isRoutePlanningOpen ||
+    isCafeOwnerOpen ||
+    isIssueReportOpen ||
+    isMapEditorOpen ||
+    isAIAssistantOpen ||
+    isEventsModalOpen
+  );
+
   // Open Wayfinding / Route Planning Modal
   const handleOpenRoutePlanning = useCallback((start = null, dest = null) => {
-    // Defend against raw event objects
     const validStart = (typeof start === 'string' && start.length > 0)
       ? start
       : (start && typeof start === 'object' && !start._reactName && !start.nativeEvent
@@ -116,7 +134,7 @@ export default function App() {
     setIsRoutePlanningOpen(true);
   }, []);
 
-  // Handle Cafe Opening (Universal click from Master Map, 3D Twin, or Directory)
+  // Handle Cafe Opening
   const handleOpenCafe = useCallback((cafe) => {
     const cId = cafe?._id || cafe?.shortCode || cafe?.code || (typeof cafe === 'string' ? cafe : 'PU-CAFE-D-BLOCK');
     setSelectedCafeId(cId);
@@ -358,8 +376,8 @@ export default function App() {
   }, []);
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#0b132b]">
-      {/* Premium Professional Splash Screen */}
+    <div className="relative h-screen w-screen overflow-hidden bg-[#e5e3df] dark:bg-[#202124]">
+      {/* Splash Screen */}
       {showSplash && (
         <SplashScreen
           isLoading={isLoading}
@@ -367,7 +385,116 @@ export default function App() {
         />
       )}
 
-      {/* Top Header */}
+      {/* =================================================================== */}
+      {/* 1. 100% FULL-SCREEN MAP VIEWPORT (Underneath all Google Maps UI)    */}
+      {/* =================================================================== */}
+      <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
+        {viewMode === 'master' ? (
+          <MasterCampusMap
+            markers={mapMarkers}
+            activeCategory={activeCategory}
+            searchQuery={searchQuery}
+            selectedMarker={selectedLocation}
+            onSelectMarker={(m) => setSelectedLocation(m)}
+            onStartNavigation={handleStartNavigation}
+            onOpenRoutePlanning={handleOpenRoutePlanning}
+            onClearRoute={() => setActiveRoute(null)}
+            onOpenIndoor={handleOpenIndoorMap}
+            onOpenBuildingPopup={handleOpenBuildingPopup}
+            onOpenIndoorMap={handleOpenIndoorMap}
+            onStartIndoorNavigation={handleStartIndoorNavigation}
+            onOpenCafe={handleOpenCafe}
+            activeRoute={activeRoute}
+            userLocation={userLocation}
+            language={language}
+            isModalOpen={isAnyModalOpen}
+          />
+        ) : viewMode === '3d' ? (
+          <CampusDigitalTwin3D
+            buildings={buildings}
+            locations={filteredLocations}
+            features={features}
+            walkingPaths={walkingPaths}
+            selectedLocation={selectedLocation}
+            onSelectLocation={(loc) => setSelectedLocation(loc)}
+            activeRoute={activeRoute}
+            onClearRoute={() => setActiveRoute(null)}
+            onStartNavigation={handleStartNavigation}
+            onOpenIndoor={handleOpenIndoorMap}
+            onOpenBuildingPopup={handleOpenBuildingPopup}
+            onOpenIndoorMap={handleOpenIndoorMap}
+            onStartIndoorNavigation={handleStartIndoorNavigation}
+            onSwitchToImmersive={() => setViewMode('immersive')}
+            onSwitchToMap={() => setViewMode('master')}
+            userLocation={userLocation}
+          />
+        ) : viewMode === 'immersive' ? (
+          <ImmersiveViewer
+            scenes={panoramaScenes}
+            hotspots={panoramaHotspots}
+            currentSceneId={currentSceneId}
+            onSceneChange={setCurrentSceneId}
+            onStartNavigation={handleStartNavigation}
+            onOpenBuildingPopup={handleOpenBuildingPopup}
+            onOpenIndoorMap={handleOpenIndoorMap}
+            onStartIndoorNavigation={handleStartIndoorNavigation}
+            onSwitchToMap={() => setViewMode('master')}
+            activeRoute={activeRoute}
+            onClearRoute={() => setActiveRoute(null)}
+          />
+        ) : viewMode === 'indoor' ? (
+          <div className="w-full h-full bg-[#0d0f14]">
+            <IndoorNavigationModal
+              isOpen={true}
+              isEmbedded={true}
+              onClose={() => setViewMode('master')}
+              initialBuilding={targetIndoorBuilding || buildings.find(b => b.shortCode === 'PU-D-BLOCK') || { name: 'D Block', shortCode: 'PU-D-BLOCK', buildingId: 'bld_d_block' }}
+              initialMode={indoorModalMode}
+              buildings={buildings}
+              onStartOutdoorNavigation={handleStartNavigation}
+              onOpenRoutePlanning={handleOpenRoutePlanning}
+              onOpenIndoorSurvey={(room) => {
+                setTargetIndoorSurveyRoom(room || null);
+                setIsIndoorSurveyOpen(true);
+              }}
+            />
+          </div>
+        ) : (
+          <CampusMap
+            campus={campus}
+            features={features}
+            locations={filteredLocations}
+            routes={routes}
+            buildings={buildings}
+            walkingPaths={walkingPaths}
+            selectedLocation={selectedLocation}
+            onSelectLocation={(loc) => setSelectedLocation(loc)}
+            activeRoute={activeRoute}
+            onClearRoute={() => setActiveRoute(null)}
+            isPickingCoordinates={isPickingCoordinates}
+            onCoordinatePicked={handleCoordinatePicked}
+            pickedCoordinates={pickedCoordinates}
+            onOpenIndoor={handleOpenIndoorMap}
+            onOpenBuildingPopup={handleOpenBuildingPopup}
+            onOpenIndoorMap={handleOpenIndoorMap}
+            onStartIndoorNavigation={handleStartIndoorNavigation}
+            onOpenRoutePlanning={handleOpenRoutePlanning}
+            userLocation={userLocation}
+            onSwitch3D={() => setViewMode('3d')}
+            onSwitchImmersive={() => setViewMode('immersive')}
+            language={language}
+            activeCategory={activeCategory}
+            searchQuery={searchQuery}
+            isModalOpen={isAnyModalOpen}
+            mapType={mapType}
+            setMapType={setMapType}
+          />
+        )}
+      </div>
+
+      {/* =================================================================== */}
+      {/* 2. AUTHENTIC GOOGLE MAPS FLOATING SEARCH BAR & CATEGORY PILLS       */}
+      {/* =================================================================== */}
       <Header
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -401,14 +528,19 @@ export default function App() {
         locations={filteredLocations}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        mapType={mapType}
+        onMapTypeChange={setMapType}
         language={language}
         onLanguageChange={(lang) => {
           setLanguage(lang);
           localStorage.setItem('dishasetu_lang', lang);
         }}
+        onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
       />
 
-      {/* Live Turn-by-Turn Walking Guidance Bar (Floats across all map views) */}
+      {/* =================================================================== */}
+      {/* 3. LIVE TURN-BY-TURN GUIDANCE BANNER & FOOTER (When Route Active)   */}
+      {/* =================================================================== */}
       {activeRoute && (
         <NavigationGuidanceBar
           route={activeRoute}
@@ -417,168 +549,9 @@ export default function App() {
         />
       )}
 
-      {/* Main Workspace Viewport: Official Master Campus Map vs 3D Campus vs 360° Aerial vs 2D GPS Map */}
-      {viewMode === 'master' ? (
-        <div className="flex-1 relative w-full h-full overflow-hidden">
-          <MasterCampusMap
-            markers={mapMarkers}
-            activeCategory={activeCategory}
-            searchQuery={searchQuery}
-            selectedMarker={selectedLocation}
-            onSelectMarker={(m) => setSelectedLocation(m)}
-            onStartNavigation={handleStartNavigation}
-            onOpenRoutePlanning={handleOpenRoutePlanning}
-            onClearRoute={() => setActiveRoute(null)}
-            onOpenIndoor={handleOpenIndoorMap}
-            onOpenBuildingPopup={handleOpenBuildingPopup}
-            onOpenIndoorMap={handleOpenIndoorMap}
-            onStartIndoorNavigation={handleStartIndoorNavigation}
-            onOpenCafe={handleOpenCafe}
-            activeRoute={activeRoute}
-            userLocation={userLocation}
-            language={language}
-          />
-        </div>
-      ) : viewMode === '3d' ? (
-        <div className="flex-1 relative w-full h-full overflow-hidden">
-          <CampusDigitalTwin3D
-            buildings={buildings}
-            locations={filteredLocations}
-            features={features}
-            walkingPaths={walkingPaths}
-            selectedLocation={selectedLocation}
-            onSelectLocation={(loc) => setSelectedLocation(loc)}
-            activeRoute={activeRoute}
-            onClearRoute={() => setActiveRoute(null)}
-            onStartNavigation={handleStartNavigation}
-            onOpenIndoor={handleOpenIndoorMap}
-            onOpenBuildingPopup={handleOpenBuildingPopup}
-            onOpenIndoorMap={handleOpenIndoorMap}
-            onStartIndoorNavigation={handleStartIndoorNavigation}
-            onSwitchToImmersive={() => setViewMode('immersive')}
-            onSwitchToMap={() => setViewMode('map')}
-            userLocation={userLocation}
-          />
-        </div>
-      ) : viewMode === 'immersive' ? (
-        <div className="flex-1 relative w-full h-full overflow-hidden">
-          <ImmersiveViewer
-            scenes={panoramaScenes}
-            hotspots={panoramaHotspots}
-            currentSceneId={currentSceneId}
-            onSceneChange={setCurrentSceneId}
-            onStartNavigation={handleStartNavigation}
-            onOpenBuildingPopup={handleOpenBuildingPopup}
-            onOpenIndoorMap={handleOpenIndoorMap}
-            onStartIndoorNavigation={handleStartIndoorNavigation}
-            onSwitchToMap={() => setViewMode('map')}
-            activeRoute={activeRoute}
-            onClearRoute={() => setActiveRoute(null)}
-          />
-        </div>
-      ) : viewMode === 'indoor' ? (
-        <div className="flex-1 relative w-full h-full overflow-hidden bg-[#0d0f14]">
-          <IndoorNavigationModal
-            isOpen={true}
-            isEmbedded={true}
-            onClose={() => setViewMode('master')}
-            initialBuilding={targetIndoorBuilding || buildings.find(b => b.shortCode === 'PU-D-BLOCK') || { name: 'D Block', shortCode: 'PU-D-BLOCK', buildingId: 'bld_d_block' }}
-            initialMode={indoorModalMode}
-            buildings={buildings}
-            onStartOutdoorNavigation={handleStartNavigation}
-            onOpenRoutePlanning={handleOpenRoutePlanning}
-            onOpenIndoorSurvey={(room) => {
-              setTargetIndoorSurveyRoom(room || null);
-              setIsIndoorSurveyOpen(true);
-            }}
-          />
-        </div>
-      ) : (
-        <div className="flex-1 relative w-full h-full overflow-hidden">
-          {/* 100% Full-Screen Geographic Campus Map (Google Maps Style) */}
-          <main className="absolute inset-0 w-full h-full z-0">
-            <CampusMap
-              campus={campus}
-              features={features}
-              locations={filteredLocations}
-              routes={routes}
-              buildings={buildings}
-              walkingPaths={walkingPaths}
-              selectedLocation={selectedLocation}
-              onSelectLocation={(loc) => setSelectedLocation(loc)}
-              activeRoute={activeRoute}
-              onClearRoute={() => setActiveRoute(null)}
-              isPickingCoordinates={isPickingCoordinates}
-              onCoordinatePicked={handleCoordinatePicked}
-              pickedCoordinates={pickedCoordinates}
-              onOpenIndoor={handleOpenIndoorMap}
-              onOpenBuildingPopup={handleOpenBuildingPopup}
-              onOpenIndoorMap={handleOpenIndoorMap}
-              onStartIndoorNavigation={handleStartIndoorNavigation}
-              onOpenRoutePlanning={handleOpenRoutePlanning}
-              userLocation={userLocation}
-              onSwitch3D={() => setViewMode('3d')}
-              onSwitchImmersive={() => setViewMode('immersive')}
-              language={language}
-              activeCategory={activeCategory}
-              searchQuery={searchQuery}
-            />
-          </main>
-
-          {/* Toggle Sidebar Floating Trigger (when collapsed) */}
-          {!isSidebarOpen && (
-            <button
-              onClick={() => setIsSidebarOpen(true)}
-              className="absolute top-24 left-3 sm:left-4 z-[400] px-3 py-2 bg-[#081528]/95 dark:bg-[#0b1728]/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl text-slate-200 shadow-2xl hover:bg-[#122847] transition-all flex items-center gap-2 text-xs font-bold active:scale-95"
-              title="Open Campus Directory"
-            >
-              <Menu className="w-4 h-4 text-sky-400" />
-              <span className="hidden sm:inline">Directory</span>
-            </button>
-          )}
-
-          {/* Collapsible Campus Directory Sidebar Drawer (Slides over map, never resizes canvas) */}
-          {isSidebarOpen && (
-            <div className="absolute top-0 bottom-0 left-0 z-[420] w-80 sm:w-96 shadow-2xl animate-in slide-in-from-left duration-200">
-              <Sidebar
-                isOpen={isSidebarOpen}
-                onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-                locations={filteredLocations}
-                buildings={filteredBuildings}
-                departments={filteredDepartments}
-                features={features}
-                selectedLocation={selectedLocation}
-                onSelectLocation={(loc) => {
-                  setSelectedLocation(loc);
-                  if (typeof window !== 'undefined' && window.innerWidth < 768) {
-                    setIsSidebarOpen(false);
-                  }
-                }}
-                onStartNavigation={handleStartNavigation}
-                onCalculateRoute={handleCalculateRoute}
-                onOpenIndoor={handleOpenIndoorMap}
-                onOpenBuildingPopup={handleOpenBuildingPopup}
-                onOpenIndoorMap={handleOpenIndoorMap}
-                onStartIndoorNavigation={handleStartIndoorNavigation}
-                userLocation={userLocation}
-                catalog={catalog}
-                activeTab={sidebarTab}
-                onTabChange={setSidebarTab}
-              />
-            </div>
-          )}
-
-          {/* Turn-by-Turn Walking Navigation Panel (Floating card) */}
-          {activeRoute && (
-            <NavigationPanel
-              route={activeRoute}
-              onClose={() => setActiveRoute(null)}
-            />
-          )}
-        </div>
-      )}
-
-      {/* Non-Blocking Floating Place Details Card (Google Maps Style) */}
+      {/* =================================================================== */}
+      {/* 4. GOOGLE MAPS PLACE DETAILS CARD (Left Docked on Desktop)          */}
+      {/* =================================================================== */}
       {selectedLocation && (
         <PlaceDetailsCard
           location={selectedLocation}
@@ -593,19 +566,63 @@ export default function App() {
         />
       )}
 
-      {/* Campus Emergency / SOS Modal */}
+      {/* Detailed Navigation Turn List Panel */}
+      {activeRoute && showDetailedSteps && (
+        <NavigationPanel
+          route={activeRoute}
+          onClose={() => setShowDetailedSteps(false)}
+        />
+      )}
+
+      {/* =================================================================== */}
+      {/* 5. SLIDE-OVER DIRECTORY SIDEBAR DRAWER                             */}
+      {/* =================================================================== */}
+      {isSidebarOpen && (
+        <div className="absolute top-0 bottom-0 left-0 z-[450] w-80 sm:w-96 shadow-2xl animate-in slide-in-from-left duration-200">
+          <Sidebar
+            isOpen={isSidebarOpen}
+            onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+            locations={filteredLocations}
+            buildings={filteredBuildings}
+            departments={filteredDepartments}
+            features={features}
+            selectedLocation={selectedLocation}
+            onSelectLocation={(loc) => {
+              setSelectedLocation(loc);
+              if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                setIsSidebarOpen(false);
+              }
+            }}
+            onStartNavigation={handleStartNavigation}
+            onCalculateRoute={handleCalculateRoute}
+            onOpenIndoor={handleOpenIndoorMap}
+            onOpenBuildingPopup={handleOpenBuildingPopup}
+            onOpenIndoorMap={handleOpenIndoorMap}
+            onStartIndoorNavigation={handleStartIndoorNavigation}
+            userLocation={userLocation}
+            catalog={catalog}
+            activeTab={sidebarTab}
+            onTabChange={setSidebarTab}
+          />
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* 6. MODALS & OVERLAYS (All Datasets & APIs Unaltered)               */}
+      {/* =================================================================== */}
+      {/* Emergency SOS */}
       <EmergencyModal
         isOpen={isSOSOpen}
         onClose={() => setIsSOSOpen(false)}
       />
 
-      {/* Admin Login Modal (if prompted) */}
+      {/* Admin Login */}
       <AdminLoginModal
         isOpen={isAdminLoginOpen}
         onClose={() => setIsAdminLoginOpen(false)}
       />
 
-      {/* Super Admin & Building Manager Master Dashboard */}
+      {/* Admin GIS Dashboard */}
       <AdminDashboard
         isOpen={isAdminDashboardOpen}
         onClose={() => setIsAdminDashboardOpen(false)}
@@ -621,7 +638,7 @@ export default function App() {
         onOpenIndoorSurvey={() => setIsIndoorSurveyOpen(true)}
       />
 
-      {/* PHASE 4 & 15: Tomorrow's Guided GPS Field Survey Checklist Modal */}
+      {/* Field Survey Checklist */}
       <SurveyChecklistModal
         isOpen={isSurveyModalOpen}
         onClose={() => setIsSurveyModalOpen(false)}
@@ -630,7 +647,7 @@ export default function App() {
         onSelectDestination={handleStartNavigation}
       />
 
-      {/* UNIVERSAL BUILDING POPUP: Requirement 10 (Open Indoor Map & Start Indoor Navigation) */}
+      {/* Building Popup Modal */}
       <BuildingPopupModal
         isOpen={Boolean(selectedBuildingForPopup)}
         building={selectedBuildingForPopup}
@@ -640,14 +657,14 @@ export default function App() {
         onStartOutdoorNavigation={(bld) => handleOpenRoutePlanning(null, bld?.buildingId || bld?.shortCode || bld?.name)}
       />
 
-      {/* CAMPUS WAYFINDING & DIRECTIONS: Select place and navigate from one place to another place */}
+      {/* Google Maps Style Route Planning & Wayfinding Modal */}
       <RoutePlanningModal
         isOpen={isRoutePlanningOpen}
         onClose={() => setIsRoutePlanningOpen(false)}
         onStartNavigation={(route) => {
           setActiveRoute(route);
-          if (viewMode !== 'master' && viewMode !== '3d') {
-            setViewMode('master');
+          if (viewMode !== 'master' && viewMode !== '3d' && viewMode !== 'map') {
+            setViewMode('map');
           }
         }}
         initialStart={routePlanningStart}
@@ -655,7 +672,7 @@ export default function App() {
         userLocation={userLocation}
       />
 
-      {/* PHASE 6, 7, 8 & 10: Multi-Floor Indoor Navigation & Floor Plan Modal */}
+      {/* Multi-Floor Indoor Navigation Modal */}
       <IndoorNavigationModal
         isOpen={isIndoorModalOpen && viewMode !== 'indoor'}
         isEmbedded={false}
@@ -671,7 +688,7 @@ export default function App() {
         }}
       />
 
-      {/* Admin Indoor Location Survey & GPS Coordinate Capture Modal */}
+      {/* Admin Indoor Survey */}
       <AdminIndoorSurveyModal
         isOpen={isIndoorSurveyOpen}
         onClose={() => setIsIndoorSurveyOpen(false)}
@@ -681,7 +698,7 @@ export default function App() {
         onRefreshData={loadData}
       />
 
-      {/* RULE 3 & PHASE 6: Student & Visitor Campus Dining & Live Menus Modal */}
+      {/* Cafeteria Dining Modal */}
       <CafeModal
         isOpen={isCafeModalOpen}
         onClose={() => setIsCafeModalOpen(false)}
@@ -707,13 +724,13 @@ export default function App() {
         }}
       />
 
-      {/* RULE 2: Dedicated Dining Concessionaire Partner Dashboard */}
+      {/* Cafe Concessionaire Dashboard */}
       <CafeOwnerDashboard
         isOpen={isCafeOwnerOpen}
         onClose={() => setIsCafeOwnerOpen(false)}
       />
 
-      {/* RULE 3: Public Helpdesk & Campus Obstacle Issue Reporter */}
+      {/* Obstacle & Issue Reporter */}
       <IssueReportModal
         isOpen={isIssueReportOpen}
         onClose={() => setIsIssueReportOpen(false)}
@@ -721,7 +738,7 @@ export default function App() {
         userLocation={userLocation}
       />
 
-      {/* TASK 5 & RULE 1: Admin Interactive Campus Master Map Marker Editor */}
+      {/* Admin Map Editor */}
       <AdminMapEditorModal
         isOpen={isMapEditorOpen}
         onClose={() => setIsMapEditorOpen(false)}
@@ -729,16 +746,15 @@ export default function App() {
         onRefreshMarkers={loadData}
       />
 
-      {/* PHASE 7: DishaSetu AI Campus Assistant Modal */}
+      {/* AI Campus Assistant Modal */}
       <CampusAIAssistantModal
         isOpen={isAIAssistantOpen}
         onClose={() => setIsAIAssistantOpen(false)}
         onStartNavigation={(route) => {
           setActiveRoute(route);
-          if (viewMode !== 'master' && viewMode !== 'map') setViewMode('master');
+          if (viewMode !== 'master' && viewMode !== 'map') setViewMode('map');
         }}
         onLocateOnMap={(placeId) => {
-          setViewMode('master');
           const target = mapMarkers.find(m => m._id === placeId || m.featureId === placeId || m.code === placeId);
           if (target) setSelectedLocation(target);
         }}
@@ -752,36 +768,21 @@ export default function App() {
         }}
       />
 
-      {/* PHASE 6: Presidency University Campus Events & Workshops Modal */}
+      {/* Campus Events Modal */}
       <CampusEventsModal
         isOpen={isEventsModalOpen}
         onClose={() => setIsEventsModalOpen(false)}
         onStartNavigation={(route) => {
           setActiveRoute(route);
-          if (viewMode !== 'master' && viewMode !== 'map') setViewMode('master');
+          if (viewMode !== 'master' && viewMode !== 'map') setViewMode('map');
         }}
       />
 
-      {/* Floating AI Assistant Trigger Pill (Persistent across all map views) */}
-      {!isAIAssistantOpen && (
-        <button
-          type="button"
-          onClick={() => setIsAIAssistantOpen(true)}
-          className="fixed bottom-5 right-20 sm:bottom-6 sm:right-24 z-40 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-[#0d223d] via-[#102d52] to-[#1e3a8a] hover:from-[#133056] hover:to-[#2563eb] text-white text-xs font-bold border border-[#2d568c]/80 shadow-2xl shadow-blue-900/40 flex items-center gap-2 transition-all hover:scale-105 active:scale-95 group"
-          title="Ask DishaSetu AI Assistant"
-        >
-          <div className="w-5 h-5 rounded-lg bg-[#d4af37]/20 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37]">
-            <Sparkles className="w-3.5 h-3.5" />
-          </div>
-          <span className="hidden sm:inline tracking-wide font-extrabold text-slate-100 group-hover:text-white">
-            Ask AI Assistant
-          </span>
-        </button>
-      )}
-
-      {/* Professional Mobile Bottom Navigation Bar (< 768px) with 5 Primary Thumb-Friendly Actions */}
-      <nav className="md:hidden h-16 bg-[#081528]/95 backdrop-blur-xl border-t border-[#1b3152] grid grid-cols-5 items-center px-1 z-30 shrink-0 shadow-2xl pb-[env(safe-area-inset-bottom)]">
-        {/* 1. Official Map */}
+      {/* =================================================================== */}
+      {/* 7. GOOGLE MAPS MOBILE BOTTOM BAR (< 768px)                          */}
+      {/* =================================================================== */}
+      <nav className="md:hidden absolute bottom-0 left-0 right-0 h-16 bg-white/95 dark:bg-[#202124]/95 backdrop-blur-xl border-t border-slate-200/90 dark:border-slate-800 grid grid-cols-5 items-center px-1 z-30 shadow-2xl pb-[env(safe-area-inset-bottom)] select-none">
+        {/* 1. Master Campus Map */}
         <button
           onClick={() => {
             setViewMode('master');
@@ -789,75 +790,77 @@ export default function App() {
           }}
           className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all h-full active:scale-95 ${
             viewMode === 'master' && !isSidebarOpen
-              ? 'text-[#d4af37] font-bold'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'text-[#1a73e8] font-bold'
+              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
+          title="Official Campus Master Map"
         >
-          <div className={`p-1 rounded-lg ${viewMode === 'master' && !isSidebarOpen ? 'bg-[#d4af37]/20 border border-[#d4af37]/40' : ''}`}>
+          <div className={`p-1 rounded-full ${viewMode === 'master' && !isSidebarOpen ? 'bg-blue-50 dark:bg-blue-950/60' : ''}`}>
             <Map className="w-4 h-4" />
           </div>
-          <span className="text-[10px] tracking-tight leading-none">Map</span>
+          <span className="text-[10px] tracking-tight leading-none">Campus Map</span>
         </button>
 
-        {/* 2. Directions / Route Planner (Primary Accent) */}
+        {/* 2. Directions / Route Planner (Google Blue) */}
         <button
           onClick={() => handleOpenRoutePlanning()}
-          className="flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl text-sky-400 hover:text-sky-300 transition-all font-bold h-full active:scale-95"
+          className="flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl text-[#1a73e8] hover:text-[#1557b0] transition-all font-bold h-full active:scale-95"
           title="Campus Directions"
         >
-          <div className="p-1 rounded-lg bg-sky-500/20 border border-sky-400/40">
-            <NavigationIcon className="w-4 h-4 text-sky-300" />
+          <div className="p-1 rounded-full bg-blue-50 dark:bg-blue-950/60">
+            <NavigationIcon className="w-4 h-4 text-[#1a73e8]" />
           </div>
           <span className="text-[10px] tracking-tight leading-none">Directions</span>
         </button>
 
-        {/* 3. Multi-Floor Indoor Navigation */}
-        <button
-          onClick={() => {
-            setViewMode('indoor');
-            setIsSidebarOpen(false);
-          }}
-          className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all h-full active:scale-95 ${
-            viewMode === 'indoor'
-              ? 'text-emerald-400 font-bold'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <div className={`p-1 rounded-lg ${viewMode === 'indoor' ? 'bg-emerald-500/20 border border-emerald-500/40' : ''}`}>
-            <DoorOpen className="w-4 h-4" />
-          </div>
-          <span className="text-[10px] tracking-tight leading-none">Indoor</span>
-        </button>
-
-        {/* 4. Campus Directory */}
+        {/* 3. Google Geographic Map Toggle */}
         <button
           onClick={() => {
             setViewMode('map');
-            setSidebarTab('places');
-            setIsSidebarOpen(true);
+            setIsSidebarOpen(false);
           }}
           className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all h-full active:scale-95 ${
-            isSidebarOpen && sidebarTab === 'places'
-              ? 'text-indigo-400 font-bold'
-              : 'text-slate-400 hover:text-slate-200'
+            viewMode === 'map' && !isSidebarOpen
+              ? 'text-blue-600 font-bold'
+              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+          }`}
+          title="Google Geographic Map"
+        >
+          <div className={`p-1 rounded-full ${viewMode === 'map' && !isSidebarOpen ? 'bg-blue-50 dark:bg-blue-950/60' : ''}`}>
+            <Layers className="w-4 h-4" />
+          </div>
+          <span className="text-[10px] tracking-tight leading-none">
+            Google Map
+          </span>
+        </button>
+
+        {/* 4. Directory Drawer */}
+        <button
+          onClick={() => {
+            setIsSidebarOpen(prev => !prev);
+          }}
+          className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all h-full active:scale-95 ${
+            isSidebarOpen
+              ? 'text-indigo-600 font-bold'
+              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
           }`}
         >
-          <div className={`p-1 rounded-lg ${isSidebarOpen && sidebarTab === 'places' ? 'bg-indigo-500/20 border border-indigo-400/40' : ''}`}>
+          <div className={`p-1 rounded-full ${isSidebarOpen ? 'bg-indigo-50 dark:bg-indigo-950/60' : ''}`}>
             <Menu className="w-4 h-4" />
           </div>
           <span className="text-[10px] tracking-tight leading-none">Directory</span>
         </button>
 
-        {/* 5. Campus Emergency / SOS */}
+        {/* 5. Emergency SOS */}
         <button
           onClick={() => setIsSOSOpen(true)}
-          className="flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl text-rose-400 hover:text-rose-300 transition-all font-bold h-full active:scale-95"
+          className="flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl text-rose-600 transition-all font-bold h-full active:scale-95"
           title="Emergency Help (SOS)"
         >
-          <div className="p-1 rounded-lg bg-rose-500/20 border border-rose-500/40">
-            <Shield className="w-4 h-4 text-rose-400" />
+          <div className="p-1 rounded-full bg-rose-50 dark:bg-rose-950/60">
+            <Shield className="w-4 h-4 text-rose-600" />
           </div>
-          <span className="text-[10px] tracking-tight leading-none text-rose-400">SOS</span>
+          <span className="text-[10px] tracking-tight leading-none text-rose-600">SOS</span>
         </button>
       </nav>
 

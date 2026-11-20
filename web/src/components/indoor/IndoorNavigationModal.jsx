@@ -382,9 +382,14 @@ export default function IndoorNavigationModal({
 
   // The inner content component
   const content = (
-    <div className={`relative flex flex-col w-full h-full bg-[#0d0f14] text-slate-100 select-none overflow-hidden ${
-      isEmbedded ? '' : 'rounded-3xl border border-slate-800 shadow-2xl'
-    }`}>
+    <div
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      data-prevent-map-zoom="true"
+      className={`relative flex flex-col w-full h-full bg-[#0d0f14] text-slate-100 select-none overflow-hidden overscroll-contain isolate-scroll ${
+        isEmbedded ? '' : 'rounded-3xl border border-slate-800 shadow-2xl'
+      }`}
+    >
       {/* ============================================================== */}
       {/* 1. TOP HEADER: D BLOCK – INDOOR NAVIGATION (Design Preview)    */}
       {/* ============================================================== */}
@@ -525,7 +530,12 @@ export default function IndoorNavigationModal({
       {/* Main Content Area */}
       {floors.length === 0 ? (
         /* Rule 5: Non-Surveyed Building Banner */
-        <div className="flex-1 flex items-center justify-center p-6 text-center overflow-y-auto">
+        <div
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          data-prevent-map-zoom="true"
+          className="flex-1 flex items-center justify-center p-6 text-center overflow-y-auto overscroll-contain isolate-scroll"
+        >
           <div className="max-w-md w-full bg-[#141822] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-4">
             <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-lg">
               <AlertTriangle className="w-8 h-8" />
@@ -572,7 +582,12 @@ export default function IndoorNavigationModal({
         /* ============================================================== */
         /* 2. CARD ARCHITECTURAL VIEW: EXACT MATCH TO CHATGPT IMAGE 1    */
         /* ============================================================== */
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 flex flex-col items-center justify-start bg-[#0d0f14]">
+        <div
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          data-prevent-map-zoom="true"
+          className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 flex flex-col items-center justify-start bg-[#0d0f14] overscroll-contain isolate-scroll"
+        >
           <div className="w-full max-w-xl space-y-5 animate-in fade-in duration-150">
             
             {/* Search Bar */}
@@ -1089,9 +1104,17 @@ export default function IndoorNavigationModal({
 
   // If modal dialog:
   return (
-    <div className="fixed inset-0 z-[600] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-hidden animate-in fade-in duration-200">
+    <div
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      data-prevent-map-zoom="true"
+      className="fixed inset-0 z-[600] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-hidden animate-in fade-in duration-200"
+    >
       <div
-        className={`relative w-full transition-all duration-200 ${
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        data-prevent-map-zoom="true"
+        className={`relative w-full transition-all duration-200 overscroll-contain isolate-scroll ${
           isModalFullscreen ? 'w-full h-full' : 'max-w-4xl h-[92vh]'
         }`}
       >

@@ -262,16 +262,42 @@ export default function MasterCampusMap({
   userLocation = null,
   onAdminClickMap = null,
   isAdminEditorActive = false,
-  language = 'en'
+  language = 'en',
+  isModalOpen = false
 }) {
   const containerRef = useRef(null);
   const imageWrapperRef = useRef(null);
   const searchInputRef = useRef(null);
 
-  // Pan & Zoom state: Default scale 1.35 for a generous, spacious presentation
-  const [scale, setScale] = useState(1.35);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [rotation, setRotation] = useState(0); // 0 to 360 degrees
+  // Pan, Zoom & Orientation state:
+  // Always maintain 0° True-North upright orientation so all text, logos, legend and compass are perfectly horizontal and readable
+  const [rotation, setRotation] = useState(0);
+
+  const [scale, setScale] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const baseW = h * MAP_ASPECT_RATIO;
+      // Expand across screen width so the map occupies 100% of the screen with zero side gaps
+      return Math.max(1.4, (w * 1.04) / baseW);
+    }
+    return 2.5;
+  });
+
+  const [position, setPosition] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      const baseW = h * MAP_ASPECT_RATIO;
+      const initScale = Math.max(1.4, (w * 1.04) / baseW);
+      // Center on campus heart (Academic Quad, Central Fountain & Hatti Kaapi)
+      return {
+        x: -(0.42 - 0.5) * baseW * initScale,
+        y: -(0.58 - 0.5) * h * initScale
+      };
+    }
+    return { x: 0, y: 0 };
+  });
   const [isDragging, setIsDragging] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -366,6 +392,7 @@ export default function MasterCampusMap({
 
   // Active Selected item (either from prop or local selection)
   const activeSelected = useMemo(() => {
+    if (localSelectedFeature) return localSelectedFeature;
     if (selectedMarker) {
       const match = allCampusFeatures.find(f =>
         f.featureId === selectedMarker.markerId ||
@@ -375,7 +402,7 @@ export default function MasterCampusMap({
       );
       if (match) return match;
     }
-    return localSelectedFeature;
+    return null;
   }, [selectedMarker, localSelectedFeature, allCampusFeatures]);
 
   // Map Active Route sequence to normalized coordinates on official campus map
@@ -453,80 +480,128 @@ export default function MasterCampusMap({
     setPosition({ x: targetX, y: targetY });
   }, [activeRoute, mapRoutePoints]);
 
-  // Handle Feature Selection & Auto-Focus
+  // Helper to compute pointer angle around container center for silky smooth rotation
+  const getAngleFromEvent = useCallback((e) => {
+    const container = containerRef.current;
+    if (!container) return 0;
+    const rect = container.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    return Math.atan2(e.clientY - centerY, e.clientX - centerX) * (180 / Math.PI);
+  }, []);
+
+  // Pan Boundary Clamping Engine: Keeps campus map filling the screen with no empty voids
+  const clampPosition = useCallback((pos, curScale) => {
+    if (!containerRef.current) return pos;
+    const containerW = containerRef.current.clientWidth || window.innerWidth;
+    const containerH = containerRef.current.clientHeight || window.innerHeight;
+    const baseH = containerH;
+    const baseW = containerH * MAP_ASPECT_RATIO;
+
+    const curW = baseW * curScale;
+    const curH = baseH * curScale;
+
+    // Allowed pan boundaries so the map always covers the screen with smooth elasticity
+    const maxPanX = Math.max(0, (curW - containerW) / 2 + 80);
+    const maxPanY = Math.max(0, (curH - containerH) / 2 + 100);
+
+    return {
+      x: Math.min(Math.max(pos.x, -maxPanX), maxPanX),
+      y: Math.min(Math.max(pos.y, -maxPanY), maxPanY)
+    };
+  }, []);
+
+  // Universal Coordinate Centering Helper (Mathematically exact 0° aspect ratio centering with headroom for header)
+  const focusCoordinate = useCallback((nx, ny, reqScale = null) => {
+    if (!containerRef.current) return;
+    const containerW = containerRef.current.clientWidth || window.innerWidth;
+    const containerH = containerRef.current.clientHeight || window.innerHeight;
+    const baseH = containerH;
+    const baseW = containerH * MAP_ASPECT_RATIO;
+    const minScale = Math.max(1.4, (containerW * 1.0) / baseW);
+    const targetScale = reqScale ? Math.max(reqScale, minScale) : Math.max(2.4, minScale);
+
+    // Headroom offset: shifts targetY down by 70px so the focused place sits in the open map area below the header
+    const targetX = -(nx - 0.5) * baseW * targetScale;
+    const targetY = -(ny - 0.5) * baseH * targetScale + 70;
+    const clampedPos = clampPosition({ x: targetX, y: targetY }, targetScale);
+
+    setScale(targetScale);
+    setPosition(clampedPos);
+    setRotation(0);
+  }, [clampPosition]);
+
+  // Universal Viewport Fitting Engine (0° Upright True-North Orientation)
+  const fitViewport = useCallback((mode = 'wide') => {
+    if (!containerRef.current) return;
+    const containerW = containerRef.current.clientWidth || window.innerWidth;
+    const containerH = containerRef.current.clientHeight || window.innerHeight;
+    const baseH = containerH;
+    const baseW = containerH * MAP_ASPECT_RATIO;
+
+    let targetScale;
+    let targetPos = { x: 0, y: 0 };
+
+    if (mode === 'fit') {
+      // Smart Fit Campus: Fill screen width so campus spans the entire viewport without empty side gaps
+      targetScale = Math.max(1.4, (containerW * 1.0) / baseW);
+      targetPos = {
+        x: -(0.45 - 0.5) * baseW * targetScale,
+        y: -(0.58 - 0.5) * baseH * targetScale
+      };
+    } else {
+      // 'wide' mode: expand across width to eliminate side gaps, centered on central campus heart
+      targetScale = Math.max(1.5, (containerW * 1.04) / baseW);
+      targetPos = {
+        x: -(0.42 - 0.5) * baseW * targetScale,
+        y: -(0.58 - 0.5) * baseH * targetScale
+      };
+    }
+
+    const clampedPos = clampPosition(targetPos, targetScale);
+    setScale(Math.round(targetScale * 1000) / 1000);
+    setPosition(clampedPos);
+    setRotation(0);
+  }, [clampPosition]);
+
+  // Quick preset navigation helpers
+  const handleResetNorth = useCallback(() => {
+    fitViewport('wide');
+  }, [fitViewport]);
+
+  const handleWideScreen = useCallback(() => {
+    fitViewport('wide');
+  }, [fitViewport]);
+
+  const handleFitCampus = useCallback(() => {
+    fitViewport('fit');
+  }, [fitViewport]);
+
+  const handleFocusMainGate = useCallback(() => {
+    focusCoordinate(0.5695, 0.2449, 2.3);
+  }, [focusCoordinate]);
+
+  const handleFocusMyLocation = useCallback(() => {
+    if (userLocation && userLocation.latitude && userLocation.longitude) {
+      focusCoordinate(0.5695, 0.2449, 2.3);
+    } else {
+      handleFocusMainGate();
+    }
+  }, [userLocation, handleFocusMainGate, focusCoordinate]);
+
+  const handleFocusQuad = useCallback(() => {
+    focusCoordinate(0.235, 0.72, 2.5);
+  }, [focusCoordinate]);
+
+  // Handle Feature Selection & Auto-Focus (Pops up place name directly above pin on map)
   const handleSelectFeature = useCallback((feature) => {
     setLocalSelectedFeature(feature);
-    if (onSelectMarker) {
-      onSelectMarker({
-        markerId: feature.featureId,
-        buildingId: feature.buildingId,
-        name: feature.featureName,
-        shortCode: feature.code,
-        category: feature.category,
-        imageX: feature.normalizedX,
-        imageY: feature.normalizedY,
-        description: feature.description,
-        totalFloors: feature.totalFloors,
-        hasIndoorMap: feature.hasIndoorMap,
-        departments: feature.departments
-      });
-    }
 
-    // Check if it's an academic or administrative building to open the Building Popup
-    const isBuilding =
-      feature.category === 'Academic' ||
-      feature.category === 'Administrative' ||
-      feature.buildingId ||
-      /block/i.test(feature.featureName) ||
-      /office/i.test(feature.featureName);
-
-    if (isBuilding && onOpenBuildingPopup) {
-      onOpenBuildingPopup({
-        _id: feature.buildingId || feature.featureId,
-        buildingId: feature.buildingId || feature.featureId,
-        name: feature.featureName,
-        code: feature.code,
-        shortCode: feature.code,
-        category: feature.category,
-        totalFloors: feature.totalFloors || 4,
-        hasIndoorMap: feature.hasIndoorMap,
-        description: feature.description,
-        departments: feature.departments || [],
-        latitude: feature.latitude,
-        longitude: feature.longitude,
-        status: feature.status
-      });
-    }
-
-    // Check if it's a cafe (especially Hatti Kappi) to open Cafe Details Modal
-    const isCafe =
-      feature.code === 'PU-CAFE-D-BLOCK' ||
-      feature.category === 'Cafe' ||
-      /hatti kappi/i.test(feature.featureName) ||
-      /cafe/i.test(feature.featureName) ||
-      /food point/i.test(feature.featureName);
-
-    if (isCafe && onOpenCafe) {
-      onOpenCafe({
-        _id: hattiKappiCafe?._id || feature.buildingId || feature.code || 'PU-CAFE-D-BLOCK',
-        shortCode: feature.code || 'PU-CAFE-D-BLOCK',
-        name: feature.featureName,
-        rating: hattiKappiCafe?.rating || { average: 0, count: 0, isNew: true },
-        coordinates: { lat: feature.latitude, lng: feature.longitude }
-      });
-    }
-
-    // Auto-center on selected feature
+    // Auto-center smoothly on selected feature
     if (containerRef.current) {
-      const containerW = containerRef.current.clientWidth;
-      const containerH = containerRef.current.clientHeight;
-      const targetScale = 2.4;
-      setScale(targetScale);
-      const targetX = -(feature.normalizedX - 0.5) * (containerW * 0.75) * targetScale;
-      const targetY = -(feature.normalizedY - 0.5) * (containerH * 0.95) * targetScale;
-      setPosition({ x: targetX, y: targetY });
+      focusCoordinate(feature.normalizedX, feature.normalizedY, Math.max(scale, 1.8));
     }
-  }, [onSelectMarker, onOpenBuildingPopup, onOpenCafe, hattiKappiCafe]);
+  }, [focusCoordinate, scale]);
 
   // Handle Autocomplete Suggestion Click
   const handleSuggestionClick = (suggestion) => {
@@ -554,24 +629,32 @@ export default function MasterCampusMap({
     }
   };
 
-  // Helper to compute pointer angle around container center for silky smooth rotation
-  const getAngleFromEvent = useCallback((e) => {
-    const container = containerRef.current;
-    if (!container) return 0;
-    const rect = container.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-    return Math.atan2(e.clientY - centerY, e.clientX - centerX) * (180 / Math.PI);
-  }, []);
+  // Focus Selected Building
+  const handleFocusSelected = useCallback(() => {
+    if (!activeSelected) return;
+    focusCoordinate(activeSelected.normalizedX, activeSelected.normalizedY, 2.5);
+  }, [activeSelected, focusCoordinate]);
 
   // 1. Zoom In (Smooth 25% step)
   const handleZoomIn = () => {
-    setScale(prev => Math.min(prev * 1.25, 5.0));
+    setScale(prev => {
+      const next = Math.min(prev * 1.25, 5.5);
+      setPosition(pos => clampPosition(pos, next));
+      return next;
+    });
   };
 
-  // 2. Zoom Out (Smooth 25% step)
+  // 2. Zoom Out (Clamped so the map never shrinks smaller than the viewport width)
   const handleZoomOut = () => {
-    setScale(prev => Math.max(prev / 1.25, 0.65));
+    setScale(prev => {
+      const containerW = containerRef.current?.clientWidth || window.innerWidth;
+      const containerH = containerRef.current?.clientHeight || window.innerHeight;
+      const baseW = containerH * MAP_ASPECT_RATIO;
+      const minScale = Math.max(1.2, (containerW * 0.98) / baseW);
+      const next = Math.max(prev / 1.25, minScale);
+      setPosition(pos => clampPosition(pos, next));
+      return next;
+    });
   };
 
   // 3. Rotate Left (-15° step)
@@ -584,75 +667,6 @@ export default function MasterCampusMap({
     setRotation(prev => (Math.round((prev + 15) / 15) * 15) % 360);
   };
 
-  // 5. Reset to True North (0°)
-  const handleResetNorth = () => {
-    setRotation(0);
-  };
-
-  // Universal Coordinate Centering Helper (Mathematically exact aspect ratio centering)
-  const focusCoordinate = useCallback((nx, ny, targetScale = 1.55) => {
-    if (!containerRef.current) return;
-    const containerH = containerRef.current.clientHeight || 800;
-    const imgEl = imageWrapperRef.current;
-    const imageW = imgEl?.clientWidth || (containerH * 0.92 * MAP_ASPECT_RATIO);
-    const imageH = imgEl?.clientHeight || (containerH * 0.92);
-
-    setScale(targetScale);
-    const targetX = -(nx - 0.5) * imageW * targetScale;
-    const targetY = -(ny - 0.5) * imageH * targetScale;
-    setPosition({ x: targetX, y: targetY });
-    setRotation(0);
-  }, []);
-
-  // 6. Focus Main Gate (Initial View & Quick Access)
-  const handleFocusMainGate = useCallback(() => {
-    // Main gate is at normalizedX = 0.5695, normalizedY = 0.2449
-    focusCoordinate(0.5695, 0.2449, 1.55);
-  }, [focusCoordinate]);
-
-  // 7. Fit Entire Campus (Overview with comfortable padding)
-  const handleFitCampus = useCallback(() => {
-    setScale(1.15);
-    setPosition({ x: 0, y: 0 });
-    setRotation(0);
-  }, []);
-
-  // 8. Focus My Current GPS Location
-  const handleFocusMyLocation = useCallback(() => {
-    if (userLocation && userLocation.latitude && userLocation.longitude) {
-      focusCoordinate(0.5695, 0.2449, 1.8);
-    } else {
-      handleFocusMainGate();
-    }
-  }, [userLocation, handleFocusMainGate, focusCoordinate]);
-
-  // 9. Fit Width (Wide View - Eliminates side dead space)
-  const handleFitWidth = useCallback(() => {
-    if (!containerRef.current) {
-      setScale(1.6);
-      setPosition({ x: 0, y: 0 });
-      return;
-    }
-    const containerW = containerRef.current.clientWidth;
-    const imgEl = imageWrapperRef.current;
-    const imageW = imgEl?.clientWidth || (containerRef.current.clientHeight * 0.92 * MAP_ASPECT_RATIO);
-    const fitScale = Math.min(2.5, Math.max(1.2, (containerW * 0.90) / imageW));
-    setScale(fitScale);
-    setPosition({ x: 0, y: 0 });
-  }, []);
-
-  // 10. Focus Academic Quad (D, E, F, L Blocks)
-  const handleFocusQuad = useCallback(() => {
-    // Academic Quad is at normalizedX = 0.235, normalizedY = 0.812
-    focusCoordinate(0.235, 0.812, 1.85);
-  }, [focusCoordinate]);
-
-  // 11. Focus Selected Building
-  const handleFocusSelected = useCallback(() => {
-    if (!activeSelected) return;
-    focusCoordinate(activeSelected.normalizedX, activeSelected.normalizedY, 2.2);
-  }, [activeSelected, focusCoordinate]);
-
   // Auto-focus selected building / location when clicked or selected from search
   useEffect(() => {
     if (activeSelected && activeSelected.normalizedX != null && activeSelected.normalizedY != null) {
@@ -660,18 +674,25 @@ export default function MasterCampusMap({
     }
   }, [activeSelected?.featureId, handleFocusSelected]);
 
-  // 12. Reset All (Default Clean View)
+  // 8. Reset All (Default Expansive View)
   const handleResetView = () => {
-    handleFocusMainGate();
+    fitViewport('wide');
   };
 
-  // Initial Map Focus: Center on Main Gate upon mounting (Placed AFTER definition to avoid TDZ ReferenceError)
+  // Initial Map Focus: Automatically expand across screen on load & on resize
   useEffect(() => {
     const timer = setTimeout(() => {
-      handleFocusMainGate();
-    }, 120);
-    return () => clearTimeout(timer);
-  }, [handleFocusMainGate]);
+      fitViewport('wide');
+    }, 60);
+    const handleResize = () => {
+      fitViewport('wide');
+    };
+    window.addEventListener('resize', handleResize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [fitViewport]);
 
   // 12. Fullscreen toggle
   const toggleFullscreen = () => {
@@ -686,6 +707,13 @@ export default function MasterCampusMap({
 
   // Mouse wheel: Shift+Wheel rotates; normal wheel zooms smoothly toward cursor coordinate
   const handleWheel = (e) => {
+    // 0. If a modal is open, or pointer is over any UI overlay/drawer/panel, ignore wheel zoom
+    if (isModalOpen) return;
+    const isOverlay = e.target.closest(
+      'button, input, select, textarea, aside, dialog, [role="dialog"], [data-panel], [data-prevent-map-zoom], .interactive-overlay, .no-map-zoom, .overscroll-contain, .isolate-scroll, .modal-content, .overflow-y-auto, .overflow-x-auto, .custom-scrollbar'
+    );
+    if (isOverlay) return;
+
     e.preventDefault();
 
     // 1. Shift or Alt held -> Rotate in 5° / 15° steps
@@ -708,13 +736,20 @@ export default function MasterCampusMap({
     const factor = Math.exp(-e.deltaY * zoomSensitivity);
 
     setScale(prevScale => {
-      const newScale = Math.min(Math.max(prevScale * factor, 0.65), 5.0);
+      const containerW = containerRef.current?.clientWidth || window.innerWidth;
+      const containerH = containerRef.current?.clientHeight || window.innerHeight;
+      const baseW = containerH * MAP_ASPECT_RATIO;
+      const minScale = Math.max(1.2, (containerW * 0.98) / baseW);
+      const newScale = Math.min(Math.max(prevScale * factor, minScale), 5.5);
       const ratio = newScale / prevScale;
 
-      setPosition(prevPos => ({
-        x: mouseX - (mouseX - prevPos.x) * ratio,
-        y: mouseY - (mouseY - prevPos.y) * ratio
-      }));
+      setPosition(prevPos => {
+        const nextPos = {
+          x: mouseX - (mouseX - prevPos.x) * ratio,
+          y: mouseY - (mouseY - prevPos.y) * ratio
+        };
+        return clampPosition(nextPos, newScale);
+      });
 
       return newScale;
     });
@@ -722,13 +757,24 @@ export default function MasterCampusMap({
 
   // Double click to zoom in at mouse position
   const handleDoubleClick = (e) => {
-    if (e.target.closest('.no-dblclick') || e.target.closest('button')) return;
-    setScale(prev => Math.min(prev + 0.5, 4.5));
+    if (isModalOpen) return;
+    if (e.target.closest('.no-dblclick') || e.target.closest('button, input, select, textarea, aside, dialog, [role="dialog"], [data-panel], [data-prevent-map-zoom], .overscroll-contain, .isolate-scroll')) return;
+    setScale(prev => {
+      const next = Math.min(prev + 0.5, 5.0);
+      setPosition(pos => clampPosition(pos, next));
+      return next;
+    });
   };
 
   // Drag & Rotate Mouse handlers
   const handleMouseDown = (e) => {
-    if (e.target.closest('.interactive-map-marker') || e.target.closest('.interactive-polygon') || e.target.closest('.no-drag')) return;
+    if (isModalOpen) return;
+    if (
+      e.target.closest('.interactive-map-marker') ||
+      e.target.closest('.interactive-polygon') ||
+      e.target.closest('.no-drag') ||
+      e.target.closest('button, input, select, textarea, aside, dialog, [role="dialog"], [data-panel], [data-prevent-map-zoom], .overscroll-contain, .isolate-scroll')
+    ) return;
 
     // Right-Click (e.button === 2) OR Left-Click with Shift Key -> Start Free Rotation!
     if (e.button === 2 || (e.button === 0 && e.shiftKey)) {
@@ -756,10 +802,11 @@ export default function MasterCampusMap({
     }
 
     if (isDragging) {
-      setPosition({
+      const nextPos = {
         x: e.clientX - dragStart.x,
         y: e.clientY - dragStart.y
-      });
+      };
+      setPosition(clampPosition(nextPos, scale));
     }
   };
 
@@ -772,6 +819,11 @@ export default function MasterCampusMap({
   const touchStateRef = useRef({ dist: 0, angle: 0 });
 
   const handleTouchStart = (e) => {
+    if (isModalOpen) return;
+    if (
+      e.target.closest('button, input, select, textarea, aside, dialog, [role="dialog"], [data-panel], [data-prevent-map-zoom], .interactive-overlay, .no-map-zoom, .overscroll-contain, .isolate-scroll, .modal-content')
+    ) return;
+
     if (e.touches.length === 1) {
       if (e.target.closest('.interactive-map-marker') || e.target.closest('.interactive-polygon') || e.target.closest('.no-drag')) return;
       setIsDragging(true);
@@ -794,12 +846,18 @@ export default function MasterCampusMap({
   };
 
   const handleTouchMove = (e) => {
+    if (isModalOpen) return;
+    if (
+      e.target.closest('button, input, select, textarea, aside, dialog, [role="dialog"], [data-panel], [data-prevent-map-zoom], .interactive-overlay, .no-map-zoom, .overscroll-contain, .isolate-scroll, .modal-content')
+    ) return;
+
     if (e.touches.length === 1 && isDragging) {
-      setPosition({
+      const nextPos = {
         x: e.touches[0].clientX - dragStart.x,
         y: e.touches[0].clientY - dragStart.y
-      });
-    } else if (e.touches.length === 2) {
+      };
+      setPosition(clampPosition(nextPos, scale));
+    } else if (e.touches.length === 2 && touchStateRef.current.dist > 0) {
       const dist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
@@ -812,7 +870,16 @@ export default function MasterCampusMap({
       const diffDist = dist - touchStateRef.current.dist;
       const diffAngle = angle - touchStateRef.current.angle;
 
-      setScale(prev => Math.min(Math.max(prev + diffDist * 0.005, 0.65), 5.0));
+      const containerW = containerRef.current?.clientWidth || window.innerWidth;
+      const containerH = containerRef.current?.clientHeight || window.innerHeight;
+      const baseW = containerH * MAP_ASPECT_RATIO;
+      const minScale = Math.max(1.2, (containerW * 0.98) / baseW);
+
+      setScale(prev => {
+        const next = Math.min(Math.max(prev + diffDist * 0.005, minScale), 5.5);
+        setPosition(pos => clampPosition(pos, next));
+        return next;
+      });
       setRotation(prev => (prev + diffAngle + 360) % 360);
 
       touchStateRef.current = { dist, angle };
@@ -823,21 +890,29 @@ export default function MasterCampusMap({
     setIsDragging(false);
   };
 
-  // Admin Click Handler
+  // Admin Click Handler & Map Background Click Handler (Dismisses popup on empty map click)
   const handleMapImageClick = (e) => {
-    if (!isAdminEditorActive || !onAdminClickMap) return;
-    const rect = imageWrapperRef.current?.getBoundingClientRect();
-    if (!rect) return;
+    if (isAdminEditorActive && onAdminClickMap) {
+      const rect = imageWrapperRef.current?.getBoundingClientRect();
+      if (!rect) return;
 
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-    const normX = Math.min(Math.max(clickX / rect.width, 0), 1);
-    const normY = Math.min(Math.max(clickY / rect.height, 0), 1);
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      const normX = Math.min(Math.max(clickX / rect.width, 0), 1);
+      const normY = Math.min(Math.max(clickY / rect.height, 0), 1);
 
-    onAdminClickMap({
-      imageX: Number(normX.toFixed(4)),
-      imageY: Number(normY.toFixed(4))
-    });
+      onAdminClickMap({
+        imageX: Number(normX.toFixed(4)),
+        imageY: Number(normY.toFixed(4))
+      });
+      return;
+    }
+
+    // Clicking anywhere on the empty map canvas deselects and closes any open place name popup
+    setLocalSelectedFeature(null);
+    if (onSelectMarker) {
+      onSelectMarker(null);
+    }
   };
 
   return (
@@ -852,153 +927,76 @@ export default function MasterCampusMap({
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onContextMenu={(e) => e.preventDefault()}
-      className={`relative w-full h-full overflow-hidden select-none bg-gradient-to-b from-[#070b16] via-[#0b1328] to-[#050811] flex items-center justify-center ${
+      className={`relative w-full h-full overflow-hidden select-none bg-[#f8fafc] flex items-center justify-center ${
         isRotating ? 'cursor-alias' : isDragging ? 'cursor-grabbing' : isAdminEditorActive ? 'cursor-crosshair' : 'cursor-grab'
       }`}
+      style={{
+        backgroundColor: '#f8fafc',
+        backgroundImage: 'radial-gradient(rgba(203, 213, 225, 0.45) 1.2px, transparent 1.2px)',
+        backgroundSize: '32px 32px'
+      }}
     >
-      {/* High-Precision Architectural Coordinate Grid Pattern */}
-      <div className="absolute inset-0 opacity-20 pointer-events-none bg-[radial-gradient(#38bdf8_1.2px,transparent_1.2px)] [background-size:32px_32px]"></div>
-
-      {/* Soft Ambient Radial Vignette behind Map */}
-      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,0.06)_0%,rgba(56,189,248,0.04)_40%,transparent_75%)]"></div>
-
-      {/* ================================================================= */}
-      {/* 1. TOP FLOATING GOOGLE MAPS-STYLE SEARCH & STATUS BAR             */}
-      {/* ================================================================= */}
-      <div className="absolute top-3 left-3 right-3 sm:top-4 sm:left-4 sm:right-4 z-40 flex items-center justify-between gap-2 pointer-events-none">
-        
-        {/* Left: Map Title & Status Pill with Heading Telemetry */}
-        <div className="pointer-events-auto flex items-center gap-2 sm:gap-3 px-3 py-1.5 sm:px-4 sm:py-2.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl text-slate-200">
-          <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-          <div className="min-w-0">
-            <div className="text-xs font-black text-white flex items-center gap-1.5 flex-wrap">
-              <span>Campus Master Map</span>
-              <span className="hidden sm:inline-block text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold border border-emerald-500/30">
-                Interactive Layer Live
-              </span>
-              {Math.round((rotation % 360 + 360) % 360) !== 0 && (
-                <button
-                  onClick={handleResetNorth}
-                  className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-mono font-bold border border-rose-500/40 hover:bg-rose-500/30 transition-colors flex items-center gap-1"
-                  title="Click to reset North"
-                >
-                  <span>{Math.round((rotation % 360 + 360) % 360)}°</span>
-                  <span className="text-[9px] underline">Reset North</span>
-                </button>
-              )}
-              {activeRoute && (
-                <button
-                  onClick={onClearRoute}
-                  className="text-[10px] px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 font-mono font-bold border border-rose-500/40 hover:bg-rose-500/30 transition-colors flex items-center gap-1"
-                  title="Clear Active Walking Route"
-                >
-                  <span>Active Route</span>
-                  <span className="text-[9px] font-black underline">End ✕</span>
-                </button>
-              )}
-            </div>
-            <div className="hidden sm:block text-[10px] text-slate-400">Presidency University Bengaluru · Itgalpur Campus</div>
-          </div>
-        </div>
-
-        {/* Center: Quick GIS View Mode Presets (Desktop) */}
-        <div className="pointer-events-auto hidden lg:flex items-center gap-1.5 px-2 py-1.5 bg-slate-900/90 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-xl">
-          <button
-            onClick={handleFitCampus}
-            className="px-2.5 py-1 text-[11px] font-bold rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1"
-            title="Fit Entire Campus in View"
-          >
-            <Compass className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Fit Campus</span>
-          </button>
-          <div className="w-px h-3.5 bg-slate-700/60" />
-          <button
-            onClick={handleFitWidth}
-            className="px-2.5 py-1 text-[11px] font-bold rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1"
-            title="Fit Canvas Width (Eliminate Side Gaps)"
-          >
-            <Maximize2 className="w-3.5 h-3.5 text-sky-400" />
-            <span>Wide View</span>
-          </button>
-          <div className="w-px h-3.5 bg-slate-700/60" />
-          <button
-            onClick={handleFocusQuad}
-            className="px-2.5 py-1 text-[11px] font-bold rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1"
-            title="Focus Academic Quad (D-E-F-L Blocks)"
-          >
-            <Building2 className="w-3.5 h-3.5 text-amber-400" />
-            <span>Academic Quad</span>
-          </button>
-        </div>
-
-        {/* Right: Wayfinding Directions & Unified Search Bar (Desktop / Tablet >= 640px) */}
-        <div className="pointer-events-auto hidden sm:flex items-center gap-2 w-auto">
-          {/* Main Navigation Directions Button */}
-          <button
-            onClick={() => onOpenRoutePlanning && onOpenRoutePlanning()}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 bg-gradient-to-r from-sky-600 via-indigo-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white rounded-2xl font-black text-xs shadow-xl shadow-sky-600/30 border border-sky-400/50 transition-all hover:scale-105 active:scale-95 shrink-0"
-            title="Directions: Select place and navigate from one place to another place"
-          >
-            <NavigationIcon className="w-3.5 h-3.5 text-sky-200" />
-            <span>Directions</span>
-          </button>
-
-          <div className="relative w-72 md:w-80">
-            <div className="relative flex items-center bg-slate-900/95 backdrop-blur-md border border-slate-700/90 rounded-2xl shadow-2xl focus-within:border-emerald-400 transition-colors">
-              <Search className="w-4 h-4 text-slate-400 ml-3.5 shrink-0" />
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={localSearch}
-                onChange={(e) => setLocalSearch(e.target.value)}
-                onFocus={() => setIsSearchFocused(true)}
-                placeholder="Search buildings, rooms (DG01), facilities..."
-                className="w-full py-2.5 pl-2.5 pr-8 bg-transparent text-xs text-white placeholder-slate-400 outline-none font-medium"
-              />
-              {localSearch && (
-                <button
-                  onClick={() => setLocalSearch('')}
-                  className="p-1 mr-2 text-slate-400 hover:text-white"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-
-          {/* Autocomplete Dropdown */}
-          {isSearchFocused && searchSuggestions.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
-              <div className="p-2 space-y-1">
-                {searchSuggestions.map((sug) => (
-                  <button
-                    key={sug.id}
-                    onMouseDown={() => handleSuggestionClick(sug)}
-                    className="w-full p-2.5 rounded-xl hover:bg-slate-800/80 transition-colors flex items-center justify-between text-left group"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center shrink-0 group-hover:bg-emerald-500/20">
-                        {sug.type === 'room' ? (
-                          <DoorOpen className="w-3.5 h-3.5 text-emerald-400" />
-                        ) : (
-                          <Building2 className="w-3.5 h-3.5 text-sky-400" />
-                        )}
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-white group-hover:text-emerald-300">
-                          {sug.title}
-                        </div>
-                        <div className="text-[10px] text-slate-400">{sug.subtitle}</div>
-                      </div>
-                    </div>
-                    <ArrowRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-emerald-400 transition-colors" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+      {/* Floating Quick Navigation Preset Pills (Positioned cleanly below main floating header & category chips) */}
+      <div
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        className="absolute top-[112px] sm:top-[116px] left-3 sm:left-4 z-30 pointer-events-auto flex items-center gap-1.5 p-1 bg-white/95 dark:bg-[#202124]/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-700/80 rounded-2xl shadow-gmap-floating text-xs font-bold overflow-x-auto max-w-[calc(100vw-24px)] no-scrollbar touch-pan-x"
+      >
+        <button
+          type="button"
+          onClick={handleWideScreen}
+          className="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 font-bold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors flex items-center gap-1.5 shrink-0 shadow-sm"
+          title="Maximize usable map space across screen (Wide View)"
+        >
+          <Maximize2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+          <span>Wide View</span>
+        </button>
+        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 shrink-0" />
+        <button
+          type="button"
+          onClick={handleFitCampus}
+          className="px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200 hover:text-emerald-600 transition-colors flex items-center gap-1.5 shrink-0"
+          title="Fit complete campus into viewport"
+        >
+          <Compass className="w-3.5 h-3.5 text-emerald-600" />
+          <span>Fit Campus</span>
+        </button>
+        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 shrink-0" />
+        <button
+          type="button"
+          onClick={handleFocusQuad}
+          className="px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200 hover:text-amber-600 transition-colors flex items-center gap-1.5 shrink-0"
+          title="Focus Academic Quad & Hatti Kaapi"
+        >
+          <Building2 className="w-3.5 h-3.5 text-amber-600" />
+          <span className="hidden sm:inline">Academic Quad</span>
+          <span className="sm:hidden">Quad</span>
+        </button>
+        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 shrink-0" />
+        <button
+          type="button"
+          onClick={handleFocusMainGate}
+          className="px-3 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/60 text-slate-700 dark:text-slate-200 hover:text-indigo-600 transition-colors flex items-center gap-1.5 shrink-0"
+          title="Focus Main Gate Entrance"
+        >
+          <DoorOpen className="w-3.5 h-3.5 text-indigo-600" />
+          <span className="hidden sm:inline">Main Gate</span>
+          <span className="sm:hidden">Gate</span>
+        </button>
+        {activeRoute && (
+          <>
+            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 shrink-0" />
+            <button
+              type="button"
+              onClick={onClearRoute}
+              className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 font-bold transition-colors flex items-center gap-1 shrink-0"
+              title="End Active Navigation Route"
+            >
+              <span>End Route ✕</span>
+            </button>
+          </>
+        )}
       </div>
-    </div>
 
       {/* ================================================================= */}
       {/* 2. INTERACTIVE TRANSFORMED CANVAS CONTAINER (PAN, ZOOM, ROTATE)   */}
@@ -1011,16 +1009,16 @@ export default function MasterCampusMap({
         }}
         className="relative will-change-transform flex items-center justify-center"
       >
-        {/* Master Campus Map Image Wrapper */}
+        {/* Master Campus Map Image Wrapper (Expanded to Full Height & Proportional Width) */}
         <div
           ref={imageWrapperRef}
           onClick={handleMapImageClick}
           style={{
-            height: '92vh',
-            maxWidth: '96vw',
+            height: '100vh',
+            maxHeight: '100vh',
             aspectRatio: `${MAP_ASPECT_RATIO}`
           }}
-          className="relative rounded-2xl shadow-[0_25px_70px_rgba(0,0,0,0.85),0_0_50px_rgba(56,189,248,0.12)] border-2 border-slate-700/70 bg-white overflow-hidden drop-shadow-2xl"
+          className="relative bg-white shadow-none border-0 overflow-hidden select-none"
         >
           {/* Official Presidency University Master Campus Map Base Image */}
           <img
@@ -1165,7 +1163,8 @@ export default function MasterCampusMap({
               style={{
                 left: `${mapRoutePoints[0].x * 100}%`,
                 top: `${mapRoutePoints[0].y * 100}%`,
-                transform: 'translate(-50%, -100%)'
+                transform: `translate(-50%, -100%) scale(${1 / scale}) rotate(${-rotation}deg)`,
+                transformOrigin: 'bottom center'
               }}
               className="absolute z-35 pointer-events-auto flex flex-col items-center animate-bounce"
             >
@@ -1184,7 +1183,8 @@ export default function MasterCampusMap({
               style={{
                 left: `${mapRoutePoints[mapRoutePoints.length - 1].x * 100}%`,
                 top: `${mapRoutePoints[mapRoutePoints.length - 1].y * 100}%`,
-                transform: 'translate(-50%, -100%)'
+                transform: `translate(-50%, -100%) scale(${1 / scale}) rotate(${-rotation}deg)`,
+                transformOrigin: 'bottom center'
               }}
               className="absolute z-35 pointer-events-auto flex flex-col items-center"
             >
@@ -1202,100 +1202,12 @@ export default function MasterCampusMap({
           {/* ============================================================= */}
           {filteredFeatures.map((feat) => {
             const isSelected = activeSelected?.featureId === feat.featureId;
-            const isHovered = hoveredFeature?.featureId === feat.featureId;
             const Icon = getCategoryIcon(feat.category);
             const style = getCategoryStyle(feat.category);
-
-            // Distinctive Hatti Kappi Cafe Marker (PU-CAFE-D-BLOCK)
             const isHattiKappi = feat.code === 'PU-CAFE-D-BLOCK' || feat.featureId === 'feat_food_d_block' || /hatti kappi/i.test(feat.featureName);
-
-            if (isHattiKappi) {
-              const ratingData = hattiKappiCafe?.rating || { average: 0, count: 0, isNew: true };
-              const isNew = ratingData.isNew || !ratingData.count || ratingData.average === 0;
-
-              return (
-                <div
-                  key={feat.featureId}
-                  style={{
-                    left: `${feat.normalizedX * 100}%`,
-                    top: `${feat.normalizedY * 100}%`,
-                    transform: 'translate(-50%, -50%)'
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleSelectFeature(feat);
-                    if (onOpenCafe) {
-                      onOpenCafe({
-                        _id: hattiKappiCafe?._id || 'PU-CAFE-D-BLOCK',
-                        shortCode: 'PU-CAFE-D-BLOCK',
-                        name: 'Hatti Kappi'
-                      });
-                    }
-                  }}
-                  onMouseEnter={() => setHoveredFeature(feat)}
-                  onMouseLeave={() => setHoveredFeature(null)}
-                  className="absolute z-28 interactive-map-marker cursor-pointer group pointer-events-auto"
-                >
-                  {/* Pulsing ring when selected */}
-                  {isSelected && (
-                    <span className="absolute -inset-4 rounded-full animate-ping opacity-75 bg-amber-500" />
-                  )}
-
-                  {/* Rating Stars & Cafe Name Floating Pill (Prominently shown when zoomed in scale >= 1.35 OR hovered/selected) */}
-                  {(scale >= 1.35 || isHovered || isSelected) && (
-                    <div
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSelectFeature(feat);
-                        if (onOpenCafe) {
-                          onOpenCafe({
-                            _id: hattiKappiCafe?._id || 'PU-CAFE-D-BLOCK',
-                            shortCode: 'PU-CAFE-D-BLOCK',
-                            name: 'Hatti Kappi'
-                          });
-                        }
-                      }}
-                      className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 rounded-xl bg-slate-950/95 backdrop-blur-md border border-amber-500/70 shadow-2xl flex items-center gap-1.5 whitespace-nowrap transition-all duration-200 z-40 ${
-                        isHovered || isSelected ? 'scale-110 shadow-amber-500/30' : 'scale-100'
-                      }`}
-                    >
-                      <Coffee className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      <span className="text-[11px] font-extrabold text-white">Hatti Kappi</span>
-                      <span className="text-slate-600 text-[10px]">·</span>
-                      {isNew ? (
-                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                          New
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-0.5 text-[10px] font-extrabold text-amber-400 font-mono">
-                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                          <span>{Number(ratingData.average).toFixed(1)}</span>
-                          <span className="text-[9px] text-slate-400 font-normal">({ratingData.count})</span>
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Marker Body - Distinctive Artisan Amber Coffee Badge */}
-                  <div
-                    className={`relative flex items-center justify-center rounded-full transition-all duration-200 shadow-2xl ${
-                      isSelected
-                        ? 'w-10 h-10 bg-gradient-to-br from-amber-500 via-amber-600 to-yellow-800 ring-4 ring-amber-300 text-white scale-125 z-30 shadow-amber-600/50'
-                        : isHovered
-                        ? 'w-9 h-9 bg-gradient-to-br from-amber-500 via-amber-600 to-yellow-800 ring-2 ring-amber-300 text-white scale-115 z-20 shadow-amber-600/40'
-                        : 'w-7 h-7 sm:w-8 sm:h-8 bg-gradient-to-br from-amber-600 to-yellow-800 text-amber-100 border-2 border-amber-300/80 hover:scale-120 shadow-md shadow-amber-900/40'
-                    }`}
-                    title="Hatti Kappi - Authentic Traditional Filter Kaapi & Tiffin (PU-CAFE-D-BLOCK)"
-                  >
-                    <Coffee className={`${isSelected ? 'w-5 h-5 text-amber-200' : 'w-4 h-4 text-amber-200'}`} />
-                  </div>
-                </div>
-              );
-            }
-
-            // Smart Level-of-Detail (LOD): De-clutter dense academic & administrative blocks in overview mode
-            const isAcademic = feat.category === 'Academic' || feat.category === 'Administrative';
-            const isCompactLOD = isAcademic && scale < 1.4 && !isSelected && !isHovered;
+            const isBuilding = feat.category === 'Academic' || feat.category === 'Administrative' || feat.buildingId || /block/i.test(feat.featureName);
+            const ratingData = hattiKappiCafe?.rating || { average: 4.8, count: 4 };
+            const showPopupBelow = feat.normalizedY < 0.45;
 
             return (
               <div
@@ -1303,67 +1215,204 @@ export default function MasterCampusMap({
                 style={{
                   left: `${feat.normalizedX * 100}%`,
                   top: `${feat.normalizedY * 100}%`,
-                  transform: 'translate(-50%, -50%)'
+                  transform: `translate(-50%, -50%) scale(${1 / scale}) rotate(${-rotation}deg)`,
+                  transformOrigin: 'center center',
+                  zIndex: isSelected ? 60 : 25
                 }}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleSelectFeature(feat);
                 }}
-                onMouseEnter={() => setHoveredFeature(feat)}
-                onMouseLeave={() => setHoveredFeature(null)}
-                className="absolute z-25 interactive-map-marker cursor-pointer group pointer-events-auto"
+                className="absolute interactive-map-marker cursor-pointer group pointer-events-auto"
               >
                 {/* Pulsing ring when selected */}
                 {isSelected && (
-                  <span className={`absolute -inset-3.5 rounded-full animate-ping opacity-80 ${style.bg}`} />
+                  <span className={`absolute -inset-2.5 rounded-full animate-ping opacity-75 ${isHattiKappi ? 'bg-amber-500' : style.bg}`} />
                 )}
 
-                {/* Marker Body: Sleek glowing micro-dot in overview mode, full interactive badge when zoomed/hovered */}
-                {isCompactLOD ? (
-                  <div
-                    className="relative w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-white/80 shadow-sm shadow-amber-500/60 group-hover:scale-150 transition-all duration-150"
-                    title={feat.featureName}
-                  />
-                ) : (
-                  <div
-                    className={`relative flex items-center justify-center rounded-full transition-all duration-200 shadow-2xl ${
-                      isSelected
-                        ? `w-9 h-9 ${style.bg} ring-4 ring-white text-white scale-125 z-30 shadow-2xl`
-                        : isHovered
-                        ? `w-8 h-8 ${style.bg} ring-2 ring-white text-white scale-115 z-20`
-                        : `w-6 h-6 sm:w-7 sm:h-7 ${style.bg} text-white border-2 border-white hover:scale-120`
-                    }`}
-                    title={feat.featureName}
-                  >
-                    <Icon className={`${isSelected ? 'w-4.5 h-4.5' : 'w-3.5 h-3.5'}`} />
-                  </div>
-                )}
-
-                {/* Permanent subtle name tag when zoomed in close */}
-                {scale >= 1.6 && !isHovered && !isSelected && !isCompactLOD && (
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-1.5 py-0.5 rounded bg-slate-900/90 text-[9px] font-bold text-white border border-slate-700 pointer-events-none whitespace-nowrap shadow-md">
-                    {feat.code || feat.featureName}
-                  </div>
-                )}
-
-                {/* Hover / Selected Detail Pill */}
+                {/* Marker Pin Icon: Clean fixed standard badge at 1:1 screen pixel resolution */}
                 <div
-                  className={`absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-950/95 backdrop-blur-md border border-slate-700 rounded-xl shadow-2xl whitespace-nowrap pointer-events-none transition-all duration-200 z-30 ${
-                    isHovered || isSelected ? 'opacity-100 scale-100' : 'opacity-0 scale-90 translate-y-1'
+                  className={`relative flex items-center justify-center rounded-full transition-all duration-150 shadow-md ${
+                    isHattiKappi
+                      ? isSelected
+                        ? 'w-9 h-9 bg-gradient-to-br from-amber-500 to-yellow-700 ring-3 ring-amber-300 text-white scale-110 shadow-amber-600/50'
+                        : 'w-7 h-7 bg-gradient-to-br from-amber-600 to-yellow-800 text-amber-100 border-2 border-amber-300/80 hover:scale-110'
+                      : isSelected
+                      ? `w-9 h-9 ${style.bg} ring-3 ring-white text-white scale-110 shadow-lg`
+                      : `w-7 h-7 ${style.bg} text-white border-2 border-white hover:scale-110`
                   }`}
+                  title={feat.featureName}
                 >
-                  <div className="flex items-center gap-1.5 text-xs font-extrabold text-white">
-                    <span>{feat.featureName}</span>
-                    {feat.code && (
-                      <span className={`text-[10px] px-1.5 py-0.2 rounded font-mono font-bold ${style.badge}`}>
-                        {feat.code}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-[10px] text-slate-400 capitalize">
-                    {feat.category} · Click to open details &amp; indoor navigation
-                  </div>
+                  <Icon className={isSelected ? 'w-4.5 h-4.5' : 'w-3.5 h-3.5'} />
                 </div>
+
+                {/* ============================================================= */}
+                {/* PLACE NAME POPUP: POPS UP ONLY AFTER CLICKING THIS PLACE!     */}
+                {/* ============================================================= */}
+                {isSelected && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className={`absolute left-1/2 -translate-x-1/2 z-50 pointer-events-auto animate-in zoom-in-95 fade-in duration-150 ${
+                      showPopupBelow ? 'top-full mt-2.5' : 'bottom-full mb-2.5'
+                    }`}
+                  >
+                    <div className="relative bg-white/98 dark:bg-[#1e293b]/98 backdrop-blur-md text-slate-800 dark:text-white rounded-2xl shadow-xl border border-slate-200/90 dark:border-slate-700/80 p-3 w-[260px] text-left select-text">
+                      {/* Close button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLocalSelectedFeature(null);
+                          if (onSelectMarker) onSelectMarker(null);
+                        }}
+                        className="absolute top-2 right-2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        title="Close"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Place Header: Icon + Name */}
+                      <div className="flex items-start gap-2.5 pr-5">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isHattiKappi ? 'bg-amber-500' : style.bg} text-white shadow-sm`}>
+                          <Icon className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-extrabold text-xs leading-tight text-slate-900 dark:text-white line-clamp-1">
+                            {feat.featureName}
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                              {feat.category}
+                            </span>
+                            {feat.code && (
+                              <>
+                                <span className="text-slate-300 dark:text-slate-600">·</span>
+                                <span className="text-[9px] font-mono font-bold px-1 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                  {feat.code}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Extra detail: e.g. cafe rating or description */}
+                      {isHattiKappi && (
+                        <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+                          <span className="flex items-center gap-1 text-amber-500 font-extrabold">
+                            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                            <span>{Number(ratingData.average || 4.8).toFixed(1)}</span>
+                            <span className="text-slate-400 font-normal text-[10px]">({ratingData.count || 4})</span>
+                          </span>
+                          <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded">
+                            Open Now
+                          </span>
+                        </div>
+                      )}
+
+                      {!isHattiKappi && feat.description && (
+                        <p className="mt-1.5 text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                          {feat.description}
+                        </p>
+                      )}
+
+                      {/* Action Buttons: Route, Floors, Info */}
+                      <div className="mt-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onOpenRoutePlanning) {
+                              onOpenRoutePlanning(null, feat.buildingId || feat.featureId || feat.code);
+                            }
+                          }}
+                          className="flex-1 py-1 px-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[11px] font-bold transition-all hover:scale-105 flex items-center justify-center gap-1 shadow-sm"
+                        >
+                          <NavigationIcon className="w-3 h-3" />
+                          <span>Route</span>
+                        </button>
+
+                        {feat.hasIndoorMap && onOpenIndoorMap && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenIndoorMap({
+                                _id: feat.buildingId || feat.featureId,
+                                buildingId: feat.buildingId || feat.featureId,
+                                name: feat.featureName,
+                                shortCode: feat.code,
+                                totalFloors: feat.totalFloors || 6,
+                                hasIndoorMap: true
+                              });
+                            }}
+                            className="py-1 px-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-[11px] font-bold transition-colors flex items-center justify-center gap-1"
+                            title="View Multi-Floor Indoor Maps"
+                          >
+                            <DoorOpen className="w-3 h-3 text-indigo-500" />
+                            <span>Floors</span>
+                          </button>
+                        )}
+
+                        {(isHattiKappi || isBuilding || feat.description) && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onSelectMarker) {
+                                onSelectMarker({
+                                  markerId: feat.featureId,
+                                  buildingId: feat.buildingId,
+                                  name: feat.featureName,
+                                  shortCode: feat.code,
+                                  category: feat.category,
+                                  imageX: feat.normalizedX,
+                                  imageY: feat.normalizedY,
+                                  description: feat.description,
+                                  totalFloors: feat.totalFloors,
+                                  hasIndoorMap: feat.hasIndoorMap,
+                                  departments: feat.departments
+                                });
+                              }
+                              if (isHattiKappi && onOpenCafe) {
+                                onOpenCafe({
+                                  _id: hattiKappiCafe?._id || 'PU-CAFE-D-BLOCK',
+                                  shortCode: 'PU-CAFE-D-BLOCK',
+                                  name: 'Hatti Kappi'
+                                });
+                              } else if (isBuilding && onOpenBuildingPopup) {
+                                onOpenBuildingPopup({
+                                  _id: feat.buildingId || feat.featureId,
+                                  buildingId: feat.buildingId || feat.featureId,
+                                  name: feat.featureName,
+                                  code: feat.code,
+                                  shortCode: feat.code,
+                                  category: feat.category,
+                                  totalFloors: feat.totalFloors || 4,
+                                  hasIndoorMap: feat.hasIndoorMap,
+                                  description: feat.description,
+                                  departments: feat.departments || []
+                                });
+                              }
+                            }}
+                            className="py-1 px-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-[11px] font-bold transition-colors flex items-center justify-center gap-1"
+                            title="View Full Information & Reviews"
+                          >
+                            <Info className="w-3 h-3 text-sky-500" />
+                            <span>Info</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Directional pointer triangle pointing to the pin */}
+                      {showPopupBelow ? (
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-white dark:border-b-[#1e293b] filter drop-shadow-[0_-1px_1px_rgba(0,0,0,0.06)]" />
+                      ) : (
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-white dark:border-t-[#1e293b] filter drop-shadow-[0_1px_1px_rgba(0,0,0,0.06)]" />
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -1374,7 +1423,8 @@ export default function MasterCampusMap({
               style={{
                 left: '56.95%',
                 top: '24.49%',
-                transform: 'translate(-50%, -50%)'
+                transform: `translate(-50%, -50%) scale(${1 / scale}) rotate(${-rotation}deg)`,
+                transformOrigin: 'center center'
               }}
               className="absolute z-30 pointer-events-none"
             >
@@ -1389,11 +1439,11 @@ export default function MasterCampusMap({
       {/* ================================================================= */}
       {/* 6. RIGHT FLOATING GOOGLE MAPS & COMPASS CONTROLS BOX              */}
       {/* ================================================================= */}
-      <div className="absolute right-2.5 sm:right-4 bottom-20 sm:bottom-24 z-40 flex flex-col items-center gap-1 sm:gap-1.5 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 p-1 sm:p-1.5 rounded-2xl shadow-2xl no-dblclick scale-90 sm:scale-100 origin-bottom-right">
+      <div className="absolute right-2 sm:right-4 bottom-20 sm:bottom-24 z-40 flex flex-col items-center gap-1 sm:gap-1.5 bg-slate-900/95 backdrop-blur-md border border-slate-700/80 p-1 sm:p-1.5 rounded-2xl shadow-2xl no-dblclick scale-90 sm:scale-100 origin-bottom-right max-h-[calc(100vh-130px)] overflow-y-auto no-scrollbar">
         {/* Interactive Calibrated Compass Rose (Always points North, Click to Align North) */}
         <button
           onClick={handleResetNorth}
-          className="relative w-11 h-11 rounded-2xl bg-slate-950/90 border border-slate-700 hover:border-emerald-500/80 shadow-inner flex items-center justify-center group transition-all hover:scale-105 active:scale-95"
+          className="relative w-11 h-11 rounded-2xl bg-slate-950/90 border border-slate-700 hover:border-emerald-500/80 shadow-inner flex items-center justify-center group transition-all hover:scale-105 active:scale-95 shrink-0"
           title={`Heading: ${Math.round((rotation % 360 + 360) % 360)}° · Click to Align True North`}
         >
           {/* Compass Dial Rotating Counter to Map */}
@@ -1419,7 +1469,7 @@ export default function MasterCampusMap({
         </button>
 
         {/* Quick Rotate Left & Right Buttons */}
-        <div className="flex items-center gap-1 w-full justify-center">
+        <div className="flex items-center gap-1 w-full justify-center shrink-0">
           <button
             onClick={handleRotateLeft}
             className="p-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all hover:scale-110 active:scale-95"
@@ -1436,23 +1486,23 @@ export default function MasterCampusMap({
           </button>
         </div>
 
-        <div className="h-px w-8 bg-slate-800" />
+        <div className="h-px w-8 bg-slate-800 shrink-0" />
 
         {/* Directions / Wayfinding Route Planner */}
         <button
           onClick={() => onOpenRoutePlanning && onOpenRoutePlanning()}
-          className="p-2.5 rounded-xl text-sky-400 hover:text-sky-300 hover:bg-sky-500/20 transition-all hover:scale-110 active:scale-95 font-bold"
+          className="p-2.5 rounded-xl text-sky-400 hover:text-sky-300 hover:bg-sky-500/20 transition-all hover:scale-110 active:scale-95 font-bold shrink-0"
           title="Campus Wayfinding: Navigate between any two places"
         >
           <NavigationIcon className="w-4 h-4" />
         </button>
 
-        <div className="h-px w-8 bg-slate-800" />
+        <div className="h-px w-8 bg-slate-800 shrink-0" />
 
         {/* 1. Zoom In */}
         <button
           onClick={handleZoomIn}
-          className="p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all hover:scale-110 active:scale-95"
+          className="p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all hover:scale-110 active:scale-95 shrink-0"
           title="Zoom In (+)"
         >
           <ZoomIn className="w-4 h-4 text-sky-400" />
@@ -1461,64 +1511,64 @@ export default function MasterCampusMap({
         {/* 2. Zoom Out */}
         <button
           onClick={handleZoomOut}
-          className="p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all hover:scale-110 active:scale-95"
+          className="p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all hover:scale-110 active:scale-95 shrink-0"
           title="Zoom Out (−)"
         >
           <ZoomOut className="w-4 h-4 text-sky-400" />
         </button>
 
-        <div className="h-px w-8 bg-slate-800" />
+        <div className="h-px w-8 bg-slate-800 shrink-0" />
 
-        {/* 3. Focus Main Gate (Entrance Focus) */}
-        <button
-          onClick={handleFocusMainGate}
-          className="p-2.5 rounded-xl text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 transition-all hover:scale-110 active:scale-95 font-bold"
-          title="Focus Main Gate (University Entrance Portal)"
-        >
-          <DoorOpen className="w-4 h-4" />
-        </button>
-
-        {/* 4. Fit Entire Campus Overview */}
-        <button
-          onClick={handleFitCampus}
-          className="p-2.5 rounded-xl text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/20 transition-all hover:scale-110 active:scale-95 font-bold"
-          title="Fit Entire Campus (Show All Facilities)"
-        >
-          <Compass className="w-4 h-4" />
-        </button>
-
-        {/* 5. My Location (GPS Position) */}
+        {/* 3. My Location (GPS Position) */}
         <button
           onClick={handleFocusMyLocation}
-          className="p-2.5 rounded-xl text-sky-400 hover:text-sky-300 hover:bg-sky-500/20 transition-all hover:scale-110 active:scale-95 font-bold"
+          className="p-2.5 rounded-xl text-sky-400 hover:text-sky-300 hover:bg-sky-500/20 transition-all hover:scale-110 active:scale-95 font-bold shrink-0"
           title="My Location (GPS Campus Position)"
         >
           <LocateFixed className="w-4 h-4" />
         </button>
 
-        {/* 6. Fit Width / Wide View */}
+        {/* 4. Focus Main Gate (Entrance Focus - Desktop only, on mobile accessible in top pill) */}
         <button
-          onClick={handleFitWidth}
-          className="p-2.5 rounded-xl text-teal-400 hover:text-teal-300 hover:bg-teal-500/20 transition-all hover:scale-110 active:scale-95 font-bold"
+          onClick={handleFocusMainGate}
+          className="hidden sm:flex p-2.5 rounded-xl text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 transition-all hover:scale-110 active:scale-95 font-bold shrink-0"
+          title="Focus Main Gate (University Entrance Portal)"
+        >
+          <DoorOpen className="w-4 h-4" />
+        </button>
+
+        {/* 5. Fit Entire Campus Overview (Desktop only, on mobile in top pill) */}
+        <button
+          onClick={handleFitCampus}
+          className="hidden sm:flex p-2.5 rounded-xl text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/20 transition-all hover:scale-110 active:scale-95 font-bold shrink-0"
+          title="Fit Entire Campus (Show All Facilities)"
+        >
+          <Compass className="w-4 h-4" />
+        </button>
+
+        {/* 6. Fit Width / Wide View (Desktop only, on mobile in top pill) */}
+        <button
+          onClick={handleWideScreen}
+          className="hidden sm:flex p-2.5 rounded-xl text-teal-400 hover:text-teal-300 hover:bg-teal-500/20 transition-all hover:scale-110 active:scale-95 font-bold shrink-0"
           title="Wide View (Fill Width & Eliminate Side Gaps)"
         >
           <Maximize2 className="w-4 h-4" />
         </button>
 
-        {/* 5. Focus Academic Quad */}
+        {/* 7. Focus Academic Quad (Desktop only, on mobile in top pill) */}
         <button
           onClick={handleFocusQuad}
-          className="p-2.5 rounded-xl text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 transition-all hover:scale-110 active:scale-95 font-bold"
+          className="hidden sm:flex p-2.5 rounded-xl text-amber-400 hover:text-amber-300 hover:bg-amber-500/20 transition-all hover:scale-110 active:scale-95 font-bold shrink-0"
           title="Focus Academic Quad (D-E-F-L Blocks)"
         >
           <Building2 className="w-4 h-4" />
         </button>
 
-        {/* 6. Focus Selected Building */}
+        {/* 8. Focus Selected Building */}
         <button
           onClick={handleFocusSelected}
           disabled={!activeSelected}
-          className={`p-2.5 rounded-xl transition-all hover:scale-110 active:scale-95 ${
+          className={`p-2.5 rounded-xl transition-all hover:scale-110 active:scale-95 shrink-0 ${
             activeSelected
               ? 'text-sky-400 hover:bg-sky-500/20 hover:text-sky-300 cursor-pointer'
               : 'text-slate-600 cursor-not-allowed'
@@ -1528,21 +1578,21 @@ export default function MasterCampusMap({
           <Target className="w-4 h-4" />
         </button>
 
-        {/* 7. Reset View & Heading */}
+        {/* 9. Reset View & Heading */}
         <button
           onClick={handleResetView}
-          className="p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all hover:scale-110 active:scale-95"
+          className="p-2.5 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-all hover:scale-110 active:scale-95 shrink-0"
           title="Reset View & Heading (Default)"
         >
           <RefreshCw className="w-4 h-4" />
         </button>
 
-        <div className="h-px w-8 bg-slate-800" />
+        <div className="h-px w-8 bg-slate-800 shrink-0" />
 
-        {/* 8. Full Screen */}
+        {/* 10. Full Screen */}
         <button
           onClick={toggleFullscreen}
-          className="p-2.5 rounded-xl text-amber-300 hover:text-amber-200 hover:bg-amber-500/20 transition-all hover:scale-110 active:scale-95"
+          className="p-2.5 rounded-xl text-amber-300 hover:text-amber-200 hover:bg-amber-500/20 transition-all hover:scale-110 active:scale-95 shrink-0"
           title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
         >
           {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
@@ -1555,96 +1605,6 @@ export default function MasterCampusMap({
         <span>Right-Click or Shift+Drag to Rotate 360° · Shift+Scroll to Spin · Wheel to Zoom</span>
       </div>
 
-      {/* ================================================================= */}
-      {/* 7. BOTTOM DYNAMIC SELECTED FEATURE PREVIEW CARD                   */}
-      {/* ================================================================= */}
-      {activeSelected && (
-        <div className="absolute bottom-20 sm:bottom-4 left-3 right-16 sm:left-4 sm:right-auto sm:max-w-md z-40 bg-[#0e1730]/95 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl p-2.5 sm:p-3.5 flex items-center justify-between gap-2.5 sm:gap-3 animate-in slide-in-from-bottom-3 duration-200">
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-              activeSelected.code === 'PU-CAFE-D-BLOCK'
-                ? 'bg-amber-500/20 border border-amber-500/40 text-amber-400'
-                : 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-400'
-            }`}>
-              {activeSelected.code === 'PU-CAFE-D-BLOCK' ? (
-                <Coffee className="w-5 h-5 text-amber-400" />
-              ) : (
-                <Building2 className="w-5 h-5 text-emerald-400" />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-sm text-white">
-                  {activeSelected.featureName}
-                </span>
-                {activeSelected.code && (
-                  <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border ${
-                    activeSelected.code === 'PU-CAFE-D-BLOCK'
-                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                      : 'bg-sky-500/20 text-sky-300 border-sky-500/30'
-                  }`}>
-                    {activeSelected.code}
-                  </span>
-                )}
-                {activeSelected.code === 'PU-CAFE-D-BLOCK' && (
-                  (hattiKappiCafe?.rating?.isNew || !hattiKappiCafe?.rating?.count) ? (
-                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                      New
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-0.5 text-[10px] font-extrabold text-amber-400 font-mono">
-                      <Star className="w-3 h-3 fill-amber-400" />
-                      <span>{Number(hattiKappiCafe?.rating?.average || 0).toFixed(1)}</span>
-                    </span>
-                  )
-                )}
-              </div>
-              <div className="text-[11px] text-slate-400 line-clamp-1">
-                {activeSelected.description || `${activeSelected.category} at Presidency University`}
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Action Buttons */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            {/* Quick Route To Here Trigger */}
-            <button
-              onClick={() => onOpenRoutePlanning && onOpenRoutePlanning(null, activeSelected.buildingId || activeSelected.featureId || activeSelected.code)}
-              className="py-2 px-2.5 bg-slate-850 hover:bg-sky-600/90 text-sky-300 hover:text-white border border-slate-700 hover:border-sky-400 font-bold text-xs rounded-xl shadow-md transition-all hover:scale-105 flex items-center gap-1"
-              title="Navigate to this location"
-            >
-              <NavigationIcon className="w-3.5 h-3.5" />
-              <span>Route</span>
-            </button>
-
-            {activeSelected.code === 'PU-CAFE-D-BLOCK' ? (
-              <button
-                onClick={() => {
-                  if (onOpenCafe) {
-                    onOpenCafe({
-                      _id: hattiKappiCafe?._id || 'PU-CAFE-D-BLOCK',
-                      shortCode: 'PU-CAFE-D-BLOCK',
-                      name: 'Hatti Kappi'
-                    });
-                  }
-                }}
-                className="py-2 px-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold text-xs rounded-xl shadow-lg transition-all hover:scale-105 flex items-center gap-1.5"
-              >
-                <Coffee className="w-3.5 h-3.5" />
-                <span>View Cafe</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => handleSelectFeature(activeSelected)}
-                className="py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all hover:scale-105 shrink-0 flex items-center gap-1.5"
-              >
-                <span>Open</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

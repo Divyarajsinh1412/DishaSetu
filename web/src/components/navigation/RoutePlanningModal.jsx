@@ -276,9 +276,17 @@ export default function RoutePlanningModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[500] flex items-center justify-center p-3 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+    <div
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      data-prevent-map-zoom="true"
+      className="fixed inset-0 z-[500] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-200"
+    >
       <div
-        className="relative w-full max-w-2xl max-h-[92vh] flex flex-col bg-[#0b1328]/95 backdrop-blur-2xl border border-sky-500/30 rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.85)] text-slate-100 overflow-hidden"
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        data-prevent-map-zoom="true"
+        className="relative w-full max-w-2xl max-h-[90vh] sm:max-h-[92vh] flex flex-col bg-[#0b1328]/95 backdrop-blur-2xl border border-sky-500/30 rounded-t-3xl sm:rounded-3xl shadow-[0_25px_70px_rgba(0,0,0,0.85)] text-slate-100 overflow-hidden overscroll-contain isolate-scroll animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 duration-200"
         onClick={(e) => {
           // Close open dropdowns if clicked outside
           if (!e.target.closest('.endpoint-dropdown')) {
@@ -287,6 +295,9 @@ export default function RoutePlanningModal({
           }
         }}
       >
+        {/* Mobile Drag Handle Indicator */}
+        <div className="sm:hidden w-12 h-1.5 bg-slate-600 rounded-full mx-auto my-2 shrink-0 cursor-grab active:cursor-grabbing" />
+        
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between shrink-0 bg-gradient-to-r from-sky-950/40 via-slate-900/60 to-emerald-950/40">
           <div className="flex items-center gap-3">
@@ -319,7 +330,12 @@ export default function RoutePlanningModal({
         </div>
 
         {/* Modal Scrollable Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 custom-scrollbar">
+        <div
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          data-prevent-map-zoom="true"
+          className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 custom-scrollbar overscroll-contain isolate-scroll"
+        >
           
           {/* ============================================================== */}
           {/* 1. ORIGIN & DESTINATION SELECTORS (GOOGLE MAPS STYLE)          */}
@@ -357,7 +373,12 @@ export default function RoutePlanningModal({
 
               {/* Start Dropdown Popup */}
               {isStartOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-slate-950/95 backdrop-blur-2xl border border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                <div
+                  onWheel={(e) => e.stopPropagation()}
+                  onTouchMove={(e) => e.stopPropagation()}
+                  data-prevent-map-zoom="true"
+                  className="absolute top-full left-0 right-0 mt-2 bg-slate-950/95 backdrop-blur-2xl border border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 overscroll-contain isolate-scroll"
+                >
                   <div className="p-2 border-b border-slate-800">
                     <div className="relative flex items-center bg-slate-900 rounded-xl px-2.5 py-1.5">
                       <Search className="w-3.5 h-3.5 text-slate-400 mr-2" />
@@ -371,7 +392,12 @@ export default function RoutePlanningModal({
                       />
                     </div>
                   </div>
-                  <div className="max-h-56 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar">
+                  <div
+                    onWheel={(e) => e.stopPropagation()}
+                    onTouchMove={(e) => e.stopPropagation()}
+                    data-prevent-map-zoom="true"
+                    className="max-h-56 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar overscroll-contain isolate-scroll"
+                  >
                     {filteredStartPlaces.map((place) => (
                       <button
                         key={place.id}
@@ -444,7 +470,12 @@ export default function RoutePlanningModal({
 
               {/* Destination Dropdown Popup */}
               {isDestOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-slate-950/95 backdrop-blur-2xl border border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                <div
+                  onWheel={(e) => e.stopPropagation()}
+                  onTouchMove={(e) => e.stopPropagation()}
+                  data-prevent-map-zoom="true"
+                  className="absolute top-full left-0 right-0 mt-2 bg-slate-950/95 backdrop-blur-2xl border border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 overscroll-contain isolate-scroll"
+                >
                   <div className="p-2 border-b border-slate-800">
                     <div className="relative flex items-center bg-slate-900 rounded-xl px-2.5 py-1.5">
                       <Search className="w-3.5 h-3.5 text-slate-400 mr-2" />
@@ -458,7 +489,12 @@ export default function RoutePlanningModal({
                       />
                     </div>
                   </div>
-                  <div className="max-h-56 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar">
+                  <div
+                    onWheel={(e) => e.stopPropagation()}
+                    onTouchMove={(e) => e.stopPropagation()}
+                    data-prevent-map-zoom="true"
+                    className="max-h-56 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar overscroll-contain isolate-scroll"
+                  >
                     {filteredDestPlaces.map((place) => (
                       <button
                         key={place.id}

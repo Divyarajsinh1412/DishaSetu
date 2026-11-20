@@ -31,7 +31,10 @@ import {
   Calendar,
   Menu,
   ChevronRight,
-  LocateFixed
+  LocateFixed,
+  CornerUpRight,
+  Eye,
+  SlidersHorizontal
 } from 'lucide-react';
 import { getTranslation } from '../services/localization';
 import { COMPLETE_CAMPUS_CATALOG } from '../services/campusCatalog';
@@ -56,21 +59,23 @@ export default function Header({
   onOpenEvents,
   onSelectLocation,
   locations = [],
-  viewMode = 'master',
+  viewMode = 'map',
   onViewModeChange,
+  mapType = 'google_roadmap',
+  onMapTypeChange,
   language = 'en',
-  onLanguageChange
+  onLanguageChange,
+  onToggleSidebar
 }) {
   const t = (key) => getTranslation(language, key);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [isLayersMenuOpen, setIsLayersMenuOpen] = useState(false);
   const searchContainerRef = useRef(null);
   const moreMenuRef = useRef(null);
-  const mobileSearchRef = useRef(null);
+  const layersMenuRef = useRef(null);
 
-  // Close search suggestions and more menu on outside click
+  // Close menus on outside click
   useEffect(() => {
     const handleOutsideClick = (e) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
@@ -79,34 +84,32 @@ export default function Header({
       if (moreMenuRef.current && !moreMenuRef.current.contains(e.target)) {
         setIsMoreMenuOpen(false);
       }
-      if (mobileSearchRef.current && !mobileSearchRef.current.contains(e.target)) {
-        if (!searchQuery) setIsMobileSearchOpen(false);
+      if (layersMenuRef.current && !layersMenuRef.current.contains(e.target)) {
+        setIsLayersMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [searchQuery]);
+  }, []);
 
-  // Official Institutional Campus Categories
+  // Official Institutional Campus Categories (Google Maps Pill Format)
   const categories = [
-    { id: 'all', label: 'Campus Overview', icon: MapPin },
-    { id: 'Gate', label: 'Gates', icon: Compass },
-    { id: 'Academic', label: 'Academic Buildings', icon: Building2 },
-    { id: 'Department', label: 'Departments', icon: Building2 },
+    { id: 'all', label: 'All Places', icon: MapPin },
+    { id: 'Cafe', label: 'Cafeterias & Food', icon: Coffee },
+    { id: 'Academic', label: 'Academic Blocks', icon: Building2 },
+    { id: 'Parking', label: 'Parking Lots', icon: Car },
     { id: 'Library', label: 'Libraries', icon: BookOpen },
-    { id: 'Cafe', label: 'Food & Dining', icon: Coffee },
-    { id: 'Medical', label: 'Medical Care', icon: HeartPulse },
-    { id: 'Parking', label: 'Parking', icon: Car },
-    { id: 'Sports', label: 'Sports', icon: Trophy },
-    { id: 'Garden', label: 'Gardens & Quads', icon: Trees },
-    { id: 'Facility', label: 'Facilities', icon: Layers },
-    { id: 'Landmark', label: 'Landmarks', icon: Compass }
+    { id: 'Medical', label: 'Health Center', icon: HeartPulse },
+    { id: 'Gate', label: 'Gates & Entrances', icon: Compass },
+    { id: 'Sports', label: 'Sports Complex', icon: Trophy },
+    { id: 'Garden', label: 'Gardens & Lawns', icon: Trees },
+    { id: 'Landmark', label: 'Central Fountain', icon: Compass }
   ];
 
   // Comprehensive Instant Search Engine
   const searchResults = useMemo(() => {
     const q = (searchQuery || '').trim().toLowerCase();
-    if (!q || q.length < 2) return [];
+    if (!q || q.length < 1) return [];
 
     const hits = [];
     const seenIds = new Set();
@@ -152,7 +155,7 @@ export default function Header({
       }
     });
 
-    return hits.slice(0, 10);
+    return hits.slice(0, 8);
   }, [searchQuery]);
 
   const handleSelectSearchResult = (hit) => {
@@ -170,76 +173,173 @@ export default function Header({
     }
   };
 
-  return (
-    <header className={`${
-      viewMode === 'map'
-        ? 'absolute top-0 left-0 right-0 z-40 pointer-events-none p-2 sm:p-3 flex flex-col gap-2'
-        : 'bg-[#0b1a30]/95 backdrop-blur-md border-b border-[#1b3152] z-40 shrink-0 shadow-lg text-slate-100'
-    }`}>
-      {/* Primary Top Bar */}
-      <div className={viewMode === 'map' ? "flex items-center justify-between gap-2 sm:gap-3 pointer-events-none" : "h-16 px-3 sm:px-4 lg:px-6 flex items-center justify-between gap-2 sm:gap-4"}>
-        
-        {/* University Brand Header */}
-        <div className={`flex items-center gap-2.5 sm:gap-3 shrink-0 ${viewMode === 'map' ? 'pointer-events-auto bg-[#081528]/95 dark:bg-[#0b1728]/95 backdrop-blur-2xl border border-slate-700/80 rounded-2xl p-2 shadow-[0_8px_30px_rgba(0,0,0,0.3)]' : ''}`}>
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#1d4ed8] via-[#0f3460] to-[#b48c26] p-0.5 shadow-md flex items-center justify-center">
-            <div className="w-full h-full bg-[#08172c] rounded-[10px] flex items-center justify-center">
-              <Compass className="w-4 h-4 sm:w-5 sm:h-5 text-[#d4af37]" />
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="font-black text-sm sm:text-base tracking-tight text-white">
-                DishaSetu
-              </span>
-              <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-[#1e3a8a]/40 text-[#93c5fd] border border-[#2563eb]/40 font-mono">
-                Presidency GIS
-              </span>
-            </div>
-            <div className="text-[10.5px] text-slate-300 font-medium truncate max-w-[170px] sm:max-w-none">
-              Presidency University Bengaluru
-            </div>
-          </div>
-        </div>
+  // View modes for the Google Maps Layers panel
+  const viewModes = [
+    {
+      id: 'master',
+      mode: 'master',
+      title: 'Campus Master Map',
+      subtitle: 'Official High-Res Illustrated Map',
+      icon: MapIcon,
+      color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/40'
+    },
+    {
+      id: 'map_roadmap',
+      mode: 'map',
+      mapType: 'google_roadmap',
+      title: 'Google Map (Geographic)',
+      subtitle: 'Real Roads, Streets & Surrounding Area',
+      icon: Compass,
+      color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40'
+    },
+    {
+      id: 'map_satellite',
+      mode: 'map',
+      mapType: 'google_satellite',
+      title: 'Satellite Hybrid',
+      subtitle: 'Aerial Imagery & Street Labels',
+      icon: Layers,
+      color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/40'
+    },
+    {
+      id: 'map_terrain',
+      mode: 'map',
+      mapType: 'google_terrain',
+      title: 'Terrain Map',
+      subtitle: 'Topography & Elevations',
+      icon: Compass,
+      color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/40'
+    },
+    {
+      id: '3d',
+      mode: '3d',
+      title: '3D Campus Twin',
+      subtitle: 'Photorealistic Digital Twin',
+      icon: Box,
+      color: 'text-purple-600 bg-purple-50 dark:bg-purple-950/40'
+    },
+    {
+      id: 'immersive',
+      mode: 'immersive',
+      title: '360° Aerial Tour',
+      subtitle: 'Spherical Campus Panoramas',
+      icon: Globe,
+      color: 'text-sky-600 bg-sky-50 dark:bg-sky-950/40'
+    },
+    {
+      id: 'indoor',
+      mode: 'indoor',
+      title: 'Indoor Floorplans',
+      subtitle: 'D Block Multi-Floor Navigator',
+      icon: DoorOpen,
+      color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/40'
+    }
+  ];
 
-        {/* Central Search Bar with Instant Results Dropdown (Desktop / Tablet >= 640px) */}
-        <div ref={searchContainerRef} className={`hidden sm:block flex-1 max-w-md lg:max-w-xl relative min-w-0 ${viewMode === 'map' ? 'pointer-events-auto' : ''}`}>
-          <div className="relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+  const currentView = viewModes.find(v =>
+    v.mode === 'map' ? (viewMode === 'map' && mapType === v.mapType) : (viewMode === v.mode)
+  );
+  const currentViewLabel = currentView?.title || 'Map View';
+
+  return (
+    <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 z-[420] pointer-events-none flex flex-col gap-2">
+      {/* Top Floating Row: Search Bar (Left) + Quick Actions (Right) */}
+      <div className="flex items-start justify-between gap-2 sm:gap-4 pointer-events-none">
+        
+        {/* ================================================================= */}
+        {/* 1. AUTHENTIC GOOGLE MAPS FLOATING SEARCH BAR                      */}
+        {/* ================================================================= */}
+        <div ref={searchContainerRef} className="pointer-events-auto flex-1 sm:flex-initial sm:w-[392px] relative min-w-0">
+          <div className="h-11 sm:h-12 bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-100 rounded-2xl sm:rounded-3xl shadow-gmap-search border border-slate-200/90 dark:border-slate-700/80 flex items-center px-2 sm:px-3 gap-1 sm:gap-1.5 transition-all focus-within:shadow-xl focus-within:border-blue-500">
+            {/* Menu Drawer Toggle Button */}
+            <button
+              type="button"
+              onClick={onToggleSidebar}
+              className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700/60 text-slate-600 dark:text-slate-300 transition-colors"
+              title="Open Campus Directory & Navigation Drawer"
+            >
+              <Menu className="w-5 h-5 text-slate-700 dark:text-slate-200" />
+            </button>
+
+            {/* University Logo Badge Icon */}
+            <div className="hidden xs:flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white font-black text-[11px] shadow-sm select-none" title="DishaSetu - Presidency University">
+              D
+            </div>
+
+            {/* Input Search Field */}
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               onFocus={() => setIsSearchFocused(true)}
-              placeholder="Search buildings, rooms (DG01), departments, cafes, gates..."
-              className={`w-full pl-9 pr-8 py-2 border rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37]/50 transition-all ${viewMode === 'map' ? 'bg-[#081528]/95 backdrop-blur-xl border-slate-700/80 shadow-[0_8px_30px_rgba(0,0,0,0.3)]' : 'bg-[#081528] border-[#1e385c] shadow-inner'}`}
+              placeholder="Search Presidency University..."
+              className="flex-1 bg-transparent px-2 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 font-medium outline-none min-w-0"
             />
+
+            {/* Clear Input Button (when text exists) */}
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => onSearchChange('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-white"
+                className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                title="Clear Search"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-4 h-4" />
               </button>
             )}
+
+            {/* Vertical Divider */}
+            <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 mx-0.5" />
+
+            {/* Search Magnifier Action */}
+            <button
+              type="button"
+              onClick={() => setIsSearchFocused(true)}
+              className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700/60 text-slate-500 dark:text-slate-400 transition-colors"
+              title="Search"
+            >
+              <Search className="w-4 h-4" />
+            </button>
+
+            {/* Blue Google Maps Directions Button */}
+            <button
+              type="button"
+              onClick={() => onOpenRoutePlanning && onOpenRoutePlanning()}
+              className="w-8 h-8 rounded-full bg-[#1a73e8] hover:bg-[#1557b0] text-white flex items-center justify-center shadow-md shadow-blue-500/25 active:scale-95 transition-all shrink-0 group"
+              title="Directions & Turn-by-Turn Wayfinding"
+            >
+              <CornerUpRight className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
+            </button>
           </div>
 
-          {/* Instant Search Suggestions Dropdown */}
+          {/* =============================================================== */}
+          {/* INSTANT GOOGLE MAPS AUTOCOMPLETE SUGGESTIONS POPUP              */}
+          {/* =============================================================== */}
           {isSearchFocused && searchResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-[#081528]/98 backdrop-blur-2xl border border-[#23426e] rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-              <div className="p-2.5 border-b border-[#1b3152] flex items-center justify-between text-[11px] text-slate-400 font-bold uppercase tracking-wider">
-                <span>Campus Directory Matches ({searchResults.length})</span>
-                <span className="text-[10px] text-slate-500 font-normal">Press Esc to close</span>
+            <div
+              onWheel={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
+              data-prevent-map-zoom="true"
+              className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-[#202124] rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-700/80 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150 overscroll-contain isolate-scroll"
+            >
+              <div className="px-3 py-2 bg-slate-50 dark:bg-[#2a2b2e] border-b border-slate-100 dark:border-slate-700 flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                <span>Presidency Campus Matches ({searchResults.length})</span>
+                <span className="text-[10px] text-slate-400 font-normal">Click to view location</span>
               </div>
-              <div className="max-h-72 overflow-y-auto p-1.5 space-y-1 custom-scrollbar">
+              <div
+                onWheel={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
+                data-prevent-map-zoom="true"
+                className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 custom-scrollbar overscroll-contain isolate-scroll"
+              >
                 {searchResults.map((hit) => (
                   <div
                     key={hit.id}
                     onClick={() => handleSelectSearchResult(hit)}
-                    className="w-full p-2.5 rounded-xl text-left flex items-center justify-between hover:bg-[#132847] transition-all cursor-pointer group"
+                    className="p-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors cursor-pointer group"
                   >
-                    <div className="flex items-center gap-3 truncate">
-                      <div className="w-8 h-8 rounded-lg bg-[#0e213d] border border-[#23426e] flex items-center justify-center shrink-0 text-[#93c5fd] group-hover:text-[#d4af37] group-hover:border-[#d4af37]/40 transition-colors">
+                    <div className="flex items-center gap-3 truncate mr-2">
+                      <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center shrink-0 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform">
                         {hit.category === 'Academic' ? <Building2 className="w-4 h-4" /> :
                          hit.category === 'Cafe' ? <Coffee className="w-4 h-4" /> :
                          hit.category === 'Gate' ? <Compass className="w-4 h-4" /> :
@@ -249,32 +349,29 @@ export default function Header({
                       </div>
                       <div className="truncate">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-white group-hover:text-[#93c5fd] truncate">
+                          <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate">
                             {hit.name}
                           </span>
                           {hit.code && (
-                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#0b1b33] text-slate-300 border border-[#1b3152]">
+                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
                               {hit.code}
                             </span>
                           )}
                         </div>
-                        <div className="text-[10px] text-slate-400 truncate">
-                          {hit.category} · {hit.description || 'Presidency University Campus'}
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                          {hit.category} · {hit.description || 'Presidency University Bengaluru'}
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                      <button
-                        type="button"
-                        onClick={(e) => handleDirectNavigate(hit, e)}
-                        className="px-2.5 py-1 rounded-lg bg-[#1e3a8a]/70 hover:bg-[#2563eb] text-white text-[10px] font-bold flex items-center gap-1 shadow-sm transition-all"
-                        title="Navigate here"
-                      >
-                        <NavigationIcon className="w-3 h-3 text-sky-200" />
-                        <span>Navigate</span>
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => handleDirectNavigate(hit, e)}
+                      className="p-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-950/60 text-blue-600 dark:text-blue-400 shrink-0 transition-colors"
+                      title="Direct directions to this location"
+                    >
+                      <CornerUpRight className="w-4 h-4" />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -282,231 +379,183 @@ export default function Header({
           )}
         </div>
 
-        {/* Mobile Navigation Controls (< 640px) */}
-        <div className={`flex sm:hidden items-center gap-1.5 shrink-0 ${viewMode === 'map' ? 'pointer-events-auto bg-[#081528]/95 dark:bg-[#0b1728]/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl p-1 shadow-lg' : ''}`}>
-          {/* Mobile Search Toggle Icon */}
-          <button
-            type="button"
-            onClick={() => setIsMobileSearchOpen(true)}
-            className="p-2 rounded-xl bg-[#0e223d] hover:bg-[#15345d] border border-[#1b365c] text-slate-300 hover:text-white transition-all shadow-sm active:scale-95"
-            title="Search campus"
-          >
-            <Search className="w-4 h-4 text-sky-400" />
-          </button>
-
-          {/* Quick Directions Button */}
-          <button
-            type="button"
-            onClick={() => onOpenRoutePlanning && onOpenRoutePlanning()}
-            className="flex items-center gap-1 px-2.5 py-1.5 bg-gradient-to-r from-[#1d4ed8] to-[#1e40af] text-white text-xs font-black rounded-xl shadow-md border border-[#3b82f6]/50 transition-all active:scale-95"
-            title="Campus Directions"
-          >
-            <NavigationIcon className="w-3.5 h-3.5 text-sky-200" />
-            <span>Go</span>
-          </button>
-
-          {/* Hamburger Drawer Menu Button */}
-          <button
-            type="button"
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="p-2 rounded-xl bg-[#0e223d] hover:bg-[#15345d] border border-[#1b365c] text-slate-300 hover:text-white transition-all shadow-sm active:scale-95"
-            title="Open Campus Menu"
-          >
-            <Menu className="w-4 h-4 text-[#d4af37]" />
-          </button>
-        </div>
-
-        {/* View Mode Switcher Toolbar */}
-        <div className={`hidden lg:flex items-center p-1 border rounded-xl shrink-0 ${viewMode === 'map' ? 'pointer-events-auto bg-[#081528]/95 dark:bg-[#0b1728]/95 backdrop-blur-xl border-slate-700/80 shadow-[0_8px_30px_rgba(0,0,0,0.3)]' : 'bg-[#081528] border-[#1b3152] shadow-inner'}`}>
-          <button
-            type="button"
-            onClick={() => onViewModeChange('master')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'master'
-                ? 'bg-[#1e3a8a] text-white shadow-md border border-[#3b82f6]/40'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <MapIcon className="w-3.5 h-3.5 text-sky-300" />
-            <span>Official Map</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onViewModeChange('3d')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === '3d'
-                ? 'bg-[#1e3a8a] text-white shadow-md border border-[#3b82f6]/40'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Box className="w-3.5 h-3.5 text-sky-300" />
-            <span>3D Campus</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onViewModeChange('immersive')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'immersive'
-                ? 'bg-[#1e3a8a] text-white shadow-md border border-[#3b82f6]/40'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Globe className="w-3.5 h-3.5 text-[#d4af37]" />
-            <span>360° Aerial</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onViewModeChange('map')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'map'
-                ? 'bg-[#1e3a8a] text-white shadow-md border border-[#3b82f6]/40'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Compass className="w-3.5 h-3.5 text-sky-300" />
-            <span>2D GPS Map</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              if (onViewModeChange) onViewModeChange('indoor');
-              if (onOpenIndoor) onOpenIndoor();
-            }}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              viewMode === 'indoor'
-                ? 'bg-[#1e3a8a] text-white shadow-md border border-[#3b82f6]/40'
-                : 'text-slate-400 hover:text-emerald-300'
-            }`}
-          >
-            <DoorOpen className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Indoor Navigation</span>
-          </button>
-        </div>
-
-        {/* Primary Action Buttons: Directions, Dining, Survey, More */}
-        <div className={`flex items-center gap-1.5 sm:gap-2 shrink-0 ${viewMode === 'map' ? 'pointer-events-auto bg-[#081528]/95 dark:bg-[#0b1728]/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl p-1 sm:p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.3)]' : ''}`}>
+        {/* ================================================================= */}
+        {/* 2. TOP-RIGHT GOOGLE MAPS ACTION BUTTONS CLUSTER                   */}
+        {/* ================================================================= */}
+        <div className="pointer-events-auto flex items-center gap-1 sm:gap-2 shrink-0">
           
-          {/* Directions / Wayfinding Route Planner */}
-          <button
-            type="button"
-            onClick={() => onOpenRoutePlanning && onOpenRoutePlanning()}
-            className="flex items-center gap-1.5 px-3 py-1.5 sm:py-2 bg-gradient-to-r from-[#1d4ed8] to-[#1e40af] hover:from-[#2563eb] hover:to-[#1d4ed8] text-white text-xs font-black rounded-xl shadow-md border border-[#3b82f6]/50 transition-all hover:scale-105 active:scale-95 shrink-0"
-            title="Campus Wayfinding: Navigate from one place to another place"
-          >
-            <NavigationIcon className="w-3.5 h-3.5 text-sky-200" />
-            <span className="hidden sm:inline">Directions</span>
-          </button>
+          {/* LAYERS & VIEW SWITCHER (Google Maps Square Layers Button) */}
+          <div ref={layersMenuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setIsLayersMenuOpen(!isLayersMenuOpen)}
+              className="h-10 sm:h-11 px-2.5 sm:px-3 bg-white dark:bg-[#202124] text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 rounded-2xl shadow-gmap-search border border-slate-200/90 dark:border-slate-700/80 flex items-center gap-1 sm:gap-1.5 text-xs font-bold transition-all active:scale-95 group shrink-0"
+              title="Campus Views & Layers"
+            >
+              <Layers className="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:rotate-12 transition-transform" />
+              <span className="hidden md:inline">{currentViewLabel}</span>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+            </button>
 
-          {/* Food & Dining Modal Trigger */}
-          <button
-            type="button"
-            onClick={onOpenCafes}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-[#0e223d] hover:bg-[#15345d] text-slate-200 hover:text-[#d4af37] text-xs font-semibold rounded-xl border border-[#1b365c] shadow-sm transition-all"
-            title="Campus Cafeteria, Hatti Kappi & Menus"
-          >
-            <Coffee className="w-3.5 h-3.5 text-[#d4af37]" />
-            <span className="hidden md:inline">Food & Dining</span>
-          </button>
+            {/* Google Maps Layer Selection Popover */}
+            {isLayersMenuOpen && (
+              <div
+                onWheel={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
+                data-prevent-map-zoom="true"
+                className="absolute right-0 mt-2 w-72 bg-white dark:bg-[#202124] rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-700/80 p-2 z-50 animate-in fade-in zoom-in-95 duration-150 overscroll-contain isolate-scroll"
+              >
+                <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  Campus View Modes
+                </div>
+                <div className="space-y-1">
+                  {viewModes.map((mode) => {
+                    const Icon = mode.icon;
+                    const isActive = mode.mode === 'map'
+                      ? (viewMode === 'map' && mapType === mode.mapType)
+                      : (viewMode === mode.mode);
+                    return (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => {
+                          if (mode.mode === 'map') {
+                            if (onMapTypeChange && mode.mapType) onMapTypeChange(mode.mapType);
+                            if (onViewModeChange) onViewModeChange('map');
+                          } else {
+                            if (onViewModeChange) onViewModeChange(mode.mode);
+                            if (mode.id === 'indoor' && onOpenIndoor) onOpenIndoor();
+                          }
+                          setIsLayersMenuOpen(false);
+                        }}
+                        className={`w-full p-2.5 rounded-xl text-left flex items-center gap-3 transition-all ${
+                          isActive
+                            ? 'bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-bold'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${mode.color}`}>
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 truncate">
+                          <div className="text-xs font-bold leading-tight">{mode.title}</div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400">{mode.subtitle}</div>
+                        </div>
+                        {isActive && <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
 
-          {/* AI Campus Assistant Trigger */}
+          {/* AI Campus Assistant Floating Pill */}
           <button
             type="button"
             onClick={onOpenAIAssistant}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-gradient-to-r from-[#0d223d] to-[#122e54] hover:from-[#133056] hover:to-[#1a4073] text-slate-100 text-xs font-bold rounded-xl border border-[#234673] shadow-sm transition-all hover:scale-105 active:scale-95 shrink-0"
-            title="DishaSetu AI Assistant: Search locations, routes, and campus questions"
+            className="h-11 px-3 bg-white dark:bg-[#202124] text-slate-700 dark:text-slate-200 hover:text-amber-500 dark:hover:text-amber-400 rounded-2xl shadow-gmap-search border border-slate-200/90 dark:border-slate-700/80 flex items-center gap-1.5 text-xs font-bold transition-all active:scale-95 group"
+            title="Ask DishaSetu AI: Smart Campus Guide"
           >
-            <Sparkles className="w-3.5 h-3.5 text-[#d4af37]" />
-            <span className="hidden lg:inline">AI Assistant</span>
+            <Sparkles className="w-4 h-4 text-amber-500 group-hover:scale-115 transition-transform" />
+            <span className="hidden lg:inline">AI Guide</span>
           </button>
 
-          {/* Campus Field Survey Trigger */}
+          {/* Campus Events Calendar */}
           <button
             type="button"
-            onClick={onOpenSurvey}
-            className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 sm:py-2 bg-[#0e223d] hover:bg-[#15345d] text-slate-200 hover:text-emerald-300 text-xs font-semibold rounded-xl border border-[#1b365c] shadow-sm transition-all"
-            title="Campus GPS Field Survey Checklist"
+            onClick={onOpenEvents}
+            className="hidden sm:flex h-11 px-3 bg-white dark:bg-[#202124] text-slate-700 dark:text-slate-200 hover:text-sky-600 dark:hover:text-sky-400 rounded-2xl shadow-gmap-search border border-slate-200/90 dark:border-slate-700/80 items-center gap-1.5 text-xs font-bold transition-all active:scale-95"
+            title="Campus Events & Happenings"
           >
-            <Crosshair className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Campus Survey</span>
+            <Calendar className="w-4 h-4 text-sky-500" />
+            <span className="hidden xl:inline">Events</span>
           </button>
 
-          {/* More Options / Institutional Tools Dropdown */}
+          {/* Emergency SOS Button (Google Maps Alert Red) */}
+          <button
+            type="button"
+            onClick={onOpenSOS}
+            className="h-10 sm:h-11 px-2.5 sm:px-3 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl shadow-gmap-search flex items-center gap-1 sm:gap-1.5 text-xs font-black transition-all active:scale-95 shrink-0"
+            title="Campus Emergency Directory & SOS"
+          >
+            <AlertTriangle className="w-4 h-4 text-white animate-bounce" />
+            <span className="hidden xs:inline">SOS</span>
+          </button>
+
+          {/* More Options / Settings Dropdown */}
           <div ref={moreMenuRef} className="relative">
             <button
               type="button"
               onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-              className="p-2 rounded-xl bg-[#0e223d] hover:bg-[#15345d] border border-[#1b365c] text-slate-300 hover:text-white transition-all shadow-sm"
+              className="h-10 w-10 sm:h-11 sm:w-11 bg-white dark:bg-[#202124] text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white rounded-2xl shadow-gmap-search border border-slate-200/90 dark:border-slate-700/80 flex items-center justify-center transition-all active:scale-95 shrink-0"
               title="More University Services & Settings"
             >
               <MoreVertical className="w-4 h-4" />
             </button>
 
             {isMoreMenuOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-[#081528]/98 backdrop-blur-2xl border border-[#23426e] rounded-2xl shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1">
-                <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <div
+                onWheel={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
+                data-prevent-map-zoom="true"
+                className="absolute right-0 mt-2 w-60 bg-white dark:bg-[#202124] rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-700/80 p-2 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1 overscroll-contain isolate-scroll"
+              >
+                <div className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                   Institutional Tools
                 </div>
 
                 <button
                   type="button"
                   onClick={() => { onOpenAdmin(); setIsMoreMenuOpen(false); }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-semibold text-slate-200 hover:bg-[#132847] flex items-center gap-2.5 transition-colors"
+                  className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition-colors"
                 >
-                  <Shield className="w-4 h-4 text-sky-400" />
+                  <Shield className="w-4 h-4 text-blue-600" />
                   <span>Admin GIS Portal</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => { onOpenMapEditor(); setIsMoreMenuOpen(false); }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-semibold text-slate-200 hover:bg-[#132847] flex items-center gap-2.5 transition-colors"
+                  className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition-colors"
                 >
-                  <Crosshair className="w-4 h-4 text-emerald-400" />
+                  <Crosshair className="w-4 h-4 text-emerald-600" />
                   <span>Map Marker Editor</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => { if (onOpenIndoorSurvey) onOpenIndoorSurvey(); setIsMoreMenuOpen(false); }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-semibold text-emerald-300 hover:bg-[#132847] flex items-center gap-2.5 transition-colors font-bold"
+                  className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition-colors font-bold"
                 >
-                  <LocateFixed className="w-4 h-4 text-emerald-400" />
+                  <LocateFixed className="w-4 h-4 text-emerald-600" />
                   <span>Indoor GPS Survey</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => { onOpenCafeOwner(); setIsMoreMenuOpen(false); }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-semibold text-slate-200 hover:bg-[#132847] flex items-center gap-2.5 transition-colors"
+                  className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition-colors"
                 >
-                  <Utensils className="w-4 h-4 text-amber-400" />
+                  <Utensils className="w-4 h-4 text-amber-500" />
                   <span>Dining Partner Portal</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => { onOpenIssueReport(); setIsMoreMenuOpen(false); }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-semibold text-slate-200 hover:bg-[#132847] flex items-center gap-2.5 transition-colors"
+                  className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition-colors"
                 >
-                  <HelpCircle className="w-4 h-4 text-sky-400" />
+                  <HelpCircle className="w-4 h-4 text-sky-600" />
                   <span>Report Obstacle / Issue</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => { if (onOpenEvents) onOpenEvents(); setIsMoreMenuOpen(false); }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-semibold text-slate-200 hover:bg-[#132847] flex items-center gap-2.5 transition-colors"
-                >
-                  <Calendar className="w-4 h-4 text-sky-400" />
-                  <span>Campus Events & Calendar</span>
-                </button>
-
-                <div className="h-px bg-[#1b3152] my-1" />
+                <div className="h-px bg-slate-100 dark:bg-slate-700 my-1" />
 
                 {/* Language Switcher */}
-                <div className="px-2.5 py-1.5">
-                  <div className="text-[10px] font-bold text-slate-400 mb-1 flex items-center gap-1">
-                    <Languages className="w-3 h-3 text-[#d4af37]" />
+                <div className="px-3 py-1.5">
+                  <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-1 flex items-center gap-1">
+                    <Languages className="w-3.5 h-3.5 text-blue-600" />
                     <span>Language</span>
                   </div>
                   <div className="flex items-center gap-1">
@@ -521,8 +570,8 @@ export default function Header({
                         onClick={() => onLanguageChange(lang.code)}
                         className={`flex-1 py-1 rounded-lg text-[10px] font-bold transition-all ${
                           language === lang.code
-                            ? 'bg-[#1e3a8a] text-white shadow-sm'
-                            : 'bg-[#0e223d] text-slate-400 hover:text-white'
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
                         {lang.label}
@@ -530,26 +579,21 @@ export default function Header({
                     ))}
                   </div>
                 </div>
-
-                <div className="h-px bg-[#1b3152] my-1" />
-
-                {/* Emergency SOS */}
-                <button
-                  type="button"
-                  onClick={() => { onOpenSOS(); setIsMoreMenuOpen(false); }}
-                  className="w-full px-2.5 py-2 rounded-xl text-left text-xs font-bold text-rose-300 hover:bg-rose-950/60 flex items-center gap-2.5 transition-colors"
-                >
-                  <AlertTriangle className="w-4 h-4 text-rose-400" />
-                  <span>Emergency Directory (SOS)</span>
-                </button>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Secondary Campus Category Pills Bar */}
-      <div className={viewMode === 'map' ? "pointer-events-none flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-[calc(100vw-24px)] pl-0.5" : "px-3 sm:px-4 py-1.5 bg-[#081528]/90 border-t border-[#162a45] flex items-center gap-1.5 overflow-x-auto no-scrollbar"}>
+      {/* ================================================================= */}
+      {/* 3. GOOGLE MAPS HORIZONTALLY SCROLLABLE CATEGORY CHIPS             */}
+      {/* ================================================================= */}
+      <div
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        data-prevent-map-zoom="true"
+        className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-[calc(100vw-24px)] pl-0.5 py-1 overscroll-contain isolate-scroll touch-pan-x"
+      >
         {categories.map((cat) => {
           const Icon = cat.icon;
           const isActive = activeCategory === cat.id;
@@ -557,301 +601,18 @@ export default function Header({
             <button
               key={cat.id}
               onClick={() => onCategorySelect(cat.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all ${
-                viewMode === 'map'
-                  ? (isActive
-                      ? 'pointer-events-auto bg-blue-600 text-white shadow-lg shadow-blue-600/30 border border-blue-400'
-                      : 'pointer-events-auto bg-[#081528]/95 hover:bg-[#122847] text-slate-200 border border-slate-700/80 shadow-md backdrop-blur-xl hover:scale-105 active:scale-95')
-                  : (isActive
-                      ? 'bg-[#1e3a8a] text-[#d4af37] border border-[#3b82f6]/50 shadow-sm'
-                      : 'bg-[#0d1f38]/70 text-slate-300 hover:text-white hover:bg-[#132c4f] border border-transparent')
+              className={`h-8 px-3.5 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all shadow-gmap-floating active:scale-95 ${
+                isActive
+                  ? 'bg-[#1a73e8] text-white border border-[#1a73e8] shadow-md font-bold'
+                  : 'bg-white/95 dark:bg-[#202124]/95 text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700/80 hover:bg-slate-50 dark:hover:bg-slate-700/60 backdrop-blur-md'
               }`}
             >
-              <Icon className={`w-3.5 h-3.5 ${isActive ? (viewMode === 'map' ? 'text-white' : 'text-[#d4af37]') : 'text-slate-400'}`} />
+              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
               <span>{cat.label}</span>
             </button>
           );
         })}
       </div>
-
-      {/* Full-Width Mobile Search Bar Overlay */}
-      {isMobileSearchOpen && (
-        <div ref={mobileSearchRef} className="sm:hidden fixed inset-x-0 top-0 h-16 z-50 bg-[#081528] px-3 flex items-center gap-2 border-b border-[#23426e] shadow-2xl animate-in slide-in-from-top duration-150">
-          <button
-            type="button"
-            onClick={() => setIsMobileSearchOpen(false)}
-            className="p-2 text-slate-400 hover:text-white"
-          >
-            <X className="w-5 h-5" />
-          </button>
-          <div className="flex-1 relative">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              autoFocus
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search buildings, rooms (DG01), cafes..."
-              className="w-full pl-9 pr-8 py-2 bg-[#0c1e36] border border-[#23426e] rounded-xl text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#d4af37]"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => onSearchChange('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-white"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-          {/* Instant mobile dropdown */}
-          {searchQuery && searchResults.length > 0 && (
-            <div className="absolute top-full left-0 right-0 bg-[#081528] border-b border-[#23426e] shadow-2xl max-h-80 overflow-y-auto p-2 space-y-1 z-50">
-              {searchResults.map((hit) => (
-                <div
-                  key={hit.id}
-                  onClick={() => {
-                    handleSelectSearchResult(hit);
-                    setIsMobileSearchOpen(false);
-                  }}
-                  className="p-2.5 rounded-xl bg-[#0c1e36] flex items-center justify-between text-xs"
-                >
-                  <div className="truncate mr-2">
-                    <div className="font-bold text-white truncate">{hit.name}</div>
-                    <div className="text-[10px] text-slate-400">{hit.category} · {hit.code || ''}</div>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      handleDirectNavigate(hit, e);
-                      setIsMobileSearchOpen(false);
-                    }}
-                    className="px-2.5 py-1 rounded bg-[#1e3a8a] text-white text-[10px] font-bold shrink-0"
-                  >
-                    Go
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Slide-Over Mobile Drawer */}
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[9999] lg:hidden flex">
-          {/* Backdrop */}
-          <div
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-
-          {/* Drawer Panel */}
-          <div className="relative ml-auto w-full max-w-xs sm:max-w-sm h-full bg-[#081528] border-l border-[#1b3152] shadow-2xl flex flex-col z-10 animate-in slide-in-from-right duration-250 text-slate-100 overflow-y-auto">
-            {/* Drawer Header */}
-            <div className="p-4 border-b border-[#1b3152] flex items-center justify-between bg-[#0b1a30] shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#1d4ed8] via-[#0f3460] to-[#b48c26] p-0.5 flex items-center justify-center">
-                  <div className="w-full h-full bg-[#08172c] rounded-[6px] flex items-center justify-center">
-                    <Compass className="w-4 h-4 text-[#d4af37]" />
-                  </div>
-                </div>
-                <div>
-                  <div className="font-extrabold text-sm text-white">DishaSetu</div>
-                  <div className="text-[10px] text-slate-400">Presidency University Bengaluru</div>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="p-1.5 rounded-lg bg-[#0e223d] hover:bg-[#15345d] text-slate-400 hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* View Switchers Section */}
-            <div className="p-4 border-b border-[#1b3152]/60 space-y-2 shrink-0">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                Campus Views
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { mode: 'master', label: 'Official Map', icon: MapIcon },
-                  { mode: '3d', label: '3D Campus', icon: Box },
-                  { mode: 'immersive', label: '360° Aerial', icon: Globe },
-                  { mode: 'map', label: '2D GPS Map', icon: Compass },
-                  { mode: 'indoor', label: 'Indoor Maps', icon: DoorOpen }
-                ].map((item) => {
-                  const Icon = item.icon;
-                  const isActive = viewMode === item.mode;
-                  return (
-                    <button
-                      key={item.mode}
-                      onClick={() => {
-                        onViewModeChange(item.mode);
-                        if (item.mode === 'indoor' && onOpenIndoor) onOpenIndoor();
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className={`p-2.5 rounded-xl text-left flex items-center gap-2 border transition-all ${
-                        isActive
-                          ? 'bg-[#1e3a8a] border-[#3b82f6] text-white shadow-md'
-                          : 'bg-[#0d1e36] border-[#182e4e] text-slate-300 hover:text-white hover:bg-[#122847]'
-                      }`}
-                    >
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-sky-300' : 'text-slate-400'}`} />
-                      <span className="text-xs font-bold truncate">{item.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* University Services */}
-            <div className="p-4 border-b border-[#1b3152]/60 space-y-1 shrink-0">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                Campus Navigation & Services
-              </div>
-              <button
-                onClick={() => { onOpenRoutePlanning && onOpenRoutePlanning(); setIsMobileMenuOpen(false); }}
-                className="w-full p-2.5 rounded-xl bg-gradient-to-r from-blue-900/40 to-indigo-900/40 hover:from-blue-800/60 hover:to-indigo-800/60 border border-blue-500/30 text-white flex items-center justify-between text-xs font-bold transition-all"
-              >
-                <div className="flex items-center gap-2.5">
-                  <NavigationIcon className="w-4 h-4 text-sky-400" />
-                  <span>Directions & Route Planner</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-400" />
-              </button>
-
-              <button
-                onClick={() => { onOpenCafes(); setIsMobileMenuOpen(false); }}
-                className="w-full p-2.5 rounded-xl hover:bg-[#132847] text-slate-200 flex items-center justify-between text-xs font-semibold transition-all"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Coffee className="w-4 h-4 text-[#d4af37]" />
-                  <span>Food & Dining (Hatti Kappi)</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-500" />
-              </button>
-
-              <button
-                onClick={() => { onOpenAIAssistant(); setIsMobileMenuOpen(false); }}
-                className="w-full p-2.5 rounded-xl hover:bg-[#132847] text-slate-200 flex items-center justify-between text-xs font-semibold transition-all"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Sparkles className="w-4 h-4 text-amber-400" />
-                  <span>DishaSetu AI Assistant</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-500" />
-              </button>
-
-              <button
-                onClick={() => { if (onOpenEvents) onOpenEvents(); setIsMobileMenuOpen(false); }}
-                className="w-full p-2.5 rounded-xl hover:bg-[#132847] text-slate-200 flex items-center justify-between text-xs font-semibold transition-all"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Calendar className="w-4 h-4 text-sky-400" />
-                  <span>Campus Events & Calendar</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-500" />
-              </button>
-
-              <button
-                onClick={() => { onOpenSurvey(); setIsMobileMenuOpen(false); }}
-                className="w-full p-2.5 rounded-xl hover:bg-[#132847] text-slate-200 flex items-center justify-between text-xs font-semibold transition-all"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Crosshair className="w-4 h-4 text-emerald-400" />
-                  <span>Campus GPS Field Survey</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-500" />
-              </button>
-
-              <button
-                onClick={() => { onOpenIssueReport(); setIsMobileMenuOpen(false); }}
-                className="w-full p-2.5 rounded-xl hover:bg-[#132847] text-slate-200 flex items-center justify-between text-xs font-semibold transition-all"
-              >
-                <div className="flex items-center gap-2.5">
-                  <HelpCircle className="w-4 h-4 text-sky-400" />
-                  <span>Report Obstacle / Issue</span>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-500" />
-              </button>
-            </div>
-
-            {/* Admin Management Portals */}
-            <div className="p-4 border-b border-[#1b3152]/60 space-y-1 shrink-0">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">
-                Administration
-              </div>
-              <button
-                onClick={() => { onOpenAdmin(); setIsMobileMenuOpen(false); }}
-                className="w-full p-2.5 rounded-xl hover:bg-[#132847] text-slate-300 flex items-center gap-2.5 text-xs font-semibold"
-              >
-                <Shield className="w-4 h-4 text-sky-400" />
-                <span>Admin GIS Portal</span>
-              </button>
-              <button
-                onClick={() => { onOpenMapEditor(); setIsMobileMenuOpen(false); }}
-                className="w-full p-2.5 rounded-xl hover:bg-[#132847] text-slate-300 flex items-center gap-2.5 text-xs font-semibold"
-              >
-                <Crosshair className="w-4 h-4 text-emerald-400" />
-                <span>Map Marker Editor</span>
-              </button>
-              <button
-                onClick={() => { if (onOpenIndoorSurvey) onOpenIndoorSurvey(); setIsMobileMenuOpen(false); }}
-                className="w-full p-2.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-500/30 text-emerald-300 flex items-center gap-2.5 text-xs font-bold"
-              >
-                <LocateFixed className="w-4 h-4 text-emerald-400" />
-                <span>Indoor GPS Survey & Coordinates</span>
-              </button>
-              <button
-                onClick={() => { onOpenCafeOwner(); setIsMobileMenuOpen(false); }}
-                className="w-full p-2.5 rounded-xl hover:bg-[#132847] text-slate-300 flex items-center gap-2.5 text-xs font-semibold"
-              >
-                <Utensils className="w-4 h-4 text-amber-400" />
-                <span>Dining Partner Portal</span>
-              </button>
-            </div>
-
-            {/* Language Selection */}
-            <div className="p-4 border-b border-[#1b3152]/60 shrink-0">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
-                <Languages className="w-3.5 h-3.5 text-[#d4af37]" />
-                <span>Language / ಭಾಷೆ / भाषा</span>
-              </div>
-              <div className="grid grid-cols-3 gap-1.5">
-                {[
-                  { code: 'en', label: 'English' },
-                  { code: 'kn', label: 'ಕನ್ನಡ' },
-                  { code: 'hi', label: 'हिंदी' }
-                ].map(lang => (
-                  <button
-                    key={lang.code}
-                    onClick={() => { onLanguageChange(lang.code); }}
-                    className={`py-1.5 rounded-xl text-xs font-bold transition-all ${
-                      language === lang.code
-                        ? 'bg-[#1e3a8a] text-white border border-[#3b82f6]'
-                        : 'bg-[#0d1e36] text-slate-400 hover:text-white border border-transparent'
-                    }`}
-                  >
-                    {lang.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Emergency SOS Button */}
-            <div className="p-4 mt-auto shrink-0 pb-8">
-              <button
-                onClick={() => { onOpenSOS(); setIsMobileMenuOpen(false); }}
-                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white font-extrabold text-xs shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 transition-all active:scale-95"
-              >
-                <AlertTriangle className="w-4 h-4" />
-                <span>EMERGENCY DIRECTORY (SOS)</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </header>
+    </div>
   );
 }

@@ -902,10 +902,10 @@ export default function CampusDigitalTwin3D({
           <button
             onClick={onSwitchToMap}
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-sky-400 hover:bg-sky-500/10 transition-all border border-sky-500/20"
-            title="Switch to Official Master Campus Map"
+            title="Switch to Google Maps Geographic View"
           >
             <MapIcon className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Official Map</span>
+            <span className="hidden sm:inline">Google Map</span>
           </button>
         </div>
       </div>

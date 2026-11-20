@@ -24,8 +24,18 @@ export default function EmergencyModal({ isOpen, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-[#0f172a] border border-rose-500/50 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+    <div
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      data-prevent-map-zoom="true"
+      className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200"
+    >
+      <div
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        data-prevent-map-zoom="true"
+        className="w-full max-w-lg bg-[#0f172a] border border-rose-500/50 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 overscroll-contain isolate-scroll"
+      >
         {/* Header */}
         <div className="p-4 bg-gradient-to-r from-rose-950 via-slate-900 to-slate-900 border-b border-rose-900/50 flex items-center justify-between">
           <div className="flex items-center gap-3">

@@ -447,8 +447,18 @@ export default function AdminDashboard({
   const selectedBuildingData = buildings.find(b => b._id === selectedBuildingForSurvey) || buildings[0];
 
   return (
-    <div className="fixed inset-0 z-[600] flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-6xl h-[90vh] bg-[#0f172a] border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+    <div
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      data-prevent-map-zoom="true"
+      className="fixed inset-0 z-[600] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+    >
+      <div
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        data-prevent-map-zoom="true"
+        className="w-full max-w-6xl h-[90vh] bg-[#0f172a] border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 overscroll-contain isolate-scroll"
+      >
         {/* Top Bar */}
         <div className="px-6 py-4 bg-gradient-to-r from-blue-950 via-[#0f172a] to-slate-900 border-b border-slate-800 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
@@ -503,7 +513,12 @@ export default function AdminDashboard({
         </div>
 
         {/* Dashboard Content Body */}
-        <div className="flex-1 overflow-y-auto p-6 bg-[#0f172a]">
+        <div
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          data-prevent-map-zoom="true"
+          className="flex-1 overflow-y-auto p-6 bg-[#0f172a] overscroll-contain isolate-scroll"
+        >
           {/* TAB 1: BUILDINGS MANAGEMENT */}
           {activeTab === 'buildings' && (
             <div className="space-y-4">

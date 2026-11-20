@@ -47,7 +47,7 @@ export default function SplashScreen({
   // Loading Steps & Status Telemetry
   const loadingSteps = [
     { title: 'Initializing Presidency University Spatial Engine...', detail: 'Calibrating WGS-84 Coordinates (13.1718°N, 77.5362°E)', pct: 28, beacon: 'main_gate' },
-    { title: 'Loading Verified Campus Master Map & 35+ Landmarks...', detail: 'Binding SVG Polygons, Gateways & Academic Quadrangles', pct: 54, beacon: 'fountain' },
+    { title: 'Loading Geographic Campus Map & 35+ Verified Landmarks...', detail: 'Binding GPS Coordinates, High-Res Map Tiles & Walking Network', pct: 54, beacon: 'fountain' },
     { title: 'Building Multi-Floor Indoor Navigation Graph for D Block...', detail: 'DG01–DG06 Ground Floor & 5 Upper Floors Calibrated', pct: 76, beacon: 'd_block' },
     { title: 'Syncing Live Hatti Kappi Cafe & Dining Menus...', detail: 'MongoDB Reviews, Filter Kaapi Specials & Availability Connected', pct: 92, beacon: 'hatti_kappi' },
     { title: 'Presidency University Navigation Ready', detail: 'Launching DishaSetu Intelligent Campus Portal', pct: 100, beacon: 'all' }

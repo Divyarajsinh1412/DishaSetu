@@ -443,8 +443,18 @@ export default function AdminIndoorSurveyModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200 select-none">
-      <div className="relative w-full max-w-5xl h-[94vh] bg-[#081528] border border-[#23426e] rounded-2xl shadow-2xl flex flex-col text-slate-100 overflow-hidden">
+    <div
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      data-prevent-map-zoom="true"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200 select-none"
+    >
+      <div
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        data-prevent-map-zoom="true"
+        className="relative w-full max-w-5xl h-[94vh] bg-[#081528] border border-[#23426e] rounded-2xl shadow-2xl flex flex-col text-slate-100 overflow-hidden overscroll-contain isolate-scroll"
+      >
         
         {/* Header */}
         <div className="h-16 px-4 sm:px-6 bg-[#0c1e36] border-b border-[#1b3152] flex items-center justify-between shrink-0">
@@ -523,7 +533,12 @@ export default function AdminIndoorSurveyModal({
 
         {/* TAB 1: SURVEY & GPS CAPTURE */}
         {activeTab === 'capture' && (
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+          <div
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            data-prevent-map-zoom="true"
+            className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 overscroll-contain isolate-scroll"
+          >
             
             {/* Step 1: Building & Floor Selector Grid */}
             <div className="p-4 bg-[#0a182b] border border-[#1e3a5f] rounded-2xl shadow-inner space-y-3">
@@ -893,7 +908,12 @@ export default function AdminIndoorSurveyModal({
 
         {/* TAB 2: SURVEYED DIRECTORY & MANAGEMENT TABLE */}
         {activeTab === 'directory' && (
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+          <div
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            data-prevent-map-zoom="true"
+            className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 overscroll-contain isolate-scroll"
+          >
             
             {/* Filter Toolbar */}
             <div className="p-3 bg-[#0a182b] border border-[#1e3a5f] rounded-2xl flex flex-wrap items-center gap-2.5">

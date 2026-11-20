@@ -182,8 +182,20 @@ export default function CafeModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[1100] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 select-none animate-in fade-in duration-200">
-      <div className="bg-[#0F172A] border border-slate-700/80 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-slate-100">
+    <div
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      data-prevent-map-zoom="true"
+      className="fixed inset-0 z-[1100] bg-black/80 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-6 select-none animate-in fade-in duration-200"
+    >
+      <div
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        data-prevent-map-zoom="true"
+        className="bg-[#0F172A] border border-slate-700/80 rounded-t-3xl sm:rounded-3xl w-full max-w-4xl max-h-[88vh] sm:max-h-[90vh] flex flex-col shadow-2xl overflow-hidden text-slate-100 overscroll-contain isolate-scroll animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 duration-200"
+      >
+        {/* Mobile Drag Handle Indicator */}
+        <div className="sm:hidden w-12 h-1.5 bg-slate-600 rounded-full mx-auto my-2 shrink-0 cursor-grab active:cursor-grabbing" />
         
         {/* Top Header Bar */}
         <div className="p-4 sm:p-6 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
@@ -212,7 +224,11 @@ export default function CafeModal({
         </div>
 
         {/* Cafe Selector Tabs */}
-        <div className="px-4 sm:px-6 pt-3 pb-2 bg-slate-900/50 border-b border-slate-800 flex items-center gap-2 overflow-x-auto scrollbar-none">
+        <div
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          className="px-4 sm:px-6 pt-3 pb-2 bg-slate-900/50 border-b border-slate-800 flex items-center gap-2 overflow-x-auto scrollbar-none overscroll-contain isolate-scroll"
+        >
           {cafes.map(cafe => {
             const isSelected = cafe._id === selectedCafeId;
             return (
@@ -329,7 +345,11 @@ export default function CafeModal({
         </div>
 
         {/* Tab Content Panes */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-thin">
+        <div
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          className="flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-thin overscroll-contain isolate-scroll"
+        >
           
           {/* 1. TODAY'S DAILY MENU TAB */}
           {activeTab === 'today' && (

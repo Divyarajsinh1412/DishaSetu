@@ -105,8 +105,18 @@ export default function CampusEventsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl h-[85vh] max-h-[700px] bg-[#07172c] border border-[#1b3459] rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
+    <div
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      data-prevent-map-zoom="true"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
+    >
+      <div
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        data-prevent-map-zoom="true"
+        className="relative w-full max-w-2xl h-[85vh] max-h-[700px] bg-[#07172c] border border-[#1b3459] rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-100 overscroll-contain isolate-scroll"
+      >
         
         {/* Header */}
         <div className="px-5 py-4 bg-gradient-to-r from-[#0b1d38] to-[#07172c] border-b border-[#1b3459] flex items-center justify-between shrink-0">
@@ -140,7 +150,12 @@ export default function CampusEventsModal({
         </div>
 
         {/* Category Filter Pills */}
-        <div className="px-5 py-2.5 bg-[#091b33]/90 border-b border-[#162e4f] flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+        <div
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          data-prevent-map-zoom="true"
+          className="px-5 py-2.5 bg-[#091b33]/90 border-b border-[#162e4f] flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 overscroll-contain isolate-scroll"
+        >
           {categories.map((cat) => (
             <button
               key={cat}
@@ -158,7 +173,12 @@ export default function CampusEventsModal({
         </div>
 
         {/* Events List */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5">
+        <div
+          onWheel={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          data-prevent-map-zoom="true"
+          className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3.5 overscroll-contain isolate-scroll"
+        >
           {filteredEvents.map((evt) => (
             <div
               key={evt.id}

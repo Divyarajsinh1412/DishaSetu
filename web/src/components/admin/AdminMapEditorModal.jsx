@@ -234,8 +234,18 @@ export default function AdminMapEditorModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-6xl h-[92vh] bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-200">
+    <div
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      data-prevent-map-zoom="true"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200"
+    >
+      <div
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        data-prevent-map-zoom="true"
+        className="relative w-full max-w-6xl h-[92vh] bg-slate-900 border border-slate-700/80 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-200 overscroll-contain isolate-scroll"
+      >
         
         {/* Top Header */}
         <div className="p-4 sm:p-5 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
@@ -361,7 +371,12 @@ export default function AdminMapEditorModal({
           </div>
 
           {/* Right: Marker Edit Form & Directory Sidebar */}
-          <div className="w-full lg:w-96 bg-slate-900 border-t lg:border-t-0 lg:border-l border-slate-800 p-4 sm:p-5 flex flex-col overflow-y-auto">
+          <div
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            data-prevent-map-zoom="true"
+            className="w-full lg:w-96 bg-slate-900 border-t lg:border-t-0 lg:border-l border-slate-800 p-4 sm:p-5 flex flex-col overflow-y-auto overscroll-contain isolate-scroll"
+          >
             
             {/* Form Section */}
             {(isAddingNew || selectedMarker) ? (
@@ -549,7 +564,12 @@ export default function AdminMapEditorModal({
             ) : null}
 
             {/* List of Current Markers */}
-            <div className="flex-1 overflow-y-auto mt-3 space-y-2">
+            <div
+              onWheel={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
+              data-prevent-map-zoom="true"
+              className="flex-1 overflow-y-auto mt-3 space-y-2 overscroll-contain isolate-scroll"
+            >
               <div className="flex items-center justify-between pb-1.5 border-b border-slate-800 text-xs">
                 <span className="font-bold text-slate-400 uppercase tracking-wider">
                   Campus Markers ({markers.length})
