@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import {
   MapContainer,
   TileLayer,
@@ -6,9 +6,10 @@ import {
   Polygon,
   Marker,
   Popup,
+  Tooltip,
+  Circle,
   useMap,
-  useMapEvents,
-  Tooltip
+  useMapEvents
 } from 'react-leaflet';
 import L from 'leaflet';
 import {
@@ -25,185 +26,180 @@ import {
   Droplets,
   Building2,
   Crosshair,
-  Accessibility
+  Accessibility,
+  Plus,
+  Minus,
+  LocateFixed,
+  Box,
+  Eye,
+  Coffee,
+  HeartPulse,
+  BookOpen,
+  Trophy,
+  Shield,
+  RotateCcw,
+  Sparkles,
+  ArrowRight,
+  DoorOpen
 } from 'lucide-react';
 
-// Custom SVG Icons
-const createDivIcon = (svgString, className = '', size = [36, 36]) => {
+// =====================================================================
+// GOOGLE MAPS STYLE PIN GENERATOR (Crisp SVG Teardrop Pin Drops)
+// =====================================================================
+const createGoogleMapsPin = ({
+  bgColor = '#2563eb',
+  glyphSvg,
+  borderColor = '#ffffff',
+  size = 38,
+  glow = false
+}) => {
+  const pinWidth = size;
+  const pinHeight = Math.round(size * 1.25);
+  const anchorX = pinWidth / 2;
+  const anchorY = pinHeight;
+
+  const html = `
+    <div style="position:relative; width:${pinWidth}px; height:${pinHeight}px; transform:translate3d(0,0,0); filter:${glow ? 'drop-shadow(0 0 10px rgba(37,99,235,0.7))' : 'drop-shadow(0 4px 8px rgba(0,0,0,0.35))'}; transition:transform 0.15s ease;">
+      <svg width="${pinWidth}" height="${pinHeight}" viewBox="0 0 38 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Pin Drop Teardrop Body -->
+        <path d="M19 0C8.506 0 0 8.506 0 19C0 30.6 19 48 19 48C19 48 38 30.6 38 19C38 8.506 29.494 0 19 0Z" fill="${bgColor}" stroke="${borderColor}" stroke-width="2.5"/>
+        <!-- Inner Glow Circle -->
+        <circle cx="19" cy="19" r="13" fill="#ffffff" fill-opacity="0.22"/>
+      </svg>
+      <!-- Center Icon Glyph -->
+      <div style="position:absolute; top:7px; left:${anchorX - 12}px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; color:#ffffff; pointer-events:none;">
+        ${glyphSvg}
+      </div>
+    </div>
+  `;
+
   return L.divIcon({
-    html: `<div class="custom-map-pin ${className}" style="width:${size[0]}px;height:${size[1]}px;">${svgString}</div>`,
-    className: 'leaflet-custom-marker',
-    iconSize: size,
-    iconAnchor: [size[0] / 2, size[1] / 2],
-    popupAnchor: [0, -size[1] / 2]
+    html,
+    className: 'leaflet-google-pin',
+    iconSize: [pinWidth, pinHeight],
+    iconAnchor: [anchorX, anchorY],
+    popupAnchor: [0, -pinHeight + 8]
   });
 };
 
-// Gate Icon (Emerald)
-const gateIcon = createDivIcon(`
-  <div style="background:#10b981; border:2px solid #ffffff; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(16,185,129,0.8);">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M9 9h6M9 13h6M9 17h6" />
-    </svg>
-  </div>
-`, 'gate-pin', [40, 40]);
+// Category SVG Icons
+const ICON_SVGS = {
+  academic: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16M2 11h20M12 2l10 9H2l10-9zM6 11v8M10 11v8M14 11v8M18 11v8"/></svg>`,
+  cafe: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3"/></svg>`,
+  library: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15z"/></svg>`,
+  medical: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>`,
+  gate: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16M9 9h6M9 13h6M9 17h6"/></svg>`,
+  parking: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 17V7h4a3 3 0 0 1 0 6H9"/></svg>`,
+  sports: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.45 1-1 1H7v2h10v-2h-2c-.55 0-1-.45-1-1v-2.34M6 4h12v7a6 6 0 0 1-12 0V4z"/></svg>`,
+  garden: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2c2 3 6 4 6 9a6 6 0 0 1-12 0c0-5 4-6 6-9z"/><path d="M12 12v9"/></svg>`,
+  landmark: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>`,
+  door: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"/><path d="M2 20h20"/><path d="M14 12v.01"/></svg>`
+};
 
-// Fountain Icon (Aquatic Blue)
-const fountainIcon = createDivIcon(`
-  <div style="background:#0ea5e9; border:2px solid #ffffff; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(14,165,233,0.8);">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 2v20M12 7a5 5 0 0 1 5 5M12 7a5 5 0 0 0-5 5M12 12a3 3 0 0 1 3 3M12 12a3 3 0 0 0-3 3" />
-    </svg>
-  </div>
-`, 'fountain-pin', [38, 38]);
+// Preset category pin instances
+const pinIcons = {
+  academic: createGoogleMapsPin({ bgColor: '#2563eb', glyphSvg: ICON_SVGS.academic }),
+  cafe: createGoogleMapsPin({ bgColor: '#d97706', glyphSvg: ICON_SVGS.cafe }),
+  library: createGoogleMapsPin({ bgColor: '#0284c7', glyphSvg: ICON_SVGS.library }),
+  medical: createGoogleMapsPin({ bgColor: '#e11d48', glyphSvg: ICON_SVGS.medical }),
+  gate: createGoogleMapsPin({ bgColor: '#059669', glyphSvg: ICON_SVGS.gate, size: 42, glow: true }),
+  parking: createGoogleMapsPin({ bgColor: '#ea580c', glyphSvg: ICON_SVGS.parking }),
+  sports: createGoogleMapsPin({ bgColor: '#ca8a04', glyphSvg: ICON_SVGS.sports }),
+  garden: createGoogleMapsPin({ bgColor: '#16a34a', glyphSvg: ICON_SVGS.garden }),
+  landmark: createGoogleMapsPin({ bgColor: '#0d9488', glyphSvg: ICON_SVGS.landmark }),
+  door: createGoogleMapsPin({ bgColor: '#7c3aed', glyphSvg: ICON_SVGS.door })
+};
 
-// Parking Icon (Orange)
-const parkingIcon = createDivIcon(`
-  <div style="background:#f97316; border:2px solid #ffffff; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(249,115,22,0.8);">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="3" width="18" height="18" rx="3" fill="#ea580c"/>
-      <path d="M9 17V7h4a3 3 0 0 1 0 6H9" stroke="#ffffff" stroke-width="2.5"/>
-    </svg>
-  </div>
-`, 'parking-pin', [36, 36]);
+// High-Precision User GPS Pin with Pulsing Ripple Effect
+const userGpsIcon = L.divIcon({
+  html: `
+    <div style="position:relative; width:48px; height:48px; display:flex; align-items:center; justify-content:center;">
+      <div style="position:absolute; width:48px; height:48px; border-radius:50%; background:rgba(37,99,235,0.25); animation:pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;"></div>
+      <div style="position:absolute; width:22px; height:22px; border-radius:50%; background:#2563eb; border:3px solid #ffffff; box-shadow:0 3px 10px rgba(0,0,0,0.4);"></div>
+      <div style="width:6px; height:6px; border-radius:50%; background:#ffffff;"></div>
+    </div>
+  `,
+  className: 'user-gps-marker',
+  iconSize: [48, 48],
+  iconAnchor: [24, 24]
+});
 
-// Garden Icon (Lush Green)
-const gardenIcon = createDivIcon(`
-  <div style="background:#15803d; border:2px solid #ffffff; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(21,128,61,0.8);">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 2c2 3 6 4 6 9a6 6 0 0 1-12 0c0-5 4-6 6-9z" fill="#22c55e"/>
-      <path d="M12 12v9" stroke="#ffffff" stroke-width="2.5"/>
-    </svg>
-  </div>
-`, 'garden-pin', [36, 36]);
+// Route Start Pin (A - Emerald)
+const routeStartIcon = L.divIcon({
+  html: `
+    <div style="position:relative; width:34px; height:44px; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.3));">
+      <svg width="34" height="44" viewBox="0 0 34 44" fill="none">
+        <path d="M17 0C7.61 0 0 7.61 0 17C0 27.5 17 44 17 44C17 44 34 27.5 34 17C34 7.61 26.39 0 17 0Z" fill="#10b981" stroke="#ffffff" stroke-width="2.5"/>
+      </svg>
+      <div style="position:absolute; top:5px; left:0; width:34px; text-align:center; font-weight:900; font-size:14px; color:#ffffff; font-family:sans-serif;">A</div>
+    </div>
+  `,
+  className: 'route-start-pin',
+  iconSize: [34, 44],
+  iconAnchor: [17, 44]
+});
 
-// Building Entrance Icon (Indigo / Accessible Green)
-const createEntranceIcon = (isAccessible = true, isPrimary = false) => createDivIcon(`
-  <div style="background:${isAccessible ? '#059669' : '#4f46e5'}; border:2px solid ${isPrimary ? '#38bdf8' : '#ffffff'}; width:100%; height:100%; border-radius:8px; display:flex; align-items:center; justify-content:center; box-shadow:0 0 10px rgba(79,70,229,0.8);">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14" />
-      <path d="M2 20h20" />
-      <path d="M14 12v.01" />
-    </svg>
-  </div>
-`, 'entrance-pin', [32, 32]);
+// Route Destination Pin (B - Rose)
+const routeEndIcon = L.divIcon({
+  html: `
+    <div style="position:relative; width:34px; height:44px; filter:drop-shadow(0 4px 8px rgba(0,0,0,0.3));">
+      <svg width="34" height="44" viewBox="0 0 34 44" fill="none">
+        <path d="M17 0C7.61 0 0 7.61 0 17C0 27.5 17 44 17 44C17 44 34 27.5 34 17C34 7.61 26.39 0 17 0Z" fill="#ef4444" stroke="#ffffff" stroke-width="2.5"/>
+      </svg>
+      <div style="position:absolute; top:5px; left:0; width:34px; text-align:center; font-weight:900; font-size:14px; color:#ffffff; font-family:sans-serif;">B</div>
+    </div>
+  `,
+  className: 'route-end-pin',
+  iconSize: [34, 44],
+  iconAnchor: [17, 44]
+});
 
-// Academic Block Icon (Indigo)
-const academicIcon = createDivIcon(`
-  <div style="background:#6366f1; border:2px solid #ffffff; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(99,102,241,0.8);">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 22h16M2 11h20M12 2l10 9H2l10-9zM6 11v8M10 11v8M14 11v8M18 11v8"/>
-    </svg>
-  </div>
-`, 'academic-pin', [36, 36]);
+// Waypoint Step Pin
+const createWaypointIcon = (stepNumber) => L.divIcon({
+  html: `
+    <div style="width:24px; height:24px; border-radius:50%; background:#1d4ed8; border:2px solid #ffffff; box-shadow:0 2px 6px rgba(0,0,0,0.3); display:flex; align-items:center; justify-content:center; color:#ffffff; font-weight:800; font-size:11px; font-family:sans-serif;">
+      ${stepNumber}
+    </div>
+  `,
+  className: 'route-waypoint-pin',
+  iconSize: [24, 24],
+  iconAnchor: [12, 12]
+});
 
-// Cafe / Food Court Icon (Amber)
-const cafeIcon = createDivIcon(`
-  <div style="background:#d97706; border:2px solid #ffffff; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(217,119,6,0.8);">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3"/>
-    </svg>
-  </div>
-`, 'cafe-pin', [36, 36]);
-
-// Medical Centre Icon (Rose)
-const medicalIcon = createDivIcon(`
-  <div style="background:#e11d48; border:2px solid #ffffff; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(225,29,72,0.8);">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 5v14M5 12h14" />
-    </svg>
-  </div>
-`, 'medical-pin', [36, 36]);
-
-// Library Icon (Cyan/Blue)
-const libraryIcon = createDivIcon(`
-  <div style="background:#0284c7; border:2px solid #ffffff; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(2,132,199,0.8);">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15z"/>
-    </svg>
-  </div>
-`, 'library-pin', [36, 36]);
-
-// Sports Icon (Yellow/Amber)
-const sportsIcon = createDivIcon(`
-  <div style="background:#eab308; border:2px solid #ffffff; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 12px rgba(234,179,8,0.8);">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6M18 9h1.5a2.5 2.5 0 0 0 0-5H18M4 22h16M10 14.66V17c0 .55-.45 1-1 1H7v2h10v-2h-2c-.55 0-1-.45-1-1v-2.34M6 4h12v7a6 6 0 0 1-12 0V4z"/>
-    </svg>
-  </div>
-`, 'sports-pin', [36, 36]);
-
-// Temporary Pick Pin Icon
-const pickPinIcon = createDivIcon(`
-  <div style="background:#ef4444; border:3px solid #ffffff; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 15px rgba(239,68,68,1); animation:pulse-ring 1.5s infinite;">
-    <div style="width:8px; height:8px; border-radius:50%; background:#ffffff;"></div>
-  </div>
-`, 'pick-pin', [36, 36]);
-
-// User GPS Icon (Pulsing Azure)
-const userGpsIcon = createDivIcon(`
-  <div style="position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center;">
-    <div class="pulse-marker" style="position:absolute; width:44px; height:44px; border-radius:50%; background:rgba(56,189,248,0.4);"></div>
-    <div style="background:#0284c7; border:3px solid #ffffff; width:22px; height:22px; border-radius:50%; box-shadow:0 0 10px rgba(2,132,199,1);"></div>
-  </div>
-`, 'gps-pin', [44, 44]);
-
-// Start Point Icon (A - Emerald)
-const startRouteIcon = createDivIcon(`
-  <div style="background:#10b981; border:3px solid #ffffff; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 15px rgba(16,185,129,0.9); font-weight:800; color:#ffffff; font-size:16px;">
-    A
-  </div>
-`, 'start-pin', [36, 36]);
-
-// Destination Point Icon (B - Rose)
-const endRouteIcon = createDivIcon(`
-  <div style="background:#f43f5e; border:3px solid #ffffff; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 15px rgba(244,63,94,0.9); font-weight:800; color:#ffffff; font-size:16px;">
-    B
-  </div>
-`, 'end-pin', [36, 36]);
-
-// Waypoint Step Marker
-const createStepIcon = (num) => createDivIcon(`
-  <div style="background:#0284c7; border:2px solid #ffffff; width:100%; height:100%; border-radius:50%; display:flex; align-items:center; justify-content:center; box-shadow:0 0 10px rgba(2,132,199,0.9); font-weight:700; color:#ffffff; font-size:11px;">
-    ${num}
-  </div>
-`, 'step-pin', [26, 26]);
-
-// Map Controller Subcomponent for Imperative Actions
+// =====================================================================
+// MAP CONTROLLER (Smooth Leaflet Camera Control & Bounds Framing)
+// =====================================================================
 function MapController({
-  focusMainGateTrigger,
+  centerCoords,
+  zoomLevel,
+  activeRoute,
+  selectedLocation,
   fitCampusTrigger,
-  userLocation,
-  defaultLocation,
-  bounds,
-  activeRoute
+  bounds
 }) {
   const map = useMap();
 
+  // Initial Center & Zoom
   useEffect(() => {
-    if (defaultLocation && defaultLocation.lat && defaultLocation.lng) {
-      map.flyTo([defaultLocation.lat, defaultLocation.lng], defaultLocation.zoom || 18, {
-        duration: 1.2,
-        easeLinearity: 0.25
+    if (centerCoords && centerCoords.lat && centerCoords.lng) {
+      map.setView([centerCoords.lat, centerCoords.lng], zoomLevel || 17.5, {
+        animate: true,
+        duration: 1.0
       });
     }
-  }, [focusMainGateTrigger, defaultLocation, map]);
+  }, [centerCoords, zoomLevel, map]);
 
+  // Fit Campus Trigger
   useEffect(() => {
-    if (fitCampusTrigger && bounds) {
+    if (fitCampusTrigger > 0 && bounds) {
       map.flyToBounds(
         [bounds.southWest, bounds.northEast],
-        { padding: [50, 50], duration: 1.2 }
+        { padding: [60, 60], duration: 1.2 }
       );
     }
   }, [fitCampusTrigger, bounds, map]);
 
-  useEffect(() => {
-    if (userLocation) {
-      map.flyTo([userLocation.lat, userLocation.lng], 19, { duration: 1.2 });
-    }
-  }, [userLocation, map]);
-
+  // Auto-Frame Active Walking Route
   useEffect(() => {
     if (activeRoute && activeRoute.geometry && activeRoute.geometry.length > 1) {
       const lats = activeRoute.geometry.map(p => Array.isArray(p) ? p[0] : p.lat);
@@ -214,10 +210,24 @@ function MapController({
       const maxLng = Math.max(...lngs);
       map.flyToBounds(
         [[minLat, minLng], [maxLat, maxLng]],
-        { padding: [80, 80], duration: 1.2 }
+        { padding: [90, 90], duration: 1.2 }
       );
     }
   }, [activeRoute, map]);
+
+  // Pan to Selected Location
+  useEffect(() => {
+    if (selectedLocation) {
+      const lat = selectedLocation.latitude || selectedLocation.coordinates?.lat || selectedLocation.entranceCoordinates?.lat;
+      const lng = selectedLocation.longitude || selectedLocation.coordinates?.lng || selectedLocation.entranceCoordinates?.lng;
+      if (lat != null && lng != null) {
+        map.flyTo([lat, lng], Math.max(map.getZoom(), 18), {
+          duration: 1.0,
+          easeLinearity: 0.25
+        });
+      }
+    }
+  }, [selectedLocation, map]);
 
   return null;
 }
@@ -234,6 +244,188 @@ function MapClickHandler({ isPicking, onPickCoordinates }) {
   return null;
 }
 
+// =====================================================================
+// FIXED GOOGLE MAPS-STYLE ON-SCREEN CONTROLS (Never Zoom With Map)
+// =====================================================================
+function GoogleMapsFixedControls({
+  mapType,
+  setMapType,
+  onZoomIn,
+  onZoomOut,
+  onLocateMe,
+  onFitCampus,
+  onSwitch3D,
+  onSwitchImmersive,
+  hasActiveRoute,
+  onClearRoute
+}) {
+  return (
+    <>
+      {/* 1. TOP-RIGHT MAP STYLE SELECTOR (Explore / Satellite / Dark) */}
+      <div className="absolute top-4 right-4 z-[400] flex items-center gap-2">
+        <div className="bg-white/95 dark:bg-[#0b1728]/95 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-[0_8px_25px_rgba(0,0,0,0.12)] p-1 flex items-center gap-1 select-none">
+          <button
+            type="button"
+            onClick={() => setMapType('voyager')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              mapType === 'voyager'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+            }`}
+            title="Clean Vector Map (Google Maps Style)"
+          >
+            Map
+          </button>
+          <button
+            type="button"
+            onClick={() => setMapType('satellite')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              mapType === 'satellite'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+            }`}
+            title="High-Resolution Satellite Aerial View"
+          >
+            Satellite
+          </button>
+          <button
+            type="button"
+            onClick={() => setMapType('dark')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+              mapType === 'dark'
+                ? 'bg-blue-600 text-white shadow-md'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60'
+            }`}
+            title="Dark Navigation Theme"
+          >
+            Dark
+          </button>
+        </div>
+
+        {/* 3D Digital Twin Switcher Pill */}
+        {onSwitch3D && (
+          <button
+            type="button"
+            onClick={onSwitch3D}
+            className="p-2.5 rounded-2xl bg-white/95 dark:bg-[#0b1728]/95 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 shadow-[0_8px_25px_rgba(0,0,0,0.12)] transition-all hover:scale-105 active:scale-95"
+            title="View 3D Campus Digital Twin"
+          >
+            <Box className="w-4 h-4 text-sky-500" />
+          </button>
+        )}
+
+        {/* 360° Aerial Tour Switcher */}
+        {onSwitchImmersive && (
+          <button
+            type="button"
+            onClick={onSwitchImmersive}
+            className="p-2.5 rounded-2xl bg-white/95 dark:bg-[#0b1728]/95 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:text-amber-500 shadow-[0_8px_25px_rgba(0,0,0,0.12)] transition-all hover:scale-105 active:scale-95"
+            title="360° Campus Aerial Tour"
+          >
+            <Eye className="w-4 h-4 text-amber-400" />
+          </button>
+        )}
+      </div>
+
+      {/* 2. BOTTOM-RIGHT GOOGLE MAPS CONTROLS COLUMN (Fixed on screen) */}
+      <div className="absolute bottom-20 sm:bottom-6 right-3 sm:right-4 z-[400] flex flex-col items-center gap-2 select-none">
+        {/* Clear Route Button (when route is active) */}
+        {hasActiveRoute && (
+          <button
+            type="button"
+            onClick={onClearRoute}
+            className="px-3.5 py-2 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-xl flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 mb-1"
+            title="Clear Active Walking Route"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>End Route</span>
+          </button>
+        )}
+
+        {/* Fit Campus Button */}
+        <button
+          type="button"
+          onClick={onFitCampus}
+          className="w-11 h-11 bg-white/95 dark:bg-[#0b1728]/95 hover:bg-white dark:hover:bg-[#13233a] border border-slate-200/90 dark:border-slate-800 rounded-2xl text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 shadow-[0_8px_25px_rgba(0,0,0,0.14)] flex items-center justify-center transition-all hover:scale-105 active:scale-95 group"
+          title="Fit Campus (Frame Presidency University Grounds)"
+        >
+          <Maximize2 className="w-5 h-5 text-indigo-500 group-hover:scale-110 transition-transform" />
+        </button>
+
+        {/* Locate Me / Current GPS Position */}
+        <button
+          type="button"
+          onClick={onLocateMe}
+          className="w-11 h-11 bg-white/95 dark:bg-[#0b1728]/95 hover:bg-white dark:hover:bg-[#13233a] border border-slate-200/90 dark:border-slate-800 rounded-2xl text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 shadow-[0_8px_25px_rgba(0,0,0,0.14)] flex items-center justify-center transition-all hover:scale-105 active:scale-95 group"
+          title="Show My Current GPS Location"
+        >
+          <LocateFixed className="w-5 h-5 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
+        </button>
+
+        {/* Zoom In & Zoom Out Split Card (Native Google Maps Shape) */}
+        <div className="bg-white/95 dark:bg-[#0b1728]/95 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800 rounded-2xl shadow-[0_8px_25px_rgba(0,0,0,0.14)] flex flex-col overflow-hidden">
+          <button
+            type="button"
+            onClick={onZoomIn}
+            className="w-11 h-11 hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 flex items-center justify-center transition-colors border-b border-slate-200/80 dark:border-slate-800"
+            title="Zoom In"
+          >
+            <Plus className="w-5 h-5 font-bold" />
+          </button>
+          <button
+            type="button"
+            onClick={onZoomOut}
+            className="w-11 h-11 hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 flex items-center justify-center transition-colors"
+            title="Zoom Out"
+          >
+            <Minus className="w-5 h-5 font-bold" />
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Inner Leaflet Connector for Fixed Controls
+function LeafletMapControlsWrapper({
+  mapType,
+  setMapType,
+  onLocateMe,
+  onFitCampus,
+  onSwitch3D,
+  onSwitchImmersive,
+  hasActiveRoute,
+  onClearRoute
+}) {
+  const map = useMap();
+
+  const handleZoomIn = () => {
+    map.zoomIn();
+  };
+
+  const handleZoomOut = () => {
+    map.zoomOut();
+  };
+
+  return (
+    <GoogleMapsFixedControls
+      mapType={mapType}
+      setMapType={setMapType}
+      onZoomIn={handleZoomIn}
+      onZoomOut={handleZoomOut}
+      onLocateMe={onLocateMe}
+      onFitCampus={onFitCampus}
+      onSwitch3D={onSwitch3D}
+      onSwitchImmersive={onSwitchImmersive}
+      hasActiveRoute={hasActiveRoute}
+      onClearRoute={onClearRoute}
+    />
+  );
+}
+
+// =====================================================================
+// MAIN CAMPUS MAP EXPORT COMPONENT
+// =====================================================================
 export default function CampusMap({
   campus,
   features = [],
@@ -244,33 +436,43 @@ export default function CampusMap({
   selectedLocation,
   onSelectLocation,
   activeRoute,
+  onClearRoute,
   isPickingCoordinates,
   onCoordinatePicked,
   pickedCoordinates,
   onOpenIndoor,
   onOpenBuildingPopup,
   onOpenIndoorMap,
-  onStartIndoorNavigation
+  onStartIndoorNavigation,
+  onOpenRoutePlanning,
+  userLocation: propUserLocation,
+  onSwitch3D,
+  onSwitchImmersive,
+  language = 'en',
+  activeCategory = 'all',
+  searchQuery = ''
 }) {
-  const [mapType, setMapType] = useState('street');
-  const [focusMainGateTrigger, setFocusMainGateTrigger] = useState(0);
+  // Map Base Tile Style: 'voyager' (Google Maps style clean light), 'satellite' (Esri World Imagery), 'dark' (CartoDB Dark)
+  const [mapType, setMapType] = useState('voyager');
   const [fitCampusTrigger, setFitCampusTrigger] = useState(0);
-  const [userLocation, setUserLocation] = useState(null);
+  const [userLocation, setUserLocation] = useState(propUserLocation || null);
   const [locationError, setLocationError] = useState(null);
-  const [layerVisibility, setLayerVisibility] = useState({
-    campusMask: true,
-    corridor: true,
-    garden: true,
-    parking: true,
-    treeDivider: true,
-    routes: true,
-    landmarks: true,
-    entrances: true,
-    walkingNetwork: false
-  });
-  const [showLayerMenu, setShowLayerMenu] = useState(false);
 
-  // Official Presidency University Campus Boundary Polygon (Perimeter)
+  // Sync external user location
+  useEffect(() => {
+    if (propUserLocation) {
+      setUserLocation(propUserLocation);
+    }
+  }, [propUserLocation]);
+
+  // Presidency University Official Coordinates (Itgalpur, Rajankunte, Bengaluru)
+  const presidencyCenter = {
+    lat: 13.171400,
+    lng: 77.536100,
+    zoom: 17.5
+  };
+
+  // Official Campus Perimeter Polygon
   const officialCampusBoundary = useMemo(() => [
     [13.172050, 77.535300], // North-West perimeter
     [13.172150, 77.536190], // North perimeter (Main Gate road)
@@ -287,132 +489,75 @@ export default function CampusMap({
     [13.172050, 77.535300]  // Return to start
   ], []);
 
-  // Outer world polygon for inverted mask
-  const worldMaskPolygon = useMemo(() => [
-    [-85, -180],
-    [-85, 180],
-    [85, 180],
-    [85, -180]
-  ], []);
-
-  // PHASE 2: Automatic Map Expansion
-  // Dynamically computes geographic bounds across all published features, surveyed buildings and locations
+  // Dynamic Campus Bounds for 1-Click Fit Campus
   const dynamicCampusBounds = useMemo(() => {
-    let minLat = 13.1686, maxLat = 13.17215;
-    let minLng = 77.5347, maxLng = 77.5371;
-
-    locations.forEach(loc => {
-      if (loc.coordinates?.lat && loc.coordinates?.lng) {
-        minLat = Math.min(minLat, loc.coordinates.lat);
-        maxLat = Math.max(maxLat, loc.coordinates.lat);
-        minLng = Math.min(minLng, loc.coordinates.lng);
-        maxLng = Math.max(maxLng, loc.coordinates.lng);
-      }
-    });
-
-    features.forEach(feat => {
-      if (feat.coordinates && Array.isArray(feat.coordinates)) {
-        const flatten = (arr) => {
-          if (arr.length === 2 && typeof arr[0] === 'number') {
-            minLat = Math.min(minLat, arr[0]);
-            maxLat = Math.max(maxLat, arr[0]);
-            minLng = Math.min(minLng, arr[1]);
-            maxLng = Math.max(maxLng, arr[1]);
-          } else {
-            arr.forEach(i => Array.isArray(i) && flatten(i));
-          }
-        };
-        flatten(feat.coordinates);
-      }
-    });
-
-    const latBuf = (maxLat - minLat) * 0.06 || 0.0003;
-    const lngBuf = (maxLng - minLng) * 0.06 || 0.0003;
-
     return {
-      southWest: [minLat - latBuf, minLng - lngBuf],
-      northEast: [maxLat + latBuf, maxLng + lngBuf]
+      southWest: [13.16840, 77.53450],
+      northEast: [13.17240, 77.53740]
     };
-  }, [locations, features]);
+  }, []);
 
-  const defaultCoords = campus?.defaultLocation?.coordinates || {
-    lat: 13.1717995,
-    lng: 77.5361915,
-    zoom: 18
-  };
-
-  const campusBounds = campus?.bounds || {
-    southWest: [13.169044795226714, 77.53496327115832],
-    northEast: [13.171866, 77.53670086988951]
-  };
-
-  const handleLocateMe = () => {
-    if (!navigator.geolocation) {
-      setLocationError('Geolocation is not supported by your browser.');
+  // Request High-Precision GPS Location
+  const handleLocateMe = useCallback(() => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser or device.');
       return;
     }
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setUserLocation({
+        const coords = {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
           accuracy: pos.coords.accuracy
-        });
+        };
+        setUserLocation(coords);
         setLocationError(null);
       },
       (err) => {
-        setLocationError('Could not retrieve current location. Please allow GPS permissions.');
+        setLocationError('Could not retrieve GPS location. Please ensure location permissions are enabled.');
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
     );
-  };
+  }, []);
 
-  // Group features by category
-  const featureGroups = useMemo(() => {
-    const corridor = features.find(f => f.featureId === 'feature_walking_avenue_corridor');
-    const gardenArea = features.find(f => f.featureId === 'feature_campus_garden_area');
-    const gardenInterior = features.find(f => f.featureId === 'feature_garden_interior_boundary');
-    const treeDivider = features.find(f => f.featureId === 'feature_central_tree_divider');
-    const parkingArea = features.find(f => f.featureId === 'feature_two_wheeler_parking_area');
-    const parkingEntry = features.find(f => f.featureId === 'feature_parking_entry_span');
-    const mainGateSpan = features.find(f => f.featureId === 'feature_main_gate_span');
-    const rightAvenue = features.find(f => f.featureId === 'feature_walking_avenue_right_side');
-    const leftAvenue = features.find(f => f.featureId === 'feature_walking_avenue_left_side');
-
-    return {
-      corridor,
-      gardenArea,
-      gardenInterior,
-      treeDivider,
-      parkingArea,
-      parkingEntry,
-      mainGateSpan,
-      rightAvenue,
-      leftAvenue
-    };
-  }, [features]);
-
-  // Extract all surveyed building entrances
-  const allBuildingEntrances = useMemo(() => {
-    const list = [];
-    buildings.forEach(b => {
-      if (b.entrances && b.entrances.length > 0) {
-        b.entrances.forEach(ent => {
-          list.push({
-            ...ent,
-            buildingName: b.name,
-            buildingCode: b.shortCode,
-            buildingId: b._id
-          });
-        });
-      }
-    });
+  // Filter Locations for Category & Search
+  const filteredLocationList = useMemo(() => {
+    let list = locations;
+    if (activeCategory && activeCategory !== 'all') {
+      list = list.filter(l => l.category === activeCategory);
+    }
+    if (searchQuery && searchQuery.trim().length > 0) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(l =>
+        l.name?.toLowerCase().includes(q) ||
+        l.shortCode?.toLowerCase().includes(q) ||
+        l.description?.toLowerCase().includes(q)
+      );
+    }
     return list;
-  }, [buildings]);
+  }, [locations, activeCategory, searchQuery]);
+
+  // Marker Icon Selector Helper
+  const getMarkerIcon = useCallback((loc) => {
+    const cat = loc.category?.toLowerCase() || '';
+    if (cat.includes('academic') || cat.includes('building') || loc.shortCode?.includes('BLOCK')) return pinIcons.academic;
+    if (cat.includes('cafe') || loc.shortCode?.includes('CAFE') || loc.name?.toLowerCase().includes('kappi')) return pinIcons.cafe;
+    if (cat.includes('library')) return pinIcons.library;
+    if (cat.includes('medical') || cat.includes('health')) return pinIcons.medical;
+    if (cat.includes('gate') || loc.shortCode?.includes('GATE')) return pinIcons.gate;
+    if (cat.includes('parking')) return pinIcons.parking;
+    if (cat.includes('sport')) return pinIcons.sports;
+    if (cat.includes('garden') || cat.includes('lawn')) return pinIcons.garden;
+    if (cat.includes('door') || loc.roomNumber) return pinIcons.door;
+    return pinIcons.landmark;
+  }, []);
 
   return (
-    <div className={`relative w-full h-full bg-[#0b132b] overflow-hidden ${isPickingCoordinates ? 'cursor-crosshair' : ''}`}>
-      {/* Coordinate Picker Active Banner */}
+    <div className="relative w-full h-full min-h-full overflow-hidden select-none bg-slate-100 dark:bg-[#071322]">
+      {/* ================================================================= */}
+      {/* 1. COORDINATE SURVEY PICKER BANNER (When Active)                  */}
+      {/* ================================================================= */}
       {isPickingCoordinates && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[500] bg-blue-600 text-white px-5 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-blue-400 font-semibold text-xs animate-bounce">
           <Crosshair className="w-4 h-4 text-white animate-spin" />
@@ -420,24 +565,29 @@ export default function CampusMap({
         </div>
       )}
 
-      {/* Leaflet Map Container */}
+      {/* ================================================================= */}
+      {/* 2. FULL-SCREEN LEAFLET MAP ENGINE                                 */}
+      {/* ================================================================= */}
       <MapContainer
-        center={[defaultCoords.lat, defaultCoords.lng]}
-        zoom={defaultCoords.zoom || 18}
-        minZoom={15}
-        maxZoom={22}
-        maxBounds={[ [13.164, 77.530], [13.176, 77.542] ]}
-        maxBoundsViscosity={0.85}
+        center={[presidencyCenter.lat, presidencyCenter.lng]}
+        zoom={presidencyCenter.zoom}
+        minZoom={14}
+        maxZoom={21}
+        maxBounds={[ [13.155, 77.520], [13.185, 77.555] ]}
+        maxBoundsViscosity={0.7}
         zoomControl={false}
-        className="w-full h-full"
+        scrollWheelZoom={true}
+        doubleClickZoom={true}
+        touchZoom={true}
+        className="w-full h-full absolute inset-0 z-0"
       >
         <MapController
-          focusMainGateTrigger={focusMainGateTrigger}
-          fitCampusTrigger={fitCampusTrigger}
-          userLocation={userLocation}
-          defaultLocation={defaultCoords}
-          bounds={dynamicCampusBounds}
+          centerCoords={presidencyCenter}
+          zoomLevel={presidencyCenter.zoom}
           activeRoute={activeRoute}
+          selectedLocation={selectedLocation}
+          fitCampusTrigger={fitCampusTrigger}
+          bounds={dynamicCampusBounds}
         />
 
         <MapClickHandler
@@ -445,273 +595,176 @@ export default function CampusMap({
           onPickCoordinates={onCoordinatePicked}
         />
 
-        {/* Base Tile Layer */}
-        {mapType === 'street' ? (
+        {/* ------------------------------------------------------------- */}
+        {/* BASE GEOGRAPHIC TILE LAYERS (Clean Light / Satellite / Dark)   */}
+        {/* ------------------------------------------------------------- */}
+        {mapType === 'voyager' ? (
           <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution="&copy; OpenStreetMap contributors | Presidency University"
-            maxZoom={20}
+            url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+            subdomains={['a', 'b', 'c', 'd']}
+            attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> | Presidency University'
+            maxZoom={21}
           />
+        ) : mapType === 'satellite' ? (
+          <>
+            <TileLayer
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              attribution="Tiles &copy; Esri, Earthstar Geographics | Presidency University"
+              maxZoom={20}
+            />
+            <TileLayer
+              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager_only_labels/{z}/{x}/{y}{r}.png"
+              subdomains={['a', 'b', 'c', 'd']}
+              maxZoom={20}
+              opacity={0.8}
+            />
+          </>
         ) : (
           <TileLayer
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-            attribution="Tiles &copy; Esri, Earthstar Geographics | Presidency University"
+            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            subdomains={['a', 'b', 'c', 'd']}
+            attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap | Presidency University'
             maxZoom={20}
           />
         )}
 
-        {/* 0. PHASE 1: Campus-Only Geographic Boundary Mask (Suppresses Outside Clutter) */}
-        {layerVisibility.campusMask && (
-          <Polygon
-            positions={[worldMaskPolygon, officialCampusBoundary]}
-            pathOptions={{
-              stroke: false,
-              fillColor: '#0b132b',
-              fillOpacity: 0.65,
-              interactive: false
-            }}
-          />
-        )}
-
-        {/* Official Campus Boundary Perimeter Stroke */}
+        {/* ------------------------------------------------------------- */}
+        {/* PRESIDENCY UNIVERSITY OFFICIAL BOUNDARY PERIMETER              */}
+        {/* ------------------------------------------------------------- */}
         <Polygon
           positions={officialCampusBoundary}
           pathOptions={{
-            color: '#10b981',
+            color: '#059669',
             weight: 3,
             opacity: 0.95,
             fillColor: '#10b981',
-            fillOpacity: 0.02,
+            fillOpacity: 0.05,
             dashArray: '6, 6'
           }}
         >
           <Tooltip sticky>
-            <div className="font-bold text-emerald-400">Presidency University Official Campus Boundary</div>
-            <div className="text-[10px] text-slate-300">Authorized Academic Precinct · Bengaluru</div>
+            <div className="font-bold text-emerald-600 dark:text-emerald-400">
+              Presidency University Bengaluru
+            </div>
+            <div className="text-[10px] text-slate-600 dark:text-slate-300">
+              Official Campus Boundary · Itgalpur Campus
+            </div>
           </Tooltip>
         </Polygon>
 
-        {/* 1. Main Walking Avenue Corridor */}
-        {layerVisibility.corridor && featureGroups.corridor && (
-          <Polygon
-            positions={featureGroups.corridor.coordinates}
-            pathOptions={{
-              color: '#3b82f6',
-              fillColor: '#60a5fa',
-              weight: 2,
-              opacity: 0.85,
-              fillOpacity: 0.3
-            }}
-          >
-            <Tooltip sticky>
-              <div className="font-semibold text-blue-400">Main Walking Avenue Corridor</div>
-              <div className="text-xs text-slate-300">Paved pedestrian walkway from Main Gate</div>
-            </Tooltip>
-          </Polygon>
-        )}
+        {/* ------------------------------------------------------------- */}
+        {/* ARCHITECTURAL CAMPUS FEATURES (Walkways, Quads, Gardens, etc)  */}
+        {/* ------------------------------------------------------------- */}
+        {features.map((feat) => {
+          if (!feat.coordinates || !Array.isArray(feat.coordinates) || feat.coordinates.length < 2) return null;
 
-        {/* 2. Left & Right Avenue Boundaries */}
-        {layerVisibility.corridor && featureGroups.rightAvenue && (
-          <Polyline
-            positions={featureGroups.rightAvenue.coordinates}
-            pathOptions={{ color: '#2563eb', weight: 4, opacity: 0.9 }}
-          />
-        )}
-        {layerVisibility.corridor && featureGroups.leftAvenue && (
-          <Polyline
-            positions={featureGroups.leftAvenue.coordinates}
-            pathOptions={{ color: '#2563eb', weight: 4, opacity: 0.9 }}
-          />
-        )}
+          const isPolygon = feat.geometryType === 'Polygon' || (Array.isArray(feat.coordinates[0]) && Array.isArray(feat.coordinates[0][0]));
+          const coords = feat.coordinates;
 
-        {/* 3. Central Tree Divider */}
-        {layerVisibility.treeDivider && featureGroups.treeDivider && (
-          <Polyline
-            positions={featureGroups.treeDivider.coordinates}
-            pathOptions={{
-              color: '#059669',
-              weight: 6,
-              opacity: 0.95,
-              dashArray: '8, 6'
-            }}
-          >
-            <Tooltip sticky>
-              <div className="font-semibold text-emerald-400">Central Tree Divider</div>
-              <div className="text-xs text-slate-300">Landscaped median along the walking avenue</div>
-            </Tooltip>
-          </Polyline>
-        )}
+          if (isPolygon) {
+            return (
+              <Polygon
+                key={feat.featureId || feat._id}
+                positions={coords}
+                pathOptions={{
+                  color: feat.category === 'Garden' ? '#16a34a' : feat.category === 'Parking' ? '#ea580c' : '#3b82f6',
+                  fillColor: feat.category === 'Garden' ? '#22c55e' : feat.category === 'Parking' ? '#f97316' : '#60a5fa',
+                  weight: 2,
+                  fillOpacity: feat.category === 'Garden' ? 0.35 : feat.category === 'Parking' ? 0.3 : 0.25
+                }}
+              >
+                <Tooltip sticky>
+                  <div className="font-bold text-xs">{feat.featureName || feat.name}</div>
+                  <div className="text-[10px] text-slate-500">{feat.description}</div>
+                </Tooltip>
+              </Polygon>
+            );
+          }
 
-        {/* 4. Campus Garden Area */}
-        {layerVisibility.garden && featureGroups.gardenArea && (
-          <Polygon
-            positions={featureGroups.gardenArea.coordinates}
-            pathOptions={{
-              color: '#15803d',
-              fillColor: '#22c55e',
-              weight: 2,
-              opacity: 0.9,
-              fillOpacity: 0.4
-            }}
-          >
-            <Tooltip sticky>
-              <div className="font-semibold text-green-400">Presidency Campus Garden</div>
-              <div className="text-xs text-slate-300">Lush landscaped student lawns and seating</div>
-            </Tooltip>
-          </Polygon>
-        )}
+          return (
+            <Polyline
+              key={feat.featureId || feat._id}
+              positions={coords}
+              pathOptions={{
+                color: feat.category === 'Gate' ? '#059669' : feat.category === 'Tree' ? '#047857' : '#2563eb',
+                weight: feat.category === 'Gate' ? 6 : 4,
+                opacity: 0.85
+              }}
+            />
+          );
+        })}
 
-        {/* 5. Garden Interior Ending Boundary */}
-        {layerVisibility.garden && featureGroups.gardenInterior && (
-          <Polyline
-            positions={featureGroups.gardenInterior.coordinates}
-            pathOptions={{
-              color: '#166534',
-              weight: 3,
-              opacity: 0.85,
-              dashArray: '4, 4'
-            }}
-          />
-        )}
+        {/* ------------------------------------------------------------- */}
+        {/* VERIFIED WALKING PATHS & PEDESTRIAN NETWORK                   */}
+        {/* ------------------------------------------------------------- */}
+        {walkingPaths.map((p) => {
+          if (!p.geometry || p.geometry.length < 2) return null;
+          return (
+            <Polyline
+              key={p.pathId}
+              positions={p.geometry}
+              pathOptions={{
+                color: p.status === 'active' ? '#64748b' : '#ef4444',
+                weight: 2.5,
+                opacity: 0.45,
+                dashArray: '4, 6'
+              }}
+            />
+          );
+        })}
 
-        {/* 6. Two-Wheeler Parking Area Polygon */}
-        {layerVisibility.parking && featureGroups.parkingArea && (
-          <Polygon
-            positions={featureGroups.parkingArea.coordinates}
-            pathOptions={{
-              color: '#c2410c',
-              fillColor: '#f97316',
-              weight: 2,
-              opacity: 0.9,
-              fillOpacity: 0.35
-            }}
-          >
-            <Tooltip sticky>
-              <div className="font-semibold text-orange-400">Two-Wheeler Parking Area</div>
-              <div className="text-xs text-slate-300">Student & Staff designated two-wheeler parking</div>
-            </Tooltip>
-          </Polygon>
-        )}
-
-        {/* 7. Two-Wheeler Parking Entry Span */}
-        {layerVisibility.parking && featureGroups.parkingEntry && (
-          <Polyline
-            positions={featureGroups.parkingEntry.coordinates}
-            pathOptions={{ color: '#ea580c', weight: 6, opacity: 1.0 }}
-          />
-        )}
-
-        {/* 8. Main Gate Entrance Span */}
-        {featureGroups.mainGateSpan && (
-          <Polyline
-            positions={featureGroups.mainGateSpan.coordinates}
-            pathOptions={{ color: '#10b981', weight: 8, opacity: 1.0 }}
-          >
-            <Tooltip sticky permanent>
-              <div className="font-bold text-emerald-400">Main Gate Entrance Span</div>
-            </Tooltip>
-          </Polyline>
-        )}
-
-        {/* 9. Verified Navigation Walking Route */}
-        {layerVisibility.routes && routes.map(route => (
-          <Polyline
-            key={route._id || route.routeId}
-            positions={route.geometry}
-            pathOptions={{ color: '#38bdf8', weight: 4, opacity: 0.6 }}
-          >
-            <Tooltip sticky>
-              <div className="font-bold text-sky-400">{route.name}</div>
-              <div className="text-xs text-slate-200">
-                {route.distanceMeters}m &bull; ~{route.estimatedWalkingMinutes} min walk
-              </div>
-            </Tooltip>
-          </Polyline>
-        ))}
-
-        {/* 9A. Complete Pedestrian Network Graph (When Toggled) */}
-        {layerVisibility.walkingNetwork && walkingPaths && walkingPaths.map(p => (
-          <Polyline
-            key={p.pathId}
-            positions={p.geometry}
-            pathOptions={{
-              color: p.status === 'active' ? '#64748b' : '#ef4444',
-              weight: 3,
-              opacity: 0.7,
-              dashArray: '4, 6'
-            }}
-          >
-            <Tooltip sticky>
-              <div className="font-semibold text-slate-200">{p.name}</div>
-              <div className="text-[10px] text-slate-400">
-                {p.distanceMeters}m &bull; {p.status} &bull; {p.accessibility ? 'Accessible' : 'Restricted'}
-              </div>
-            </Tooltip>
-          </Polyline>
-        ))}
-
-        {/* 9B. LIVE ACTIVE WALKING ROUTE (GLOWING BLUE PATH + TURN PINS) */}
+        {/* ------------------------------------------------------------- */}
+        {/* LIVE ACTIVE WALKING ROUTE (Cyan/Blue Pedestrian Guidance Path) */}
+        {/* ------------------------------------------------------------- */}
         {activeRoute && activeRoute.geometry && activeRoute.geometry.length > 0 && (
           <>
-            {/* Outer Glow Halo */}
+            {/* Outer Cyan Glow Halo */}
             <Polyline
               positions={activeRoute.geometry}
               pathOptions={{
                 color: '#0284c7',
                 weight: 12,
-                opacity: 0.5,
+                opacity: 0.4,
                 lineCap: 'round',
                 lineJoin: 'round'
               }}
             />
 
-            {/* Inner Vibrant Animated-Style Path */}
+            {/* Inner Vibrant Walking Path */}
             <Polyline
               positions={activeRoute.geometry}
               pathOptions={{
-                color: '#38bdf8',
+                color: '#2563eb',
                 weight: 5,
                 opacity: 1.0,
-                dashArray: '8, 8',
                 lineCap: 'round',
                 lineJoin: 'round'
               }}
-            >
-              <Tooltip sticky permanent>
-                <div className="font-bold text-sky-400">Active Walking Route</div>
-                <div className="text-xs text-slate-200">
-                  {activeRoute.distanceMeters} m &bull; ~{activeRoute.estimatedWalkingMinutes} min walk
-                </div>
-              </Tooltip>
-            </Polyline>
+            />
 
-            {/* Route Start Point Marker (A) */}
+            {/* Route Origin Marker (A) */}
             <Marker
               position={activeRoute.geometry[0]}
-              icon={startRouteIcon}
+              icon={routeStartIcon}
             >
-              <Popup>
-                <div className="p-1">
-                  <div className="text-[10px] uppercase font-bold text-emerald-400">Route Origin (A)</div>
-                  <div className="font-bold text-xs text-white">{activeRoute.startLocation?.name || 'Start Point'}</div>
-                </div>
-              </Popup>
+              <Tooltip permanent sticky>
+                <div className="font-bold text-xs text-emerald-600">Start (A)</div>
+                <div className="text-[10px]">{activeRoute.startLocation?.name || 'Starting Point'}</div>
+              </Tooltip>
             </Marker>
 
             {/* Route Destination Marker (B) */}
             <Marker
               position={activeRoute.geometry[activeRoute.geometry.length - 1]}
-              icon={endRouteIcon}
+              icon={routeEndIcon}
             >
-              <Popup>
-                <div className="p-1">
-                  <div className="text-[10px] uppercase font-bold text-rose-400">Route Destination (B)</div>
-                  <div className="font-bold text-xs text-white">{activeRoute.endLocation?.name || 'Destination'}</div>
-                </div>
-              </Popup>
+              <Tooltip permanent sticky>
+                <div className="font-bold text-xs text-rose-600">Destination (B)</div>
+                <div className="text-[10px]">{activeRoute.endLocation?.name || 'Destination'}</div>
+              </Tooltip>
             </Marker>
 
-            {/* Turn Waypoint Markers */}
+            {/* Waypoint Step Pins */}
             {activeRoute.waypoints && activeRoute.waypoints.map((step, idx) => {
               if (idx === 0 || idx === activeRoute.waypoints.length - 1) return null;
               const stepGeom = activeRoute.geometry[Math.min(idx, activeRoute.geometry.length - 1)];
@@ -720,11 +773,11 @@ export default function CampusMap({
                 <Marker
                   key={`step_${idx}`}
                   position={stepGeom}
-                  icon={createStepIcon(step.stepIndex)}
+                  icon={createWaypointIcon(step.stepIndex)}
                 >
                   <Tooltip sticky>
-                    <div className="font-bold text-sky-300">Turn #{step.stepIndex}</div>
-                    <div className="text-xs text-white">{step.instruction}</div>
+                    <div className="font-bold text-xs text-blue-600">Turn #{step.stepIndex}</div>
+                    <div className="text-[11px] text-slate-700">{step.instruction}</div>
                   </Tooltip>
                 </Marker>
               );
@@ -732,302 +785,124 @@ export default function CampusMap({
           </>
         )}
 
-        {/* 10. Markers / POIs */}
-        {layerVisibility.landmarks && locations.map(loc => {
-          if (!loc.coordinates || loc.coordinates.lat == null || loc.coordinates.lng == null) return null;
+        {/* ------------------------------------------------------------- */}
+        {/* CAMPUS LOCATION PINS (Google Maps Style Pin Drops)            */}
+        {/* ------------------------------------------------------------- */}
+        {filteredLocationList.map((loc) => {
+          const lat = loc.coordinates?.lat || loc.latitude;
+          const lng = loc.coordinates?.lng || loc.longitude;
+          if (lat == null || lng == null) return null;
 
-          let icon = gateIcon;
-          if (loc.category === 'Landmark') icon = fountainIcon;
-          else if (loc.category === 'Parking') icon = parkingIcon;
-          else if (loc.category === 'Garden') icon = gardenIcon;
-          else if (loc.category === 'Academic' || loc.category === 'Building') icon = academicIcon;
-          else if (loc.category === 'Cafe') icon = cafeIcon;
-          else if (loc.category === 'Medical') icon = medicalIcon;
-          else if (loc.category === 'Library') icon = libraryIcon;
-          else if (loc.category === 'Sports') icon = sportsIcon;
+          const isSelected = selectedLocation && (
+            selectedLocation._id === loc._id ||
+            selectedLocation.locationId === loc.locationId ||
+            selectedLocation.shortCode === loc.shortCode
+          );
 
           return (
             <Marker
-              key={loc._id || loc.shortCode}
-              position={[loc.coordinates.lat, loc.coordinates.lng]}
-              icon={icon}
+              key={loc._id || loc.locationId || loc.shortCode}
+              position={[lat, lng]}
+              icon={getMarkerIcon(loc)}
               eventHandlers={{
                 click: () => {
                   if (onSelectLocation) onSelectLocation(loc);
-                  const isBld = loc.category === 'Academic' || loc.category === 'Building' || loc.category === 'Library' || loc.shortCode?.includes('BLOCK') || loc.name?.includes('Block');
-                  if (isBld && onOpenBuildingPopup) {
-                    onOpenBuildingPopup(loc);
-                  }
                 }
               }}
             >
-              <Popup>
-                <div className="p-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                      {loc.category}
-                    </span>
-                    <span className="text-[11px] text-slate-400 font-mono">{loc.shortCode}</span>
-                  </div>
-                  <h3 className="font-bold text-sm text-white mb-1">{loc.name}</h3>
-                  <p className="text-xs text-slate-300 leading-relaxed mb-2">{loc.description}</p>
-                  <div className="text-[10px] text-slate-400 font-mono mb-2">
-                    {loc.coordinates.lat.toFixed(6)}, {loc.coordinates.lng.toFixed(6)}
-                  </div>
-
-                  {(loc.category === 'Academic' || loc.category === 'Building' || loc.category === 'Library') ? (
-                    <div className="space-y-1.5">
-                      <button
-                        onClick={() => onOpenIndoorMap ? onOpenIndoorMap(loc) : onOpenIndoor(loc)}
-                        className="w-full py-1.5 px-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 shadow-md transition-all"
-                        title="BUTTON 1: Open Indoor Map"
-                      >
-                        <Layers className="w-3.5 h-3.5" /> Open Indoor Map
-                      </button>
-
-                      <button
-                        onClick={() => onStartIndoorNavigation ? onStartIndoorNavigation(loc) : onOpenIndoor(loc)}
-                        className="w-full py-1.5 px-3 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 shadow-md transition-all"
-                        title="BUTTON 2: Start Indoor Navigation"
-                      >
-                        <NavigationIcon className="w-3.5 h-3.5" /> Start Indoor Navigation
-                      </button>
-
-                      {onOpenBuildingPopup && (
-                        <button
-                          onClick={() => onOpenBuildingPopup(loc)}
-                          className="w-full py-1 px-2.5 bg-slate-800 hover:bg-slate-750 text-slate-300 text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1 border border-slate-700 transition-colors"
-                        >
-                          <Building2 className="w-3 h-3 text-indigo-400" /> Building Info Card
-                        </button>
-                      )}
-
-                      <button
-                        onClick={() => onSelectLocation && onSelectLocation(loc)}
-                        className="w-full py-1 px-2.5 bg-slate-800 hover:bg-slate-750 text-slate-300 text-[11px] font-semibold rounded-lg flex items-center justify-center gap-1 border border-slate-700 transition-colors"
-                      >
-                        <Compass className="w-3 h-3 text-sky-400" /> Walk to Building (GPS)
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => onSelectLocation && onSelectLocation(loc)}
-                      className="w-full py-1.5 px-3 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5 transition-colors"
-                    >
-                      <NavigationIcon className="w-3.5 h-3.5" /> Start Walking Navigation
-                    </button>
-                  )}
-                </div>
-              </Popup>
+              <Tooltip direction="top" offset={[0, -38]} opacity={0.95}>
+                <div className="font-bold text-xs text-slate-900">{loc.name}</div>
+                <div className="text-[10px] text-slate-500 font-semibold">{loc.category} · {loc.shortCode || 'PU'}</div>
+              </Tooltip>
             </Marker>
           );
         })}
 
-        {/* 11. Surveyed Building Entrances */}
-        {layerVisibility.entrances && allBuildingEntrances.map(ent => (
-          <Marker
-            key={ent.entranceId}
-            position={[ent.coordinates.lat, ent.coordinates.lng]}
-            icon={createEntranceIcon(ent.isAccessible, ent.isPrimary)}
-            eventHandlers={{
-              click: () => onSelectLocation && onSelectLocation({
-                name: `${ent.buildingName} (${ent.name})`,
-                shortCode: `${ent.buildingCode}-ENT`,
-                category: 'Building',
-                description: `Surveyed entrance door for ${ent.buildingName}. Accessible: ${ent.isAccessible ? 'Yes' : 'No'}.`,
-                coordinates: ent.coordinates
-              })
-            }}
-          >
-            <Tooltip sticky>
-              <div className="font-bold text-indigo-300">{ent.buildingName}</div>
-              <div className="text-xs text-slate-200">{ent.name} {ent.isPrimary ? '(Primary)' : ''}</div>
-              {ent.isAccessible && <div className="text-[10px] text-emerald-400 flex items-center gap-1">Wheelchair Accessible</div>}
-            </Tooltip>
-          </Marker>
-        ))}
-
-        {/* 12. Temporary Pick Pin on Map */}
+        {/* ------------------------------------------------------------- */}
+        {/* TEMPORARY SURVEY PICK PIN (When Admin Picking Coordinates)    */}
+        {/* ------------------------------------------------------------- */}
         {pickedCoordinates && (
-          <Marker position={[pickedCoordinates.lat, pickedCoordinates.lng]} icon={pickPinIcon}>
+          <Marker
+            position={[pickedCoordinates.lat, pickedCoordinates.lng]}
+            icon={pinIcons.landmark}
+          >
             <Tooltip permanent>
-              <div className="font-bold text-rose-400">Captured Entrance Point</div>
-              <div className="text-[10px] font-mono text-white">
+              <div className="font-bold text-rose-600">Selected Coordinates</div>
+              <div className="text-[10px] font-mono">
                 {pickedCoordinates.lat.toFixed(6)}, {pickedCoordinates.lng.toFixed(6)}
               </div>
             </Tooltip>
           </Marker>
         )}
 
-        {/* 13. User Live GPS Marker */}
-        {userLocation && (
-          <Marker position={[userLocation.lat, userLocation.lng]} icon={userGpsIcon}>
-            <Popup>
-              <div className="text-xs font-semibold text-white">Your Current GPS Position</div>
-              <div className="text-[10px] text-slate-400">Accuracy: &plusmn;{Math.round(userLocation.accuracy)}m</div>
-            </Popup>
-          </Marker>
+        {/* ------------------------------------------------------------- */}
+        {/* LIVE USER GPS POSITION PIN & ACCURACY RADIUS CIRCLE           */}
+        {/* ------------------------------------------------------------- */}
+        {userLocation && userLocation.lat && userLocation.lng && (
+          <>
+            <Marker position={[userLocation.lat, userLocation.lng]} icon={userGpsIcon}>
+              <Tooltip sticky>
+                <div className="font-bold text-blue-600 text-xs">You are here</div>
+                <div className="text-[10px] text-slate-500">
+                  Accuracy: ±{Math.round(userLocation.accuracy || 5)}m
+                </div>
+              </Tooltip>
+            </Marker>
+
+            {userLocation.accuracy && userLocation.accuracy < 100 && (
+              <Circle
+                center={[userLocation.lat, userLocation.lng]}
+                radius={userLocation.accuracy}
+                pathOptions={{
+                  color: '#3b82f6',
+                  fillColor: '#60a5fa',
+                  fillOpacity: 0.12,
+                  weight: 1.5,
+                  dashArray: '3, 4'
+                }}
+              />
+            )}
+          </>
         )}
+
+        {/* Fixed Google Maps On-Screen Controls */}
+        <LeafletMapControlsWrapper
+          mapType={mapType}
+          setMapType={setMapType}
+          onLocateMe={handleLocateMe}
+          onFitCampus={() => setFitCampusTrigger(t => t + 1)}
+          onSwitch3D={onSwitch3D}
+          onSwitchImmersive={onSwitchImmersive}
+          hasActiveRoute={Boolean(activeRoute)}
+          onClearRoute={onClearRoute}
+        />
       </MapContainer>
 
-      {/* Floating Modern Dark Navy Map Controls */}
-      <div className="absolute top-4 right-4 z-[400] flex flex-col gap-2">
-        <div className="relative">
-          <button
-            onClick={() => setShowLayerMenu(!showLayerMenu)}
-            title="Map Layers & Filters"
-            className="w-11 h-11 bg-[#1e293b]/95 hover:bg-[#334155] border border-slate-700/80 rounded-xl text-slate-200 shadow-xl backdrop-blur-md flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-          >
-            <Layers className="w-5 h-5 text-sky-400" />
-          </button>
-
-          {showLayerMenu && (
-            <div className="absolute right-0 top-13 w-64 bg-[#1e293b]/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl p-4 shadow-2xl text-xs space-y-3">
-              <div className="font-bold text-sm text-white border-b border-slate-700/60 pb-2 flex items-center justify-between">
-                <span>Map Layers</span>
-                <span className="text-[10px] text-sky-400 uppercase tracking-wider font-mono">Presidency GIS</span>
-              </div>
-
-              <div>
-                <label className="text-slate-400 font-medium block mb-1.5">Map View</label>
-                <div className="grid grid-cols-2 gap-1.5 bg-[#0f172a] p-1 rounded-lg border border-slate-800">
-                  <button
-                    onClick={() => setMapType('street')}
-                    className={`py-1.5 rounded-md font-semibold text-xs transition-all ${
-                      mapType === 'street' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    Street Map
-                  </button>
-                  <button
-                    onClick={() => setMapType('satellite')}
-                    className={`py-1.5 rounded-md font-semibold text-xs transition-all ${
-                      mapType === 'satellite' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    Satellite
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-2 pt-1 border-t border-slate-700/60">
-                <label className="text-slate-400 font-medium block mb-1">Feature Overlays</label>
-                <label className="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5">
-                  <span className="flex items-center gap-2">
-                    <Building2 className="w-3.5 h-3.5 text-indigo-400" /> Building Entrances
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={layerVisibility.entrances}
-                    onChange={e => setLayerVisibility({ ...layerVisibility, entrances: e.target.checked })}
-                    className="rounded bg-slate-800 border-slate-700 text-indigo-600"
-                  />
-                </label>
-                <label className="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5">
-                  <span className="flex items-center gap-2">
-                    <Footprints className="w-3.5 h-3.5 text-blue-400" /> Walking Corridor
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={layerVisibility.corridor}
-                    onChange={e => setLayerVisibility({ ...layerVisibility, corridor: e.target.checked })}
-                    className="rounded bg-slate-800 border-slate-700 text-blue-600"
-                  />
-                </label>
-                <label className="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5">
-                  <span className="flex items-center gap-2">
-                    <Trees className="w-3.5 h-3.5 text-green-400" /> Campus Garden
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={layerVisibility.garden}
-                    onChange={e => setLayerVisibility({ ...layerVisibility, garden: e.target.checked })}
-                    className="rounded bg-slate-800 border-slate-700 text-green-600"
-                  />
-                </label>
-                <label className="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5">
-                  <span className="flex items-center gap-2">
-                    <Car className="w-3.5 h-3.5 text-orange-400" /> Parking Area
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={layerVisibility.parking}
-                    onChange={e => setLayerVisibility({ ...layerVisibility, parking: e.target.checked })}
-                    className="rounded bg-slate-800 border-slate-700 text-orange-600"
-                  />
-                </label>
-                <label className="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5">
-                  <span className="flex items-center gap-2">
-                    <NavigationIcon className="w-3.5 h-3.5 text-sky-400" /> Walking Route
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={layerVisibility.routes}
-                    onChange={e => setLayerVisibility({ ...layerVisibility, routes: e.target.checked })}
-                    className="rounded bg-slate-800 border-slate-700 text-sky-600"
-                  />
-                </label>
-                <label className="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5">
-                  <span className="flex items-center gap-2">
-                    <Compass className="w-3.5 h-3.5 text-slate-400" /> Pedestrian Network Grid
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={layerVisibility.walkingNetwork}
-                    onChange={e => setLayerVisibility({ ...layerVisibility, walkingNetwork: e.target.checked })}
-                    className="rounded bg-slate-800 border-slate-700 text-slate-500"
-                  />
-                </label>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Focus Main Gate */}
-        <button
-          onClick={() => setFocusMainGateTrigger(t => t + 1)}
-          title="Focus Main Gate (Default Entrance View)"
-          className="w-11 h-11 bg-[#1e293b]/95 hover:bg-[#334155] border border-slate-700/80 rounded-xl text-slate-200 shadow-xl backdrop-blur-md flex items-center justify-center transition-all hover:scale-105 active:scale-95 group"
-        >
-          <Compass className="w-5 h-5 text-emerald-400 group-hover:rotate-45 transition-transform" />
-        </button>
-
-        {/* Fit Campus */}
-        <button
-          onClick={() => setFitCampusTrigger(t => t + 1)}
-          title="Fit Campus (Show All Mapped Features)"
-          className="w-11 h-11 bg-[#1e293b]/95 hover:bg-[#334155] border border-slate-700/80 rounded-xl text-slate-200 shadow-xl backdrop-blur-md flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-        >
-          <Maximize2 className="w-5 h-5 text-blue-400" />
-        </button>
-
-        {/* Locate Me */}
-        <button
-          onClick={handleLocateMe}
-          title="Locate Me (Current GPS Position)"
-          className="w-11 h-11 bg-[#1e293b]/95 hover:bg-[#334155] border border-slate-700/80 rounded-xl text-slate-200 shadow-xl backdrop-blur-md flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-        >
-          <NavigationIcon className="w-5 h-5 text-amber-400" />
-        </button>
-      </div>
-
-      {/* GPS Location Error Banner */}
+      {/* ================================================================= */}
+      {/* 3. GPS LOCATION ERROR TOAST                                       */}
+      {/* ================================================================= */}
       {locationError && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[400] bg-red-950/90 border border-red-500/50 text-red-200 px-4 py-2 rounded-xl text-xs flex items-center gap-2 shadow-2xl backdrop-blur-md">
-          <Info className="w-4 h-4 text-red-400 shrink-0" />
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[500] bg-rose-600 text-white px-4 py-2 rounded-2xl shadow-2xl text-xs font-semibold flex items-center gap-2">
+          <Info className="w-4 h-4 text-white shrink-0" />
           <span>{locationError}</span>
-          <button onClick={() => setLocationError(null)} className="ml-2 font-bold hover:text-white">&times;</button>
+          <button
+            type="button"
+            onClick={() => setLocationError(null)}
+            className="ml-2 p-0.5 hover:bg-rose-700 rounded-lg text-white font-bold"
+          >
+            ✕
+          </button>
         </div>
       )}
 
-      {/* Campus Map Status Pill */}
-      <div className="absolute bottom-4 left-4 z-[400] bg-[#1e293b]/90 backdrop-blur-md border border-slate-700/60 rounded-full px-3.5 py-1.5 text-[11px] text-slate-300 flex items-center gap-2 shadow-xl">
-        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span className="font-semibold text-white">Presidency University</span>
-        <span className="text-slate-500">|</span>
-        <span className="text-slate-400">
-          {allBuildingEntrances.length} Surveyed Entrances &bull; 13.1718&deg;N, 77.5362&deg;E
-        </span>
+      {/* ================================================================= */}
+      {/* 4. BOTTOM-LEFT CAMPUS BRAND STATUS PILL                           */}
+      {/* ================================================================= */}
+      <div className="hidden sm:flex absolute bottom-4 left-4 z-[400] bg-white/90 dark:bg-[#0b1728]/90 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800 rounded-full px-3.5 py-1.5 text-[11px] text-slate-600 dark:text-slate-300 items-center gap-2 shadow-[0_4px_15px_rgba(0,0,0,0.08)]">
+        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span className="font-extrabold text-slate-900 dark:text-white">Presidency University</span>
+        <span className="text-slate-400">|</span>
+        <span className="text-slate-500 font-mono text-[10px]">13.1714°N, 77.5361°E · Bengaluru GIS</span>
       </div>
     </div>
   );

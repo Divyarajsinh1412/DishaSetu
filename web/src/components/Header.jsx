@@ -171,12 +171,16 @@ export default function Header({
   };
 
   return (
-    <header className="bg-[#0b1a30]/95 backdrop-blur-md border-b border-[#1b3152] z-40 shrink-0 shadow-lg text-slate-100">
+    <header className={`${
+      viewMode === 'map'
+        ? 'absolute top-0 left-0 right-0 z-40 pointer-events-none p-2 sm:p-3 flex flex-col gap-2'
+        : 'bg-[#0b1a30]/95 backdrop-blur-md border-b border-[#1b3152] z-40 shrink-0 shadow-lg text-slate-100'
+    }`}>
       {/* Primary Top Bar */}
-      <div className="h-16 px-3 sm:px-4 lg:px-6 flex items-center justify-between gap-2 sm:gap-4">
+      <div className={viewMode === 'map' ? "flex items-center justify-between gap-2 sm:gap-3 pointer-events-none" : "h-16 px-3 sm:px-4 lg:px-6 flex items-center justify-between gap-2 sm:gap-4"}>
         
         {/* University Brand Header */}
-        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+        <div className={`flex items-center gap-2.5 sm:gap-3 shrink-0 ${viewMode === 'map' ? 'pointer-events-auto bg-[#081528]/95 dark:bg-[#0b1728]/95 backdrop-blur-2xl border border-slate-700/80 rounded-2xl p-2 shadow-[0_8px_30px_rgba(0,0,0,0.3)]' : ''}`}>
           <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#1d4ed8] via-[#0f3460] to-[#b48c26] p-0.5 shadow-md flex items-center justify-center">
             <div className="w-full h-full bg-[#08172c] rounded-[10px] flex items-center justify-center">
               <Compass className="w-4 h-4 sm:w-5 sm:h-5 text-[#d4af37]" />
@@ -198,7 +202,7 @@ export default function Header({
         </div>
 
         {/* Central Search Bar with Instant Results Dropdown (Desktop / Tablet >= 640px) */}
-        <div ref={searchContainerRef} className="hidden sm:block flex-1 max-w-md lg:max-w-xl relative min-w-0">
+        <div ref={searchContainerRef} className={`hidden sm:block flex-1 max-w-md lg:max-w-xl relative min-w-0 ${viewMode === 'map' ? 'pointer-events-auto' : ''}`}>
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
@@ -207,7 +211,7 @@ export default function Header({
               onChange={(e) => onSearchChange(e.target.value)}
               onFocus={() => setIsSearchFocused(true)}
               placeholder="Search buildings, rooms (DG01), departments, cafes, gates..."
-              className="w-full pl-9 pr-8 py-2 bg-[#081528] border border-[#1e385c] rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37]/50 transition-all shadow-inner"
+              className={`w-full pl-9 pr-8 py-2 border rounded-xl text-xs sm:text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37]/50 transition-all ${viewMode === 'map' ? 'bg-[#081528]/95 backdrop-blur-xl border-slate-700/80 shadow-[0_8px_30px_rgba(0,0,0,0.3)]' : 'bg-[#081528] border-[#1e385c] shadow-inner'}`}
             />
             {searchQuery && (
               <button
@@ -279,7 +283,7 @@ export default function Header({
         </div>
 
         {/* Mobile Navigation Controls (< 640px) */}
-        <div className="flex sm:hidden items-center gap-1.5 shrink-0">
+        <div className={`flex sm:hidden items-center gap-1.5 shrink-0 ${viewMode === 'map' ? 'pointer-events-auto bg-[#081528]/95 dark:bg-[#0b1728]/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl p-1 shadow-lg' : ''}`}>
           {/* Mobile Search Toggle Icon */}
           <button
             type="button"
@@ -313,7 +317,7 @@ export default function Header({
         </div>
 
         {/* View Mode Switcher Toolbar */}
-        <div className="hidden lg:flex items-center p-1 bg-[#081528] border border-[#1b3152] rounded-xl shadow-inner shrink-0">
+        <div className={`hidden lg:flex items-center p-1 border rounded-xl shrink-0 ${viewMode === 'map' ? 'pointer-events-auto bg-[#081528]/95 dark:bg-[#0b1728]/95 backdrop-blur-xl border-slate-700/80 shadow-[0_8px_30px_rgba(0,0,0,0.3)]' : 'bg-[#081528] border-[#1b3152] shadow-inner'}`}>
           <button
             type="button"
             onClick={() => onViewModeChange('master')}
@@ -380,7 +384,7 @@ export default function Header({
         </div>
 
         {/* Primary Action Buttons: Directions, Dining, Survey, More */}
-        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <div className={`flex items-center gap-1.5 sm:gap-2 shrink-0 ${viewMode === 'map' ? 'pointer-events-auto bg-[#081528]/95 dark:bg-[#0b1728]/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl p-1 sm:p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.3)]' : ''}`}>
           
           {/* Directions / Wayfinding Route Planner */}
           <button
@@ -545,7 +549,7 @@ export default function Header({
       </div>
 
       {/* Secondary Campus Category Pills Bar */}
-      <div className="px-3 sm:px-4 py-1.5 bg-[#081528]/90 border-t border-[#162a45] flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+      <div className={viewMode === 'map' ? "pointer-events-none flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-[calc(100vw-24px)] pl-0.5" : "px-3 sm:px-4 py-1.5 bg-[#081528]/90 border-t border-[#162a45] flex items-center gap-1.5 overflow-x-auto no-scrollbar"}>
         {categories.map((cat) => {
           const Icon = cat.icon;
           const isActive = activeCategory === cat.id;
@@ -553,13 +557,17 @@ export default function Header({
             <button
               key={cat.id}
               onClick={() => onCategorySelect(cat.id)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all ${
-                isActive
-                  ? 'bg-[#1e3a8a] text-[#d4af37] border border-[#3b82f6]/50 shadow-sm'
-                  : 'bg-[#0d1f38]/70 text-slate-300 hover:text-white hover:bg-[#132c4f] border border-transparent'
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all ${
+                viewMode === 'map'
+                  ? (isActive
+                      ? 'pointer-events-auto bg-blue-600 text-white shadow-lg shadow-blue-600/30 border border-blue-400'
+                      : 'pointer-events-auto bg-[#081528]/95 hover:bg-[#122847] text-slate-200 border border-slate-700/80 shadow-md backdrop-blur-xl hover:scale-105 active:scale-95')
+                  : (isActive
+                      ? 'bg-[#1e3a8a] text-[#d4af37] border border-[#3b82f6]/50 shadow-sm'
+                      : 'bg-[#0d1f38]/70 text-slate-300 hover:text-white hover:bg-[#132c4f] border border-transparent')
               }`}
             >
-              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[#d4af37]' : 'text-slate-400'}`} />
+              <Icon className={`w-3.5 h-3.5 ${isActive ? (viewMode === 'map' ? 'text-white' : 'text-[#d4af37]') : 'text-slate-400'}`} />
               <span>{cat.label}</span>
             </button>
           );

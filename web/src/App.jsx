@@ -18,6 +18,7 @@ import NavigationPanel from './components/NavigationPanel';
 import NavigationGuidanceBar from './components/NavigationGuidanceBar';
 import RoutePlanningModal from './components/navigation/RoutePlanningModal';
 import LocationDetailsModal from './components/LocationDetailsModal';
+import PlaceDetailsCard from './components/common/PlaceDetailsCard';
 import EmergencyModal from './components/EmergencyModal';
 import AdminLoginModal from './components/AdminLoginModal';
 import AdminDashboard from './components/admin/AdminDashboard';
@@ -57,8 +58,8 @@ export default function App() {
   const [walkingPaths, setWalkingPaths] = useState([]);
   const [userLocation, setUserLocation] = useState(null);
 
-  // View Mode: 'master' (Official Presidency Master Campus Map), '3d' (3D Digital Twin), 'immersive' (360° Aerial Tour), or 'map' (2D GPS Map)
-  const [viewMode, setViewMode] = useState('master');
+  // View Mode: 'map' (Full-Screen Google Maps Geographic Engine), 'master' (Official Master Map), '3d' (3D Digital Twin), 'immersive' (360° Aerial Tour), or 'indoor' (Multi-Floor Floorplans)
+  const [viewMode, setViewMode] = useState('map');
   const [showSplash, setShowSplash] = useState(true);
   const [mapMarkers, setMapMarkers] = useState([]);
   const [isMapEditorOpen, setIsMapEditorOpen] = useState(false);
@@ -72,7 +73,7 @@ export default function App() {
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [activeRoute, setActiveRoute] = useState(null);
   const [showDetailedSteps, setShowDetailedSteps] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [sidebarTab, setSidebarTab] = useState('places');
   const [isSOSOpen, setIsSOSOpen] = useState(false);
   const [isAdminLoginOpen, setIsAdminLoginOpen] = useState(false);
@@ -493,42 +494,9 @@ export default function App() {
           />
         </div>
       ) : (
-        <div className="flex-1 flex relative overflow-hidden">
-          {/* Toggle Sidebar Floating Trigger (when collapsed) */}
-          {!isSidebarOpen && (
-            <button
-              onClick={() => setIsSidebarOpen(true)}
-              className="absolute top-4 left-4 z-[400] p-2.5 bg-[#1e293b]/95 backdrop-blur-md border border-slate-700/80 rounded-xl text-slate-200 shadow-xl hover:bg-[#334155] transition-all"
-              title="Open Campus Directory"
-            >
-              <Menu className="w-5 h-5 text-sky-400" />
-            </button>
-          )}
-
-          {/* Collapsible Campus Directory Sidebar */}
-          <Sidebar
-            isOpen={isSidebarOpen}
-            onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
-            locations={filteredLocations}
-            buildings={filteredBuildings}
-            departments={filteredDepartments}
-            features={features}
-            selectedLocation={selectedLocation}
-            onSelectLocation={(loc) => setSelectedLocation(loc)}
-            onStartNavigation={handleStartNavigation}
-            onCalculateRoute={handleCalculateRoute}
-            onOpenIndoor={handleOpenIndoorMap}
-            onOpenBuildingPopup={handleOpenBuildingPopup}
-            onOpenIndoorMap={handleOpenIndoorMap}
-            onStartIndoorNavigation={handleStartIndoorNavigation}
-            userLocation={userLocation}
-            catalog={catalog}
-            activeTab={sidebarTab}
-            onTabChange={setSidebarTab}
-          />
-
-          {/* Interactive Leaflet Campus Map */}
-          <main className="flex-1 relative h-full w-full">
+        <div className="flex-1 relative w-full h-full overflow-hidden">
+          {/* 100% Full-Screen Geographic Campus Map (Google Maps Style) */}
+          <main className="absolute inset-0 w-full h-full z-0">
             <CampusMap
               campus={campus}
               features={features}
@@ -539,6 +507,7 @@ export default function App() {
               selectedLocation={selectedLocation}
               onSelectLocation={(loc) => setSelectedLocation(loc)}
               activeRoute={activeRoute}
+              onClearRoute={() => setActiveRoute(null)}
               isPickingCoordinates={isPickingCoordinates}
               onCoordinatePicked={handleCoordinatePicked}
               pickedCoordinates={pickedCoordinates}
@@ -546,36 +515,81 @@ export default function App() {
               onOpenBuildingPopup={handleOpenBuildingPopup}
               onOpenIndoorMap={handleOpenIndoorMap}
               onStartIndoorNavigation={handleStartIndoorNavigation}
+              onOpenRoutePlanning={handleOpenRoutePlanning}
+              userLocation={userLocation}
+              onSwitch3D={() => setViewMode('3d')}
+              onSwitchImmersive={() => setViewMode('immersive')}
+              language={language}
+              activeCategory={activeCategory}
+              searchQuery={searchQuery}
             />
-
-            {/* Phase 3A: Live Outdoor Walking Guidance Bar */}
-            {activeRoute && (
-              <NavigationGuidanceBar
-                route={activeRoute}
-                onClose={() => setActiveRoute(null)}
-                userLocation={userLocation}
-              />
-            )}
-
-            {/* Turn-by-Turn Walking Navigation Panel (Sidebar summary) */}
-            {activeRoute && (
-              <NavigationPanel
-                route={activeRoute}
-                onClose={() => setActiveRoute(null)}
-              />
-            )}
           </main>
+
+          {/* Toggle Sidebar Floating Trigger (when collapsed) */}
+          {!isSidebarOpen && (
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="absolute top-24 left-3 sm:left-4 z-[400] px-3 py-2 bg-[#081528]/95 dark:bg-[#0b1728]/95 backdrop-blur-xl border border-slate-700/80 rounded-2xl text-slate-200 shadow-2xl hover:bg-[#122847] transition-all flex items-center gap-2 text-xs font-bold active:scale-95"
+              title="Open Campus Directory"
+            >
+              <Menu className="w-4 h-4 text-sky-400" />
+              <span className="hidden sm:inline">Directory</span>
+            </button>
+          )}
+
+          {/* Collapsible Campus Directory Sidebar Drawer (Slides over map, never resizes canvas) */}
+          {isSidebarOpen && (
+            <div className="absolute top-0 bottom-0 left-0 z-[420] w-80 sm:w-96 shadow-2xl animate-in slide-in-from-left duration-200">
+              <Sidebar
+                isOpen={isSidebarOpen}
+                onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
+                locations={filteredLocations}
+                buildings={filteredBuildings}
+                departments={filteredDepartments}
+                features={features}
+                selectedLocation={selectedLocation}
+                onSelectLocation={(loc) => {
+                  setSelectedLocation(loc);
+                  if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                    setIsSidebarOpen(false);
+                  }
+                }}
+                onStartNavigation={handleStartNavigation}
+                onCalculateRoute={handleCalculateRoute}
+                onOpenIndoor={handleOpenIndoorMap}
+                onOpenBuildingPopup={handleOpenBuildingPopup}
+                onOpenIndoorMap={handleOpenIndoorMap}
+                onStartIndoorNavigation={handleStartIndoorNavigation}
+                userLocation={userLocation}
+                catalog={catalog}
+                activeTab={sidebarTab}
+                onTabChange={setSidebarTab}
+              />
+            </div>
+          )}
+
+          {/* Turn-by-Turn Walking Navigation Panel (Floating card) */}
+          {activeRoute && (
+            <NavigationPanel
+              route={activeRoute}
+              onClose={() => setActiveRoute(null)}
+            />
+          )}
         </div>
       )}
 
-      {/* Selected Location Details Modal */}
+      {/* Non-Blocking Floating Place Details Card (Google Maps Style) */}
       {selectedLocation && (
-        <LocationDetailsModal
+        <PlaceDetailsCard
           location={selectedLocation}
           onClose={() => setSelectedLocation(null)}
           onStartNavigation={handleStartNavigation}
           onOpenIndoorMap={handleOpenIndoorMap}
           onStartIndoorNavigation={handleStartIndoorNavigation}
+          onOpenIndoorSurvey={(room) => {
+            setTargetIndoorSurveyRoom(room || null);
+            setIsIndoorSurveyOpen(true);
+          }}
         />
       )}
 
