@@ -342,7 +342,14 @@ export default function MasterCampusMap({
   const filteredFeatures = useMemo(() => {
     let list = allCampusFeatures;
     if (activeCategory && activeCategory !== 'all') {
-      list = list.filter(f => f.category.toLowerCase() === activeCategory.toLowerCase());
+      const target = activeCategory.toLowerCase();
+      list = list.filter(f => {
+        const c = (f.category || '').toLowerCase();
+        if (target === 'academic') return c === 'academic' || c === 'administrative';
+        if (target === 'cafe') return c === 'cafe' || c === 'food' || c === 'dining';
+        if (target === 'garden') return c === 'garden' || c === 'outdoor' || c === 'lawn';
+        return c === target;
+      });
     }
     const query = (localSearch || searchQuery || '').trim().toLowerCase();
     if (query) {
@@ -936,11 +943,11 @@ export default function MasterCampusMap({
         backgroundSize: '32px 32px'
       }}
     >
-      {/* Floating Quick Navigation Preset Pills (Positioned cleanly below main floating header & category chips) */}
+      {/* Floating Quick Navigation Preset Pills (Positioned cleanly below main floating header) */}
       <div
         onWheel={(e) => e.stopPropagation()}
         onTouchMove={(e) => e.stopPropagation()}
-        className="absolute top-[112px] sm:top-[116px] left-3 sm:left-4 z-30 pointer-events-auto flex items-center gap-1.5 p-1 bg-white/95 dark:bg-[#202124]/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-700/80 rounded-2xl shadow-gmap-floating text-xs font-bold overflow-x-auto max-w-[calc(100vw-24px)] no-scrollbar touch-pan-x"
+        className="absolute top-[68px] sm:top-[74px] left-3 sm:left-4 z-30 pointer-events-auto flex items-center gap-1.5 p-1 bg-white/95 dark:bg-[#202124]/95 backdrop-blur-md border border-slate-200/90 dark:border-slate-700/80 rounded-2xl shadow-gmap-floating text-xs font-bold overflow-x-auto max-w-[calc(100vw-24px)] no-scrollbar touch-pan-x"
       >
         <button
           type="button"

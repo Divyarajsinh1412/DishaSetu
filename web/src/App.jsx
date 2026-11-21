@@ -504,9 +504,6 @@ export default function App() {
         activeCategory={activeCategory}
         onCategorySelect={(cat) => {
           setActiveCategory(cat);
-          if (cat === 'Cafe') {
-            setIsCafeModalOpen(true);
-          }
         }}
         onOpenSOS={() => setIsSOSOpen(true)}
         onOpenAdmin={() => setIsAdminDashboardOpen(true)}

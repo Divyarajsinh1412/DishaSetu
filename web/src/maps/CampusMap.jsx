@@ -739,7 +739,14 @@ export default function CampusMap({
   const filteredLocationList = useMemo(() => {
     let list = allCampusPoints;
     if (activeCategory && activeCategory !== 'all') {
-      list = list.filter(l => l.category === activeCategory);
+      const target = activeCategory.toLowerCase();
+      list = list.filter(l => {
+        const c = (l.category || '').toLowerCase();
+        if (target === 'academic') return c === 'academic' || c === 'administrative';
+        if (target === 'cafe') return c === 'cafe' || c === 'food' || c === 'dining';
+        if (target === 'garden') return c === 'garden' || c === 'outdoor' || c === 'lawn';
+        return c === target;
+      });
     }
     if (searchQuery && searchQuery.trim().length > 0) {
       const q = searchQuery.toLowerCase().trim();

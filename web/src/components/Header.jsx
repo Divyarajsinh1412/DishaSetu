@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Compass,
   Search,
@@ -79,6 +80,41 @@ export default function Header({
   const moreMenuRef = useRef(null);
   const layersMenuRef = useRef(null);
   const categoryMenuRef = useRef(null);
+  const categoryButtonRef = useRef(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 70, left: 16, width: 440 });
+
+  // Update dynamic position for the portaled dropdown
+  useEffect(() => {
+    if (!isCategoryMenuOpen) return;
+    const updatePos = () => {
+      if (!categoryButtonRef.current) return;
+      const rect = categoryButtonRef.current.getBoundingClientRect();
+      const isMobile = window.innerWidth < 640;
+      if (isMobile) {
+        setDropdownPos({
+          top: Math.max(12, rect.bottom + 8),
+          left: 12,
+          width: Math.min(window.innerWidth - 24, 440)
+        });
+      } else {
+        const panelWidth = 440;
+        const maxLeft = window.innerWidth - panelWidth - 16;
+        const left = Math.max(16, Math.min(rect.left, maxLeft));
+        setDropdownPos({
+          top: rect.bottom + 8,
+          left,
+          width: panelWidth
+        });
+      }
+    };
+    updatePos();
+    window.addEventListener('resize', updatePos);
+    window.addEventListener('scroll', updatePos, true);
+    return () => {
+      window.removeEventListener('resize', updatePos);
+      window.removeEventListener('scroll', updatePos, true);
+    };
+  }, [isCategoryMenuOpen]);
 
   // Close menus on outside click or Escape key
   useEffect(() => {
@@ -91,7 +127,12 @@ export default function Header({
       }
     };
     const handleOutsideClick = (e) => {
-      if (categoryMenuRef.current && !categoryMenuRef.current.contains(e.target)) {
+      if (
+        categoryMenuRef.current &&
+        !categoryMenuRef.current.contains(e.target) &&
+        categoryButtonRef.current &&
+        !categoryButtonRef.current.contains(e.target)
+      ) {
         setIsCategoryMenuOpen(false);
       }
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
@@ -463,8 +504,9 @@ export default function Header({
           </div>
 
           {/* 2. COMPACT "EXPLORE CAMPUS" CATEGORY SELECTOR DROPDOWN */}
-          <div ref={categoryMenuRef} className="relative shrink-0">
+          <div className="relative shrink-0">
             <button
+              ref={categoryButtonRef}
               type="button"
               onClick={() => {
                 setIsCategoryMenuOpen(!isCategoryMenuOpen);
@@ -516,106 +558,125 @@ export default function Header({
               />
             </button>
 
-            {/* Dropdown Popover Panel */}
-            {isCategoryMenuOpen && (
-              <div
-                onWheel={(e) => e.stopPropagation()}
-                onTouchMove={(e) => e.stopPropagation()}
-                data-prevent-map-zoom="true"
-                className="fixed inset-x-3 top-18 sm:top-full sm:inset-auto sm:left-0 sm:mt-2.5 w-auto sm:w-[440px] bg-white/98 dark:bg-[#1e293b]/98 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200/90 dark:border-slate-700/80 p-3.5 z-[550] animate-in fade-in zoom-in-95 duration-150 overscroll-contain isolate-scroll select-none max-h-[75vh] overflow-y-auto custom-scrollbar"
-              >
-                {/* Popover Header */}
-                <div className="flex items-center justify-between px-2 pb-2.5 mb-2 border-b border-slate-100 dark:border-slate-800/80">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                      <Compass className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-extrabold text-slate-900 dark:text-white">
-                        Explore Campus
+            {/* Dropdown Popover Panel via React Portal */}
+            {isCategoryMenuOpen && typeof document !== 'undefined' && createPortal(
+              <div className="fixed inset-0 z-[9999] pointer-events-auto">
+                {/* Clickable Backdrop to close dropdown on outside click */}
+                <div
+                  className="fixed inset-0 bg-black/25 backdrop-blur-[1px] transition-opacity animate-in fade-in duration-150"
+                  onClick={() => setIsCategoryMenuOpen(false)}
+                  onWheel={(e) => e.stopPropagation()}
+                  onTouchMove={(e) => e.stopPropagation()}
+                />
+
+                {/* Popover Dropdown Panel */}
+                <div
+                  ref={categoryMenuRef}
+                  style={{
+                    position: 'fixed',
+                    top: `${dropdownPos.top}px`,
+                    left: `${dropdownPos.left}px`,
+                    width: `${dropdownPos.width}px`
+                  }}
+                  onWheel={(e) => e.stopPropagation()}
+                  onTouchMove={(e) => e.stopPropagation()}
+                  data-prevent-map-zoom="true"
+                  className="bg-white/98 dark:bg-[#1e293b]/98 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200/90 dark:border-slate-700/80 p-3.5 animate-in fade-in zoom-in-95 duration-150 select-none max-h-[75vh] overflow-y-auto custom-scrollbar overscroll-contain isolate-scroll pointer-events-auto"
+                >
+                  {/* Popover Header */}
+                  <div className="flex items-center justify-between px-2 pb-2.5 mb-2 border-b border-slate-100 dark:border-slate-800/80">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                        <Compass className="w-4 h-4" />
                       </div>
-                      <div className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
-                        Select a category to filter locations on the map
+                      <div>
+                        <div className="text-xs font-extrabold text-slate-900 dark:text-white">
+                          Explore Campus
+                        </div>
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                          Select a category to filter locations on the map
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {isFiltered && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        onCategorySelect('all');
-                        setIsCategoryMenuOpen(false);
-                      }}
-                      className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 px-2.5 py-1 rounded-xl transition-colors flex items-center gap-1"
-                    >
-                      <RotateCcw className="w-3 h-3" />
-                      <span>All Places</span>
-                    </button>
-                  )}
-                </div>
-
-                {/* Categories Grid (2-column on desktop, 1-column on mobile) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                  {categories.map((cat) => {
-                    const Icon = cat.icon;
-                    const isActive = activeCategory === cat.id;
-                    const count = categoryCounts[cat.id];
-
-                    return (
+                    {isFiltered && (
                       <button
-                        key={cat.id}
                         type="button"
                         onClick={() => {
-                          onCategorySelect(cat.id);
+                          onCategorySelect('all');
                           setIsCategoryMenuOpen(false);
                         }}
-                        className={`p-2.5 rounded-2xl text-left flex items-center gap-2.5 transition-all group ${
-                          isActive
-                            ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 ring-2 ring-blue-500/30'
-                            : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-200 border border-transparent hover:border-slate-200/60 dark:hover:border-slate-700/60'
-                        }`}
+                        className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 px-2.5 py-1 rounded-xl transition-colors flex items-center gap-1"
                       >
-                        {/* Category Icon Badge */}
-                        <div
-                          className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
+                        <RotateCcw className="w-3 h-3" />
+                        <span>All Places</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Categories Grid (2-column on desktop, 1-column on mobile) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {categories.map((cat) => {
+                      const Icon = cat.icon;
+                      const isActive = activeCategory === cat.id;
+                      const count = categoryCounts[cat.id];
+
+                      return (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => {
+                            onCategorySelect(cat.id);
+                            setIsCategoryMenuOpen(false);
+                          }}
+                          className={`p-2.5 rounded-2xl text-left flex items-center gap-2.5 transition-all group ${
                             isActive
-                              ? 'bg-white/20 text-white'
-                              : cat.color
+                              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 ring-2 ring-blue-500/30'
+                              : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-200 border border-transparent hover:border-slate-200/60 dark:hover:border-slate-700/60'
                           }`}
                         >
-                          <Icon className="w-4 h-4" />
-                        </div>
-
-                        {/* Category Name & Count */}
-                        <div className="flex-1 min-w-0">
-                          <div className={`text-xs font-bold leading-tight truncate ${isActive ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>
-                            {cat.label}
+                          {/* Category Icon Badge */}
+                          <div
+                            className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
+                              isActive
+                                ? 'bg-white/20 text-white'
+                                : cat.color
+                            }`}
+                          >
+                            <Icon className="w-4 h-4" />
                           </div>
-                          {count != null && (
-                            <div className={`text-[10px] mt-0.5 truncate ${isActive ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'}`}>
-                              {count} {count === 1 ? 'place' : 'places'}
+
+                          {/* Category Name & Count */}
+                          <div className="flex-1 min-w-0">
+                            <div className={`text-xs font-bold leading-tight truncate ${isActive ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>
+                              {cat.label}
+                            </div>
+                            {count != null && (
+                              <div className={`text-[10px] mt-0.5 truncate ${isActive ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'}`}>
+                                {count} {count === 1 ? 'place' : 'places'}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Checkmark when active */}
+                          {isActive && (
+                            <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                              <Check className="w-3 h-3 text-white" />
                             </div>
                           )}
-                        </div>
+                        </button>
+                      );
+                    })}
+                  </div>
 
-                        {/* Checkmark when active */}
-                        {isActive && (
-                          <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center shrink-0">
-                            <Check className="w-3 h-3 text-white" />
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
+                  {/* Popover Footer */}
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 px-1">
+                    <span>{MASTER_CAMPUS_FEATURES.length} Verified Facilities</span>
+                    <span className="font-mono">Presidency University GIS</span>
+                  </div>
                 </div>
-
-                {/* Popover Footer */}
-                <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 px-1">
-                  <span>{MASTER_CAMPUS_FEATURES.length} Verified Facilities</span>
-                  <span className="font-mono">Presidency University GIS</span>
-                </div>
-              </div>
+              </div>,
+              document.body
             )}
           </div>
         </div>
