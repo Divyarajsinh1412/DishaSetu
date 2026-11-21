@@ -34,7 +34,8 @@ import {
   LocateFixed,
   CornerUpRight,
   Eye,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Smartphone
 } from 'lucide-react';
 import { getTranslation } from '../services/localization';
 import { COMPLETE_CAMPUS_CATALOG } from '../services/campusCatalog';
@@ -57,6 +58,7 @@ export default function Header({
   onOpenRoutePlanning,
   onOpenAIAssistant,
   onOpenEvents,
+  onOpenFlutterApp,
   onSelectLocation,
   locations = [],
   viewMode = 'map',
@@ -472,6 +474,19 @@ export default function Header({
             <span className="hidden xl:inline">Events</span>
           </button>
 
+          {/* Flutter Mobile App Info Button */}
+          {onOpenFlutterApp && (
+            <button
+              type="button"
+              onClick={onOpenFlutterApp}
+              className="hidden lg:flex h-11 px-3 bg-white dark:bg-[#202124] text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 rounded-2xl shadow-gmap-search border border-slate-200/90 dark:border-slate-700/80 items-center gap-1.5 text-xs font-bold transition-all active:scale-95 group shrink-0"
+              title="DishaSetu Mobile App (Flutter Native)"
+            >
+              <Smartphone className="w-4 h-4 text-blue-500 group-hover:scale-110 transition-transform" />
+              <span className="hidden 2xl:inline">Flutter App</span>
+            </button>
+          )}
+
           {/* Emergency SOS Button (Google Maps Alert Red) */}
           <button
             type="button"
@@ -549,6 +564,17 @@ export default function Header({
                   <HelpCircle className="w-4 h-4 text-sky-600" />
                   <span>Report Obstacle / Issue</span>
                 </button>
+
+                {onOpenFlutterApp && (
+                  <button
+                    type="button"
+                    onClick={() => { onOpenFlutterApp(); setIsMoreMenuOpen(false); }}
+                    className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition-colors font-bold"
+                  >
+                    <Smartphone className="w-4 h-4 text-blue-500" />
+                    <span>Flutter Mobile App</span>
+                  </button>
+                )}
 
                 <div className="h-px bg-slate-100 dark:bg-slate-700 my-1" />
 

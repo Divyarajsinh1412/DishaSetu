@@ -24,6 +24,7 @@ import AdminLoginModal from './components/AdminLoginModal';
 import AdminDashboard from './components/admin/AdminDashboard';
 import CampusAIAssistantModal from './components/assistant/CampusAIAssistantModal';
 import CampusEventsModal from './components/events/CampusEventsModal';
+import FlutterAppModal from './components/common/FlutterAppModal';
 import Toast from './components/common/Toast';
 import {
   fetchCampusData,
@@ -95,6 +96,7 @@ export default function App() {
   const [routePlanningDest, setRoutePlanningDest] = useState('bld_d_block');
   const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false);
   const [isEventsModalOpen, setIsEventsModalOpen] = useState(false);
+  const [isFlutterModalOpen, setIsFlutterModalOpen] = useState(false);
   const [language, setLanguage] = useState(() => localStorage.getItem('dishasetu_lang') || 'en');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -113,7 +115,8 @@ export default function App() {
     isIssueReportOpen ||
     isMapEditorOpen ||
     isAIAssistantOpen ||
-    isEventsModalOpen
+    isEventsModalOpen ||
+    isFlutterModalOpen
   );
 
   // Open Wayfinding / Route Planning Modal
@@ -524,6 +527,7 @@ export default function App() {
         onOpenRoutePlanning={handleOpenRoutePlanning}
         onOpenAIAssistant={() => setIsAIAssistantOpen(true)}
         onOpenEvents={() => setIsEventsModalOpen(true)}
+        onOpenFlutterApp={() => setIsFlutterModalOpen(true)}
         onSelectLocation={(loc) => setSelectedLocation(loc)}
         locations={filteredLocations}
         viewMode={viewMode}
@@ -776,6 +780,12 @@ export default function App() {
           setActiveRoute(route);
           if (viewMode !== 'master' && viewMode !== 'map') setViewMode('map');
         }}
+      />
+
+      {/* DishaSetu Flutter Mobile App Showcase & Instructions Modal */}
+      <FlutterAppModal
+        isOpen={isFlutterModalOpen}
+        onClose={() => setIsFlutterModalOpen(false)}
       />
 
       {/* =================================================================== */}
