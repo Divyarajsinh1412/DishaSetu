@@ -359,6 +359,14 @@ export default function Header({
       color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/40'
     },
     {
+      id: 'main-lawn-demo',
+      mode: 'main-lawn-demo',
+      title: 'Main Lawn Demo',
+      subtitle: 'Authoritative 14-Node GPS Polygon',
+      icon: Trees,
+      color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40'
+    },
+    {
       id: 'kml-demo',
       mode: 'kml-demo',
       title: 'KML Map Demo',
@@ -845,6 +853,18 @@ export default function Header({
                 >
                   <Crosshair className="w-4 h-4 text-emerald-600" />
                   <span>Map Marker Editor</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onViewModeChange) onViewModeChange('main-lawn-demo');
+                    setIsMoreMenuOpen(false);
+                  }}
+                  className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition-colors font-bold"
+                >
+                  <Trees className="w-4 h-4 text-emerald-500" />
+                  <span>Main Lawn Demo (14-Node Preview)</span>
                 </button>
 
                 <button

@@ -203,3 +203,15 @@ body {
   overscroll-behavior: contain !important;
 }
 
+/* Custom Main Lawn Demo Map Tooltip */
+.main-lawn-center-label {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+.main-lawn-center-label::before {
+  display: none !important;
+}
+
+
