@@ -1157,8 +1157,8 @@ export default function MasterCampusMap({
                     </polygon>
                     {/* Centered Main Lawn Label */}
                     <text
-                      x={kmlOverlays.mainLawnCenter ? kmlOverlays.mainLawnCenter[0] : 505}
-                      y={kmlOverlays.mainLawnCenter ? kmlOverlays.mainLawnCenter[1] : 605}
+                      x={kmlOverlays.mainLawnCenter ? kmlOverlays.mainLawnCenter[0] : 595}
+                      y={kmlOverlays.mainLawnCenter ? kmlOverlays.mainLawnCenter[1] : 590}
                       textAnchor="middle"
                       dominantBaseline="middle"
                       fill="#0f172a"

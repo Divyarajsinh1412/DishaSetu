@@ -15,17 +15,22 @@ import {
   MAIN_LAWN_CENTER
 } from './mainLawnDemoData';
 
-// SVG Mapping parameters for Master Campus Map (viewBox 0 0 1000 1422)
+// Calibrated Perspective Homography Matrix for Master Campus Map (viewBox 0 0 1000 1422)
+// Accurately maps surveyed GPS coordinates to the illustrated campus master map
 const lat0 = 13.1700;
 const lng0 = 77.5360;
-const ax = 27.508115, bx = -9.116564, cx = 579.0793;
-const ay = -2.417814, by = -17.802639, cy = 649.2956;
+const H = [
+  [51.1333046, -23.3175022, 636.978465],
+  [18.8427871, -26.4840471, 627.040870],
+  [0.051377301, -0.026919293, 1.0]
+];
 
 export function projectGpsToMasterMapSvg(lat, lng) {
   const u = (lng - lng0) * 10000;
   const v = (lat - lat0) * 10000;
-  const x = ax * u + bx * v + cx;
-  const y = ay * u + by * v + cy;
+  const denom = H[2][0] * u + H[2][1] * v + H[2][2];
+  const x = (H[0][0] * u + H[0][1] * v + H[0][2]) / denom;
+  const y = (H[1][0] * u + H[1][1] * v + H[1][2]) / denom;
   return [parseFloat(x.toFixed(1)), parseFloat(y.toFixed(1))];
 }
 
@@ -49,7 +54,7 @@ export const MAIN_LAWN_GEOMETRY = {
     const [x, y] = projectGpsToMasterMapSvg(lat, lng);
     return `${x},${y}`;
   }).join(' '),
-  svgCenter: [505, 605],
+  svgCenter: [595, 590],
   metrics: MAIN_LAWN_KML.metrics,
   style: {
     fillColor: 'rgba(34, 197, 94, 0.45)', // Green transparent fill matching reference campus map

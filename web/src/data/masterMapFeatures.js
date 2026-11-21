@@ -501,19 +501,18 @@ export const MASTER_CAMPUS_FEATURES = [
     code: 'PU-MAIN-LAWN',
     category: 'Garden',
     type: 'polygon',
-    normalizedX: 0.5850,
-    normalizedY: 0.4200,
+    normalizedX: 0.5900,
+    normalizedY: 0.4150,
     polygonCoordinates: [
-      [0.550, 0.255],
-      [0.680, 0.285],
-      [0.620, 0.540],
-      [0.545, 0.580],
-      [0.485, 0.580],
-      [0.540, 0.255]
+      [0.5969, 0.2569], // Top-Left corner (near Main Gate avenue)
+      [0.6810, 0.2786], // Top-Right corner (near Frisking Area road)
+      [0.6192, 0.5392], // Bottom-Right corner (opposite Faculty Parking)
+      [0.5695, 0.5392], // Bottom notch (cross-road junction)
+      [0.4871, 0.5778]  // Bottom-Left corner (opposite Bus Boarding / Fountain road)
     ],
     description: 'Lush expansive central campus green lawn providing peaceful student relaxation, garden paths, and grand ceremonial avenue view.',
-    latitude: 13.17135,
-    longitude: 77.53675,
+    latitude: 13.17032,
+    longitude: 77.53605,
     status: 'Verified'
   },
   {
