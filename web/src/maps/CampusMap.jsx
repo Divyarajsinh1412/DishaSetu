@@ -44,6 +44,7 @@ import {
   Map as MapIcon
 } from 'lucide-react';
 import { MASTER_CAMPUS_FEATURES } from '../data/masterMapFeatures';
+import { MAIN_LAWN_SURVEYED_GPS_COORDINATES } from '../data/gardenAreaCoords';
 
 // =====================================================================
 // AUTHENTIC GOOGLE MAPS PIN GENERATOR (SVG Teardrop Drop Pins)
@@ -882,10 +883,74 @@ export default function CampusMap({
         </Polygon>
 
         {/* ------------------------------------------------------------- */}
+        {/* AUTHORITATIVE SURVEYED MAIN LAWN / GARDEN AREA (77 GPS Points) */}
+        {/* ------------------------------------------------------------- */}
+        <Polygon
+          positions={MAIN_LAWN_SURVEYED_GPS_COORDINATES}
+          pathOptions={{
+            color: '#15803d',
+            fillColor: '#22c55e',
+            weight: 2.5,
+            opacity: 0.95,
+            fillOpacity: 0.32
+          }}
+          eventHandlers={{
+            click: () => {
+              if (onSelectLocation) {
+                onSelectLocation({
+                  locationId: 'loc_main_lawn',
+                  name: 'Main Lawn / Garden Area',
+                  category: 'Garden',
+                  description: 'Central campus green lawn and landscaped gardens, surveyed via Google Earth KML (77 GPS points).',
+                  coordinates: { lat: 13.17032, lng: 77.53605 }
+                });
+              }
+            }
+          }}
+        >
+          <Tooltip sticky>
+            <div className="font-bold text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>Main Lawn / Garden Area</span>
+            </div>
+            <div className="text-[10px] text-slate-600 dark:text-slate-400">
+              Presidency University Central Campus Garden &bull; 77 Surveyed GPS Points
+            </div>
+          </Tooltip>
+          <Popup>
+            <div className="p-1 min-w-[220px]">
+              <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 mb-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                <span>Main Lawn / Garden Area</span>
+              </div>
+              <div className="text-[11px] text-slate-600 dark:text-slate-300 space-y-1 mb-2">
+                <div><strong>Category:</strong> Campus Gardens &amp; Lawns</div>
+                <div><strong>Status:</strong> <span className="text-emerald-600 font-bold">Verified KML Surveyed</span></div>
+                <div><strong>GPS Accuracy:</strong> 77 Boundary Coordinates</div>
+                <div><strong>Location:</strong> Central Promenade, between Main Avenue and Faculty Parking</div>
+              </div>
+              {onOpenRoutePlanning && (
+                <button
+                  type="button"
+                  onClick={() => onOpenRoutePlanning('node_main_gate', 'loc_main_lawn')}
+                  className="w-full py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+                >
+                  <NavigationIcon className="w-3.5 h-3.5" />
+                  <span>Navigate to Main Lawn</span>
+                </button>
+              )}
+            </div>
+          </Popup>
+        </Polygon>
+
+        {/* ------------------------------------------------------------- */}
         {/* ARCHITECTURAL CAMPUS FEATURES (Walkways, Quads, Gardens, etc)  */}
         {/* ------------------------------------------------------------- */}
         {features.map((feat) => {
           if (!feat.coordinates || !Array.isArray(feat.coordinates) || feat.coordinates.length < 2) return null;
+          if (feat.featureId === 'feature_campus_garden_area' || feat.name === 'Main Lawn / Garden Area' || feat.name === 'Presidency Campus Central Garden') {
+            return null;
+          }
 
           const isPolygon = feat.geometryType === 'Polygon' || (Array.isArray(feat.coordinates[0]) && Array.isArray(feat.coordinates[0][0]));
           const coords = feat.coordinates;

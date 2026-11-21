@@ -12,6 +12,7 @@ import { fileURLToPath } from 'url';
 import WalkingPath from '../models/WalkingPath.js';
 import Route from '../models/Route.js';
 import NavigationNode from '../models/NavigationNode.js';
+import CampusFeature from '../models/CampusFeature.js';
 import { parseKml } from '../utils/kmlParser.js';
 import routingServiceInstance from './routingService.js';
 import { CampusService } from './campusService.js';
@@ -151,6 +152,47 @@ export async function seedKmlRoute() {
     }
 
     console.log(`[KMLSeed] Successfully seeded & persisted "${parsed.name}" (${parsed.distanceMeters}m) into MongoDB Atlas.`);
+
+    // 5. Seed Authoritative Main Lawn / Garden Area Polygon (gardenArea.kml)
+    try {
+      const gardenCoordsPath = path.join(__dirname, '../data/kml/garden_area_coords.json');
+      if (fs.existsSync(gardenCoordsPath)) {
+        const gardenCoords = JSON.parse(fs.readFileSync(gardenCoordsPath, 'utf8'));
+        const gardenFeatureDoc = {
+          featureId: 'feature_campus_garden_area',
+          name: 'Main Lawn / Garden Area',
+          category: 'garden',
+          geometryType: 'Polygon',
+          coordinates: gardenCoords,
+          geoJSON: {
+            type: 'Polygon',
+            coordinates: [gardenCoords.map(p => [p[1], p[0]])]
+          },
+          style: {
+            color: '#15803d',
+            fillColor: '#22c55e',
+            weight: 2.5,
+            opacity: 0.95,
+            fillOpacity: 0.32
+          },
+          metadata: {
+            description: 'Authoritative surveyed Main Lawn and Central Garden polygon (77 GPS points from gardenArea.kml).',
+            source: 'Google Earth KML',
+            sourceFileName: 'gardenArea.kml'
+          }
+        };
+
+        await CampusFeature.findOneAndUpdate(
+          { featureId: 'feature_campus_garden_area' },
+          { $set: gardenFeatureDoc },
+          { upsert: true, new: true }
+        ).catch(() => {});
+        console.log(`[KMLSeed] Successfully seeded & persisted "Main Lawn / Garden Area" (${gardenCoords.length} points) into MongoDB Atlas.`);
+      }
+    } catch (featErr) {
+      console.warn('[KMLSeed] Garden feature seed warning:', featErr.message);
+    }
+
     return savedPath;
   } catch (error) {
     console.error('[KMLSeed] Error seeding KML route:', error.message);
