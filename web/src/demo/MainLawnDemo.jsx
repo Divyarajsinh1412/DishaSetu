@@ -13,11 +13,7 @@ import {
   FileCode,
   MapPin
 } from 'lucide-react';
-import {
-  MAIN_LAWN_MASTER_SVG_STRING,
-  MAIN_LAWN_MASTER_CENTER,
-  MAIN_LAWN_KML
-} from './masterMapKmlData';
+import { MAIN_LAWN_GEOMETRY } from './campusGeometryRegistry';
 
 export default function MainLawnDemo({ onExit }) {
   // Main Lawn polygon visibility
@@ -28,7 +24,7 @@ export default function MainLawnDemo({ onExit }) {
   const [copiedCoords, setCopiedCoords] = useState(false);
 
   const handleCopyCoords = () => {
-    const text = MAIN_LAWN_KML.coordinates
+    const text = MAIN_LAWN_GEOMETRY.coordinates
       .map(([lat, lng], idx) => `#${idx + 1}: ${lat.toFixed(6)}, ${lng.toFixed(6)}`)
       .join('\n');
     navigator.clipboard.writeText(text);
@@ -107,8 +103,9 @@ export default function MainLawnDemo({ onExit }) {
         <MasterCampusMap
           kmlOverlays={{
             showMainLawn,
-            mainLawnPoints: MAIN_LAWN_MASTER_SVG_STRING,
-            mainLawnCenter: MAIN_LAWN_MASTER_CENTER,
+            showCampusBoundary: false,
+            mainLawnPoints: MAIN_LAWN_GEOMETRY.svgPointsString,
+            mainLawnCenter: MAIN_LAWN_GEOMETRY.svgCenter,
             onSelectPolygon: () => setShowInfoModal(true)
           }}
         />
@@ -211,7 +208,7 @@ export default function MainLawnDemo({ onExit }) {
                 <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/60">
                   <span className="text-slate-400 block text-[10px]">Total Coordinates</span>
                   <span className="text-base font-bold text-white font-mono">
-                    {MAIN_LAWN_KML.pointCount} points
+                    {MAIN_LAWN_GEOMETRY.pointCount} points
                   </span>
                   <span className="text-[10px] text-slate-400 block">13 Unique Vertices</span>
                 </div>
@@ -230,19 +227,19 @@ export default function MainLawnDemo({ onExit }) {
                 <div className="flex justify-between text-slate-300">
                   <span className="text-slate-400">Calculated Area:</span>
                   <span className="font-mono font-bold text-emerald-300">
-                    {MAIN_LAWN_KML.metrics.areaSqMeters.toLocaleString()} m²
+                    {MAIN_LAWN_GEOMETRY.metrics.areaSqMeters.toLocaleString()} m²
                   </span>
                 </div>
                 <div className="flex justify-between text-slate-300">
                   <span className="text-slate-400">Area (Imperial):</span>
                   <span className="font-mono text-slate-300">
-                    {Math.round(MAIN_LAWN_KML.metrics.areaSqFt).toLocaleString()} sq ft ({MAIN_LAWN_KML.metrics.areaAcres} acres)
+                    {Math.round(MAIN_LAWN_GEOMETRY.metrics.areaSqFt).toLocaleString()} sq ft ({MAIN_LAWN_GEOMETRY.metrics.areaAcres} acres)
                   </span>
                 </div>
                 <div className="flex justify-between text-slate-300">
                   <span className="text-slate-400">Calculated Perimeter:</span>
                   <span className="font-mono font-bold text-sky-300">
-                    {MAIN_LAWN_KML.metrics.perimeterMeters} m ({MAIN_LAWN_KML.metrics.perimeterKm} km)
+                    {MAIN_LAWN_GEOMETRY.metrics.perimeterMeters} m ({MAIN_LAWN_GEOMETRY.metrics.perimeterKm} km)
                   </span>
                 </div>
               </div>
@@ -271,7 +268,7 @@ export default function MainLawnDemo({ onExit }) {
                   </button>
                 </div>
                 <div className="max-h-56 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950/80 p-2 font-mono text-[10px] space-y-1 text-slate-300">
-                  {MAIN_LAWN_KML.coordinates.map(([lat, lng], idx) => (
+                  {MAIN_LAWN_GEOMETRY.coordinates.map(([lat, lng], idx) => (
                     <div key={idx} className="flex justify-between py-0.5 border-b border-slate-800/50">
                       <span className="text-emerald-500 font-bold">#{idx + 1}</span>
                       <span>{lat.toFixed(6)}, {lng.toFixed(6)}</span>
