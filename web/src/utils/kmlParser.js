@@ -103,3 +103,71 @@ export function parseKml(kmlText, fileName = 'Untitled map project.kml', options
     notes: options.notes || `Surveyed GPS route imported from ${fileName}. Contains ${coordinates.length} precise GPS coordinates.`
   };
 }
+
+/**
+ * Reusable KML Polygon Parser
+ * Extracts LinearRing coordinates from KML Polygons
+ * Converts KML [lng, lat, alt] to Leaflet [lat, lng] format
+ */
+export function parseKmlPolygon(kmlText, fileName = 'geometry.kml', options = {}) {
+  if (!kmlText || typeof kmlText !== 'string') {
+    throw new Error('Invalid KML content provided.');
+  }
+
+  const coordMatches = [...kmlText.matchAll(/<coordinates>([\s\S]*?)<\/coordinates>/gi)];
+  if (!coordMatches.length) {
+    throw new Error('No valid <coordinates> tag found in the uploaded KML polygon.');
+  }
+
+  const docNameMatch = kmlText.match(/<Placemark[\s\S]*?<name>([\s\S]*?)<\/name>/i) ||
+                       kmlText.match(/<Document[\s\S]*?<name>([\s\S]*?)<\/name>/i);
+  const originalName = docNameMatch ? docNameMatch[1].trim() : 'Surveyed Polygon';
+
+  // Use the coordinates from the first LinearRing (outerBoundaryIs)
+  const coordText = coordMatches[0][1].trim();
+  const tokens = coordText.split(/\s+/).filter(Boolean);
+  const coordinates = [];
+  const rawPoints = [];
+  let minLat = 90, maxLat = -90, minLng = 180, maxLng = -180;
+
+  for (const token of tokens) {
+    const parts = token.split(',');
+    if (parts.length >= 2) {
+      const lng = parseFloat(parts[0]);
+      const lat = parseFloat(parts[1]);
+      const alt = parts[2] ? parseFloat(parts[2]) : 0;
+      if (!isNaN(lat) && !isNaN(lng)) {
+        coordinates.push([lat, lng]);
+        rawPoints.push({ lat, lng, alt });
+        if (lat < minLat) minLat = lat;
+        if (lat > maxLat) maxLat = lat;
+        if (lng < minLng) minLng = lng;
+        if (lng > maxLng) maxLng = lng;
+      }
+    }
+  }
+
+  if (coordinates.length < 3) {
+    throw new Error('KML Polygon must contain at least 3 valid GPS coordinates.');
+  }
+
+  // Calculate centroid
+  let centerLat = 0, centerLng = 0;
+  coordinates.forEach(([lat, lng]) => {
+    centerLat += lat;
+    centerLng += lng;
+  });
+  centerLat /= coordinates.length;
+  centerLng /= coordinates.length;
+
+  return {
+    name: options.name || originalName,
+    originalName,
+    sourceFileName: fileName,
+    pointCount: coordinates.length,
+    coordinates,
+    rawPoints,
+    bounds: [[minLat, minLng], [maxLat, maxLng]],
+    center: [centerLat, centerLng]
+  };
+}

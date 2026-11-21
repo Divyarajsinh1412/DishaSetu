@@ -26,6 +26,7 @@ import CampusAIAssistantModal from './components/assistant/CampusAIAssistantModa
 import CampusEventsModal from './components/events/CampusEventsModal';
 import FlutterAppModal from './components/common/FlutterAppModal';
 import Toast from './components/common/Toast';
+import KmlMapDemo from './demo/KmlMapDemo';
 import {
   fetchCampusData,
   fetchCampusFeatures,
@@ -59,8 +60,17 @@ export default function App() {
   const [walkingPaths, setWalkingPaths] = useState([]);
   const [userLocation, setUserLocation] = useState(null);
 
-  // View Mode: 'master' (Official Expanded High-Res Illustrated Map - Default), 'map' (Geographic Google Map Engine), '3d' (3D Digital Twin), 'immersive' (360° Aerial Tour), or 'indoor' (Multi-Floor Floorplans)
-  const [viewMode, setViewMode] = useState('master');
+  // View Mode: 'master' (Official Expanded High-Res Illustrated Map - Default), 'map' (Geographic Google Map Engine), '3d' (3D Digital Twin), 'immersive' (360° Aerial Tour), 'indoor' (Multi-Floor Floorplans), or 'kml-demo' (Dedicated KML Verification Map)
+  const [viewMode, setViewMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const search = window.location.search || '';
+      const hash = window.location.hash || '';
+      if (search.includes('kml') || search.includes('demo') || hash.includes('kml') || hash.includes('demo')) {
+        return 'kml-demo';
+      }
+    }
+    return 'master';
+  });
   const [mapType, setMapType] = useState('google_roadmap');
   const [showSplash, setShowSplash] = useState(true);
   const [mapMarkers, setMapMarkers] = useState([]);
@@ -392,7 +402,9 @@ export default function App() {
       {/* 1. 100% FULL-SCREEN MAP VIEWPORT (Underneath all Google Maps UI)    */}
       {/* =================================================================== */}
       <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
-        {viewMode === 'master' ? (
+        {viewMode === 'kml-demo' ? (
+          <KmlMapDemo onExit={() => setViewMode('master')} />
+        ) : viewMode === 'master' ? (
           <MasterCampusMap
             markers={mapMarkers}
             activeCategory={activeCategory}
@@ -499,46 +511,48 @@ export default function App() {
       {/* =================================================================== */}
       {/* 2. AUTHENTIC GOOGLE MAPS FLOATING SEARCH BAR & CATEGORY PILLS       */}
       {/* =================================================================== */}
-      <Header
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        activeCategory={activeCategory}
-        onCategorySelect={(cat) => {
-          setActiveCategory(cat);
-        }}
-        onOpenSOS={() => setIsSOSOpen(true)}
-        onOpenAdmin={() => setIsAdminDashboardOpen(true)}
-        onOpenSurvey={() => setIsSurveyModalOpen(true)}
-        onOpenIndoor={(bld) => {
-          const dBlock = buildings.find(b => b.shortCode === 'PU-D-BLOCK' || /d[-_]?block/i.test(b.name)) || { name: 'D Block', shortCode: 'PU-D-BLOCK', buildingId: 'bld_d_block' };
-          setTargetIndoorBuilding(bld || dBlock);
-          setViewMode('indoor');
-        }}
-        onOpenCafes={() => setIsCafeModalOpen(true)}
-        onOpenCafeOwner={() => setIsCafeOwnerOpen(true)}
-        onOpenIssueReport={() => setIsIssueReportOpen(true)}
-        onOpenMapEditor={() => setIsMapEditorOpen(true)}
-        onOpenIndoorSurvey={(room) => {
-          setTargetIndoorSurveyRoom(room || null);
-          setIsIndoorSurveyOpen(true);
-        }}
-        onOpenRoutePlanning={handleOpenRoutePlanning}
-        onOpenAIAssistant={() => setIsAIAssistantOpen(true)}
-        onOpenEvents={() => setIsEventsModalOpen(true)}
-        onOpenFlutterApp={() => setIsFlutterModalOpen(true)}
-        onSelectLocation={(loc) => setSelectedLocation(loc)}
-        locations={filteredLocations}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        mapType={mapType}
-        onMapTypeChange={setMapType}
-        language={language}
-        onLanguageChange={(lang) => {
-          setLanguage(lang);
-          localStorage.setItem('dishasetu_lang', lang);
-        }}
-        onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
-      />
+      {viewMode !== 'kml-demo' && (
+        <Header
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          activeCategory={activeCategory}
+          onCategorySelect={(cat) => {
+            setActiveCategory(cat);
+          }}
+          onOpenSOS={() => setIsSOSOpen(true)}
+          onOpenAdmin={() => setIsAdminDashboardOpen(true)}
+          onOpenSurvey={() => setIsSurveyModalOpen(true)}
+          onOpenIndoor={(bld) => {
+            const dBlock = buildings.find(b => b.shortCode === 'PU-D-BLOCK' || /d[-_]?block/i.test(b.name)) || { name: 'D Block', shortCode: 'PU-D-BLOCK', buildingId: 'bld_d_block' };
+            setTargetIndoorBuilding(bld || dBlock);
+            setViewMode('indoor');
+          }}
+          onOpenCafes={() => setIsCafeModalOpen(true)}
+          onOpenCafeOwner={() => setIsCafeOwnerOpen(true)}
+          onOpenIssueReport={() => setIsIssueReportOpen(true)}
+          onOpenMapEditor={() => setIsMapEditorOpen(true)}
+          onOpenIndoorSurvey={(room) => {
+            setTargetIndoorSurveyRoom(room || null);
+            setIsIndoorSurveyOpen(true);
+          }}
+          onOpenRoutePlanning={handleOpenRoutePlanning}
+          onOpenAIAssistant={() => setIsAIAssistantOpen(true)}
+          onOpenEvents={() => setIsEventsModalOpen(true)}
+          onOpenFlutterApp={() => setIsFlutterModalOpen(true)}
+          onSelectLocation={(loc) => setSelectedLocation(loc)}
+          locations={filteredLocations}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          mapType={mapType}
+          onMapTypeChange={setMapType}
+          language={language}
+          onLanguageChange={(lang) => {
+            setLanguage(lang);
+            localStorage.setItem('dishasetu_lang', lang);
+          }}
+          onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
+        />
+      )}
 
       {/* =================================================================== */}
       {/* 3. LIVE TURN-BY-TURN GUIDANCE BANNER & FOOTER (When Route Active)   */}
@@ -789,88 +803,90 @@ export default function App() {
       {/* =================================================================== */}
       {/* 7. GOOGLE MAPS MOBILE BOTTOM BAR (< 768px)                          */}
       {/* =================================================================== */}
-      <nav className="md:hidden absolute bottom-0 left-0 right-0 h-16 bg-white/95 dark:bg-[#202124]/95 backdrop-blur-xl border-t border-slate-200/90 dark:border-slate-800 grid grid-cols-5 items-center px-1 z-30 shadow-2xl pb-[env(safe-area-inset-bottom)] select-none">
-        {/* 1. Master Campus Map */}
-        <button
-          onClick={() => {
-            setViewMode('master');
-            setIsSidebarOpen(false);
-          }}
-          className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all h-full active:scale-95 ${
-            viewMode === 'master' && !isSidebarOpen
-              ? 'text-[#1a73e8] font-bold'
-              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
-          title="Official Campus Master Map"
-        >
-          <div className={`p-1 rounded-full ${viewMode === 'master' && !isSidebarOpen ? 'bg-blue-50 dark:bg-blue-950/60' : ''}`}>
-            <Map className="w-4 h-4" />
-          </div>
-          <span className="text-[10px] tracking-tight leading-none">Campus Map</span>
-        </button>
+      {viewMode !== 'kml-demo' && (
+        <nav className="md:hidden absolute bottom-0 left-0 right-0 h-16 bg-white/95 dark:bg-[#202124]/95 backdrop-blur-xl border-t border-slate-200/90 dark:border-slate-800 grid grid-cols-5 items-center px-1 z-30 shadow-2xl pb-[env(safe-area-inset-bottom)] select-none">
+          {/* 1. Master Campus Map */}
+          <button
+            onClick={() => {
+              setViewMode('master');
+              setIsSidebarOpen(false);
+            }}
+            className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all h-full active:scale-95 ${
+              viewMode === 'master' && !isSidebarOpen
+                ? 'text-[#1a73e8] font-bold'
+                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+            title="Official Campus Master Map"
+          >
+            <div className={`p-1 rounded-full ${viewMode === 'master' && !isSidebarOpen ? 'bg-blue-50 dark:bg-blue-950/60' : ''}`}>
+              <Map className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] tracking-tight leading-none">Campus Map</span>
+          </button>
 
-        {/* 2. Directions / Route Planner (Google Blue) */}
-        <button
-          onClick={() => handleOpenRoutePlanning()}
-          className="flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl text-[#1a73e8] hover:text-[#1557b0] transition-all font-bold h-full active:scale-95"
-          title="Campus Directions"
-        >
-          <div className="p-1 rounded-full bg-blue-50 dark:bg-blue-950/60">
-            <NavigationIcon className="w-4 h-4 text-[#1a73e8]" />
-          </div>
-          <span className="text-[10px] tracking-tight leading-none">Directions</span>
-        </button>
+          {/* 2. Directions / Route Planner (Google Blue) */}
+          <button
+            onClick={() => handleOpenRoutePlanning()}
+            className="flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl text-[#1a73e8] hover:text-[#1557b0] transition-all font-bold h-full active:scale-95"
+            title="Campus Directions"
+          >
+            <div className="p-1 rounded-full bg-blue-50 dark:bg-blue-950/60">
+              <NavigationIcon className="w-4 h-4 text-[#1a73e8]" />
+            </div>
+            <span className="text-[10px] tracking-tight leading-none">Directions</span>
+          </button>
 
-        {/* 3. Google Geographic Map Toggle */}
-        <button
-          onClick={() => {
-            setViewMode('map');
-            setIsSidebarOpen(false);
-          }}
-          className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all h-full active:scale-95 ${
-            viewMode === 'map' && !isSidebarOpen
-              ? 'text-blue-600 font-bold'
-              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
-          title="Google Geographic Map"
-        >
-          <div className={`p-1 rounded-full ${viewMode === 'map' && !isSidebarOpen ? 'bg-blue-50 dark:bg-blue-950/60' : ''}`}>
-            <Layers className="w-4 h-4" />
-          </div>
-          <span className="text-[10px] tracking-tight leading-none">
-            Google Map
-          </span>
-        </button>
+          {/* 3. Google Geographic Map Toggle */}
+          <button
+            onClick={() => {
+              setViewMode('map');
+              setIsSidebarOpen(false);
+            }}
+            className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all h-full active:scale-95 ${
+              viewMode === 'map' && !isSidebarOpen
+                ? 'text-blue-600 font-bold'
+                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+            title="Google Geographic Map"
+          >
+            <div className={`p-1 rounded-full ${viewMode === 'map' && !isSidebarOpen ? 'bg-blue-50 dark:bg-blue-950/60' : ''}`}>
+              <Layers className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] tracking-tight leading-none">
+              Google Map
+            </span>
+          </button>
 
-        {/* 4. Directory Drawer */}
-        <button
-          onClick={() => {
-            setIsSidebarOpen(prev => !prev);
-          }}
-          className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all h-full active:scale-95 ${
-            isSidebarOpen
-              ? 'text-indigo-600 font-bold'
-              : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
-        >
-          <div className={`p-1 rounded-full ${isSidebarOpen ? 'bg-indigo-50 dark:bg-indigo-950/60' : ''}`}>
-            <Menu className="w-4 h-4" />
-          </div>
-          <span className="text-[10px] tracking-tight leading-none">Directory</span>
-        </button>
+          {/* 4. Directory Drawer */}
+          <button
+            onClick={() => {
+              setIsSidebarOpen(prev => !prev);
+            }}
+            className={`flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all h-full active:scale-95 ${
+              isSidebarOpen
+                ? 'text-indigo-600 font-bold'
+                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            <div className={`p-1 rounded-full ${isSidebarOpen ? 'bg-indigo-50 dark:bg-indigo-950/60' : ''}`}>
+              <Menu className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] tracking-tight leading-none">Directory</span>
+          </button>
 
-        {/* 5. Emergency SOS */}
-        <button
-          onClick={() => setIsSOSOpen(true)}
-          className="flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl text-rose-600 transition-all font-bold h-full active:scale-95"
-          title="Emergency Help (SOS)"
-        >
-          <div className="p-1 rounded-full bg-rose-50 dark:bg-rose-950/60">
-            <Shield className="w-4 h-4 text-rose-600" />
-          </div>
-          <span className="text-[10px] tracking-tight leading-none text-rose-600">SOS</span>
-        </button>
-      </nav>
+          {/* 5. Emergency SOS */}
+          <button
+            onClick={() => setIsSOSOpen(true)}
+            className="flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl text-rose-600 transition-all font-bold h-full active:scale-95"
+            title="Emergency Help (SOS)"
+          >
+            <div className="p-1 rounded-full bg-rose-50 dark:bg-rose-950/60">
+              <Shield className="w-4 h-4 text-rose-600" />
+            </div>
+            <span className="text-[10px] tracking-tight leading-none text-rose-600">SOS</span>
+          </button>
+        </nav>
+      )}
 
       {/* Global Toast Notification */}
       <Toast toast={toast} onClose={() => setToast(null)} />

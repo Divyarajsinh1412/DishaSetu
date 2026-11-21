@@ -37,7 +37,8 @@ import {
   Eye,
   SlidersHorizontal,
   Smartphone,
-  RotateCcw
+  RotateCcw,
+  FileCode
 } from 'lucide-react';
 import { getTranslation } from '../services/localization';
 import { COMPLETE_CAMPUS_CATALOG } from '../services/campusCatalog';
@@ -356,6 +357,14 @@ export default function Header({
       subtitle: 'D Block Multi-Floor Navigator',
       icon: DoorOpen,
       color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/40'
+    },
+    {
+      id: 'kml-demo',
+      mode: 'kml-demo',
+      title: 'KML Map Demo',
+      subtitle: 'Verified Boundary & Garden Polygons',
+      icon: FileCode,
+      color: 'text-cyan-600 bg-cyan-50 dark:bg-cyan-950/40'
     }
   ];
 
@@ -836,6 +845,18 @@ export default function Header({
                 >
                   <Crosshair className="w-4 h-4 text-emerald-600" />
                   <span>Map Marker Editor</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onViewModeChange) onViewModeChange('kml-demo');
+                    setIsMoreMenuOpen(false);
+                  }}
+                  className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-cyan-600 dark:text-cyan-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition-colors font-bold"
+                >
+                  <FileCode className="w-4 h-4 text-cyan-500" />
+                  <span>KML Map Demo (GPS Verification)</span>
                 </button>
 
                 <button

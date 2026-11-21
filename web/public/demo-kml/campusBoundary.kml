@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:ex="http://earth.google.com/kml/ext">
+<Document id="document">
+	<ex:extension>base64;CooBCoEBCn8KAggBEnkKdwokCiAKAwjQDxoHCNLtZRD_ASEAAAAAAADwPykAAAAAAAAAABgAEg8KCAitgO8HEP8BEKAfGAAaGgoHCP___wcQQBIICK2A7wcQ_wEYoB8gACgAIgkIARIFCP___wcqFwgBEggI____BxD_ARkAAAAAAADwPyAAEgQIARAA</ex:extension>
+	<name>Untitled map project</name>
+	<gx:CascadingStyle kml:id="__managed_style_002D05845D43349F3B13_highlight">
+		<ex:extension>base64;EgIYAQ</ex:extension>
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>4</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+				<displayMode>hide</displayMode>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_002D05845D43349F3B13_normal">
+		<ex:extension>base64;EgIYAQ</ex:extension>
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>2.66667</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+				<displayMode>hide</displayMode>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_002D05845D43349F3B13">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_002D05845D43349F3B13_normal</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_002D05845D43349F3B13_highlight</styleUrl>
+		</Pair>
+	</StyleMap>
+	<Placemark id="08CC1F5F3243349F3AF7">
+		<name>presidency university</name>
+		<LookAt>
+			<longitude>77.53575179805408</longitude>
+			<latitude>13.16970012010381</latitude>
+			<altitude>921.2960646487252</altitude>
+			<heading>-64.18618411779494</heading>
+			<tilt>2.02710926148624</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>1074.077489319752</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_002D05845D43349F3B13</styleUrl>
+		<Polygon>
+			<outerBoundaryIs>
+				<LinearRing>
+					<coordinates>
+						77.53549852324451,13.17181416320875,0 77.53476665629074,13.17040148034208,0 77.53365329839991,13.17075152415068,0 77.53213079472374,13.17118406695513,0 77.53174445475659,13.17007791815406,0 77.53248385444135,13.169710019786,0 77.53212592447798,13.16884378218733,0 77.53283202159993,13.16860076844938,0 77.53260201266713,13.16816191967963,0 77.53308146458676,13.16798724533258,0 77.53270338943021,13.16674122544647,0 77.5335498082179,13.16646777371925,0 77.53448233192523,13.1681567049758,0 77.53460484814589,13.16848178990111,0 77.53510016711247,13.16826378100466,0 77.53588487401981,13.16787851290804,0 77.53635615336538,13.167643854039,0 77.53665749802832,13.16828260062636,0 77.53671288046078,13.16899492269333,0 77.53634866741406,13.16914167581488,0 77.53659994614361,13.16973859762385,0 77.53753259136485,13.17180862115961,0 77.53595387555967,13.17217213485888,0 77.53549852324451,13.17181416320875,0 
+					</coordinates>
+				</LinearRing>
+			</outerBoundaryIs>
+		</Polygon>
+	</Placemark>
+</Document>
+</kml>
