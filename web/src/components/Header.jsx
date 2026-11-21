@@ -35,7 +35,8 @@ import {
   CornerUpRight,
   Eye,
   SlidersHorizontal,
-  Smartphone
+  Smartphone,
+  RotateCcw
 } from 'lucide-react';
 import { getTranslation } from '../services/localization';
 import { COMPLETE_CAMPUS_CATALOG } from '../services/campusCatalog';
@@ -73,13 +74,26 @@ export default function Header({
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [isLayersMenuOpen, setIsLayersMenuOpen] = useState(false);
+  const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
   const searchContainerRef = useRef(null);
   const moreMenuRef = useRef(null);
   const layersMenuRef = useRef(null);
+  const categoryMenuRef = useRef(null);
 
-  // Close menus on outside click
+  // Close menus on outside click or Escape key
   useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsCategoryMenuOpen(false);
+        setIsLayersMenuOpen(false);
+        setIsMoreMenuOpen(false);
+        setIsSearchFocused(false);
+      }
+    };
     const handleOutsideClick = (e) => {
+      if (categoryMenuRef.current && !categoryMenuRef.current.contains(e.target)) {
+        setIsCategoryMenuOpen(false);
+      }
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
         setIsSearchFocused(false);
       }
@@ -90,23 +104,89 @@ export default function Header({
         setIsLayersMenuOpen(false);
       }
     };
+    document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
   }, []);
 
-  // Official Institutional Campus Categories (Google Maps Pill Format)
+  // Official Institutional Campus Categories
   const categories = [
-    { id: 'all', label: 'All Places', icon: MapPin },
-    { id: 'Cafe', label: 'Cafeterias & Food', icon: Coffee },
-    { id: 'Academic', label: 'Academic Blocks', icon: Building2 },
-    { id: 'Parking', label: 'Parking Lots', icon: Car },
-    { id: 'Library', label: 'Libraries', icon: BookOpen },
-    { id: 'Medical', label: 'Health Center', icon: HeartPulse },
-    { id: 'Gate', label: 'Gates & Entrances', icon: Compass },
-    { id: 'Sports', label: 'Sports Complex', icon: Trophy },
-    { id: 'Garden', label: 'Gardens & Lawns', icon: Trees },
-    { id: 'Landmark', label: 'Central Fountain', icon: Compass }
+    {
+      id: 'all',
+      label: 'All Places',
+      icon: MapPin,
+      color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/60'
+    },
+    {
+      id: 'Cafe',
+      label: 'Cafeterias & Food',
+      icon: Coffee,
+      color: 'text-amber-600 bg-amber-50 dark:bg-amber-950/60'
+    },
+    {
+      id: 'Academic',
+      label: 'Academic Blocks',
+      icon: Building2,
+      color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-950/60'
+    },
+    {
+      id: 'Parking',
+      label: 'Parking Lots',
+      icon: Car,
+      color: 'text-sky-600 bg-sky-50 dark:bg-sky-950/60'
+    },
+    {
+      id: 'Library',
+      label: 'Libraries',
+      icon: BookOpen,
+      color: 'text-purple-600 bg-purple-50 dark:bg-purple-950/60'
+    },
+    {
+      id: 'Medical',
+      label: 'Health Center',
+      icon: HeartPulse,
+      color: 'text-rose-600 bg-rose-50 dark:bg-rose-950/60'
+    },
+    {
+      id: 'Gate',
+      label: 'Gates & Entrances',
+      icon: Compass,
+      color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60'
+    },
+    {
+      id: 'Sports',
+      label: 'Sports Complex',
+      icon: Trophy,
+      color: 'text-orange-600 bg-orange-50 dark:bg-orange-950/60'
+    },
+    {
+      id: 'Garden',
+      label: 'Gardens & Lawns',
+      icon: Trees,
+      color: 'text-teal-600 bg-teal-50 dark:bg-teal-950/60'
+    }
   ];
+
+  // Dynamic location counts for each category
+  const categoryCounts = useMemo(() => {
+    const counts = { all: MASTER_CAMPUS_FEATURES.length };
+    MASTER_CAMPUS_FEATURES.forEach((feat) => {
+      let cat = feat.category;
+      if (cat === 'Administrative') cat = 'Academic';
+      if (cat === 'Food' || cat === 'Dining') cat = 'Cafe';
+      if (cat) {
+        counts[cat] = (counts[cat] || 0) + 1;
+      }
+    });
+    return counts;
+  }, []);
+
+  const activeCatObj = categories.find(c => c.id === activeCategory) || categories[0];
+  const isFiltered = activeCategory && activeCategory !== 'all';
+  const ActiveIcon = isFiltered ? activeCatObj.icon : Compass;
 
   // Comprehensive Instant Search Engine
   const searchResults = useMemo(() => {
@@ -245,140 +325,299 @@ export default function Header({
 
   return (
     <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-4 z-[420] pointer-events-none flex flex-col gap-2">
-      {/* Top Floating Row: Search Bar (Left) + Quick Actions (Right) */}
-      <div className="flex items-start justify-between gap-2 sm:gap-4 pointer-events-none">
+      {/* Top Floating Row: Search Bar (Left) + Explore Campus Dropdown + Quick Actions (Right) */}
+      <div className="flex items-start justify-between gap-2 sm:gap-3 pointer-events-none w-full">
         
-        {/* ================================================================= */}
-        {/* 1. AUTHENTIC GOOGLE MAPS FLOATING SEARCH BAR                      */}
-        {/* ================================================================= */}
-        <div ref={searchContainerRef} className="pointer-events-auto flex-1 sm:flex-initial sm:w-[392px] relative min-w-0">
-          <div className="h-11 sm:h-12 bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-100 rounded-2xl sm:rounded-3xl shadow-gmap-search border border-slate-200/90 dark:border-slate-700/80 flex items-center px-2 sm:px-3 gap-1 sm:gap-1.5 transition-all focus-within:shadow-xl focus-within:border-blue-500">
-            {/* Menu Drawer Toggle Button */}
-            <button
-              type="button"
-              onClick={onToggleSidebar}
-              className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700/60 text-slate-600 dark:text-slate-300 transition-colors"
-              title="Open Campus Directory & Navigation Drawer"
-            >
-              <Menu className="w-5 h-5 text-slate-700 dark:text-slate-200" />
-            </button>
-
-            {/* University Logo Badge Icon */}
-            <div className="hidden xs:flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white font-black text-[11px] shadow-sm select-none" title="DishaSetu - Presidency University">
-              D
-            </div>
-
-            {/* Input Search Field */}
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              onFocus={() => setIsSearchFocused(true)}
-              placeholder="Search Presidency University..."
-              className="flex-1 bg-transparent px-2 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 font-medium outline-none min-w-0"
-            />
-
-            {/* Clear Input Button (when text exists) */}
-            {searchQuery && (
+        {/* Left Cluster: Search Bar + Compact "Explore Campus" Category Dropdown */}
+        <div className="flex items-center gap-2 pointer-events-auto flex-1 sm:flex-initial min-w-0">
+          
+          {/* 1. AUTHENTIC GOOGLE MAPS FLOATING SEARCH BAR */}
+          <div ref={searchContainerRef} className="flex-1 sm:flex-initial sm:w-[350px] md:w-[380px] relative min-w-0">
+            <div className="h-11 sm:h-12 bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-100 rounded-2xl sm:rounded-3xl shadow-gmap-search border border-slate-200/90 dark:border-slate-700/80 flex items-center px-2 sm:px-3 gap-1 sm:gap-1.5 transition-all focus-within:shadow-xl focus-within:border-blue-500">
+              {/* Menu Drawer Toggle Button */}
               <button
                 type="button"
-                onClick={() => onSearchChange('')}
-                className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                title="Clear Search"
+                onClick={onToggleSidebar}
+                className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700/60 text-slate-600 dark:text-slate-300 transition-colors"
+                title="Open Campus Directory & Navigation Drawer"
               >
-                <X className="w-4 h-4" />
+                <Menu className="w-5 h-5 text-slate-700 dark:text-slate-200" />
               </button>
-            )}
 
-            {/* Vertical Divider */}
-            <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 mx-0.5" />
-
-            {/* Search Magnifier Action */}
-            <button
-              type="button"
-              onClick={() => setIsSearchFocused(true)}
-              className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700/60 text-slate-500 dark:text-slate-400 transition-colors"
-              title="Search"
-            >
-              <Search className="w-4 h-4" />
-            </button>
-
-            {/* Blue Google Maps Directions Button */}
-            <button
-              type="button"
-              onClick={() => onOpenRoutePlanning && onOpenRoutePlanning()}
-              className="w-8 h-8 rounded-full bg-[#1a73e8] hover:bg-[#1557b0] text-white flex items-center justify-center shadow-md shadow-blue-500/25 active:scale-95 transition-all shrink-0 group"
-              title="Directions & Turn-by-Turn Wayfinding"
-            >
-              <CornerUpRight className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
-            </button>
-          </div>
-
-          {/* =============================================================== */}
-          {/* INSTANT GOOGLE MAPS AUTOCOMPLETE SUGGESTIONS POPUP              */}
-          {/* =============================================================== */}
-          {isSearchFocused && searchResults.length > 0 && (
-            <div
-              onWheel={(e) => e.stopPropagation()}
-              onTouchMove={(e) => e.stopPropagation()}
-              data-prevent-map-zoom="true"
-              className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-[#202124] rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-700/80 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150 overscroll-contain isolate-scroll"
-            >
-              <div className="px-3 py-2 bg-slate-50 dark:bg-[#2a2b2e] border-b border-slate-100 dark:border-slate-700 flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                <span>Presidency Campus Matches ({searchResults.length})</span>
-                <span className="text-[10px] text-slate-400 font-normal">Click to view location</span>
+              {/* University Logo Badge Icon */}
+              <div className="hidden xs:flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white font-black text-[11px] shadow-sm select-none" title="DishaSetu - Presidency University">
+                D
               </div>
+
+              {/* Input Search Field */}
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
+                placeholder="Search Presidency University..."
+                className="flex-1 bg-transparent px-2 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-400 font-medium outline-none min-w-0"
+              />
+
+              {/* Clear Input Button (when text exists) */}
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => onSearchChange('')}
+                  className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  title="Clear Search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+
+              {/* Vertical Divider */}
+              <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 mx-0.5" />
+
+              {/* Search Magnifier Action */}
+              <button
+                type="button"
+                onClick={() => setIsSearchFocused(true)}
+                className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700/60 text-slate-500 dark:text-slate-400 transition-colors"
+                title="Search"
+              >
+                <Search className="w-4 h-4" />
+              </button>
+
+              {/* Blue Google Maps Directions Button */}
+              <button
+                type="button"
+                onClick={() => onOpenRoutePlanning && onOpenRoutePlanning()}
+                className="w-8 h-8 rounded-full bg-[#1a73e8] hover:bg-[#1557b0] text-white flex items-center justify-center shadow-md shadow-blue-500/25 active:scale-95 transition-all shrink-0 group"
+                title="Directions & Turn-by-Turn Wayfinding"
+              >
+                <CornerUpRight className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
+              </button>
+            </div>
+
+            {/* =============================================================== */}
+            {/* INSTANT GOOGLE MAPS AUTOCOMPLETE SUGGESTIONS POPUP              */}
+            {/* =============================================================== */}
+            {isSearchFocused && searchResults.length > 0 && (
               <div
                 onWheel={(e) => e.stopPropagation()}
                 onTouchMove={(e) => e.stopPropagation()}
                 data-prevent-map-zoom="true"
-                className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 custom-scrollbar overscroll-contain isolate-scroll"
+                className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-[#202124] rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-700/80 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150 overscroll-contain isolate-scroll"
               >
-                {searchResults.map((hit) => (
-                  <div
-                    key={hit.id}
-                    onClick={() => handleSelectSearchResult(hit)}
-                    className="p-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-3 truncate mr-2">
-                      <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center shrink-0 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform">
-                        {hit.category === 'Academic' ? <Building2 className="w-4 h-4" /> :
-                         hit.category === 'Cafe' ? <Coffee className="w-4 h-4" /> :
-                         hit.category === 'Gate' ? <Compass className="w-4 h-4" /> :
-                         hit.category === 'Library' ? <BookOpen className="w-4 h-4" /> :
-                         hit.category === 'Medical' ? <HeartPulse className="w-4 h-4" /> :
-                         <MapPin className="w-4 h-4" />}
-                      </div>
-                      <div className="truncate">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate">
-                            {hit.name}
-                          </span>
-                          {hit.code && (
-                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                              {hit.code}
+                <div className="px-3 py-2 bg-slate-50 dark:bg-[#2a2b2e] border-b border-slate-100 dark:border-slate-700 flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                  <span>Presidency Campus Matches ({searchResults.length})</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Click to view location</span>
+                </div>
+                <div
+                  onWheel={(e) => e.stopPropagation()}
+                  onTouchMove={(e) => e.stopPropagation()}
+                  data-prevent-map-zoom="true"
+                  className="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800 custom-scrollbar overscroll-contain isolate-scroll"
+                >
+                  {searchResults.map((hit) => (
+                    <div
+                      key={hit.id}
+                      onClick={() => handleSelectSearchResult(hit)}
+                      className="p-3 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/80 transition-colors cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-3 truncate mr-2">
+                        <div className="w-8 h-8 rounded-full bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 flex items-center justify-center shrink-0 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition-transform">
+                          {hit.category === 'Academic' ? <Building2 className="w-4 h-4" /> :
+                           hit.category === 'Cafe' ? <Coffee className="w-4 h-4" /> :
+                           hit.category === 'Gate' ? <Compass className="w-4 h-4" /> :
+                           hit.category === 'Library' ? <BookOpen className="w-4 h-4" /> :
+                           hit.category === 'Medical' ? <HeartPulse className="w-4 h-4" /> :
+                           <MapPin className="w-4 h-4" />}
+                        </div>
+                        <div className="truncate">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate">
+                              {hit.name}
                             </span>
-                          )}
+                            {hit.code && (
+                              <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                                {hit.code}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                            {hit.category} · {hit.description || 'Presidency University Bengaluru'}
+                          </div>
                         </div>
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                          {hit.category} · {hit.description || 'Presidency University Bengaluru'}
-                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => handleDirectNavigate(hit, e)}
+                        className="p-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-950/60 text-blue-600 dark:text-blue-400 shrink-0 transition-colors"
+                        title="Direct directions to this location"
+                      >
+                        <CornerUpRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 2. COMPACT "EXPLORE CAMPUS" CATEGORY SELECTOR DROPDOWN */}
+          <div ref={categoryMenuRef} className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setIsCategoryMenuOpen(!isCategoryMenuOpen);
+                setIsLayersMenuOpen(false);
+                setIsMoreMenuOpen(false);
+                setIsSearchFocused(false);
+              }}
+              className={`h-11 sm:h-12 px-2.5 sm:px-3.5 rounded-2xl sm:rounded-3xl border shadow-gmap-search flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-bold transition-all active:scale-95 group shrink-0 ${
+                isFiltered
+                  ? 'bg-blue-50 dark:bg-blue-950/70 border-blue-400 dark:border-blue-600/80 text-blue-700 dark:text-blue-300 ring-2 ring-blue-500/20'
+                  : 'bg-white dark:bg-[#202124] text-slate-800 dark:text-slate-100 border-slate-200/90 dark:border-slate-700/80 hover:bg-slate-50 dark:hover:bg-[#282a2d] hover:border-blue-400 dark:hover:border-blue-500/50'
+              }`}
+              title={isFiltered ? `Filtered by ${activeCatObj.label} (Click to change)` : 'Explore Campus Categories'}
+            >
+              {/* Category Icon */}
+              <ActiveIcon
+                className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${
+                  isFiltered ? 'text-blue-600 dark:text-blue-400' : 'text-blue-500'
+                }`}
+              />
+
+              {/* Label */}
+              <span className="truncate max-w-[110px] sm:max-w-[150px]">
+                {isFiltered ? activeCatObj.label : 'Explore Campus'}
+              </span>
+
+              {/* Quick Reset X Button when a category is active */}
+              {isFiltered && (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCategorySelect('all');
+                    setIsCategoryMenuOpen(false);
+                  }}
+                  className="p-0.5 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800/60 text-blue-500 hover:text-blue-700 dark:text-blue-300 transition-colors"
+                  title="Clear category filter (Show All Places)"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </span>
+              )}
+
+              {/* Dropdown Chevron Arrow */}
+              <ChevronDown
+                className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                  isCategoryMenuOpen ? 'rotate-180 text-blue-600 dark:text-blue-400' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200'
+                }`}
+              />
+            </button>
+
+            {/* Dropdown Popover Panel */}
+            {isCategoryMenuOpen && (
+              <div
+                onWheel={(e) => e.stopPropagation()}
+                onTouchMove={(e) => e.stopPropagation()}
+                data-prevent-map-zoom="true"
+                className="fixed inset-x-3 top-18 sm:top-full sm:inset-auto sm:left-0 sm:mt-2.5 w-auto sm:w-[440px] bg-white/98 dark:bg-[#1e293b]/98 backdrop-blur-xl rounded-3xl shadow-2xl border border-slate-200/90 dark:border-slate-700/80 p-3.5 z-[550] animate-in fade-in zoom-in-95 duration-150 overscroll-contain isolate-scroll select-none max-h-[75vh] overflow-y-auto custom-scrollbar"
+              >
+                {/* Popover Header */}
+                <div className="flex items-center justify-between px-2 pb-2.5 mb-2 border-b border-slate-100 dark:border-slate-800/80">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-blue-50 dark:bg-blue-950/60 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                      <Compass className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-extrabold text-slate-900 dark:text-white">
+                        Explore Campus
+                      </div>
+                      <div className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                        Select a category to filter locations on the map
                       </div>
                     </div>
+                  </div>
 
+                  {isFiltered && (
                     <button
                       type="button"
-                      onClick={(e) => handleDirectNavigate(hit, e)}
-                      className="p-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-950/60 text-blue-600 dark:text-blue-400 shrink-0 transition-colors"
-                      title="Direct directions to this location"
+                      onClick={() => {
+                        onCategorySelect('all');
+                        setIsCategoryMenuOpen(false);
+                      }}
+                      className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 px-2.5 py-1 rounded-xl transition-colors flex items-center gap-1"
                     >
-                      <CornerUpRight className="w-4 h-4" />
+                      <RotateCcw className="w-3 h-3" />
+                      <span>All Places</span>
                     </button>
-                  </div>
-                ))}
+                  )}
+                </div>
+
+                {/* Categories Grid (2-column on desktop, 1-column on mobile) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  {categories.map((cat) => {
+                    const Icon = cat.icon;
+                    const isActive = activeCategory === cat.id;
+                    const count = categoryCounts[cat.id];
+
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => {
+                          onCategorySelect(cat.id);
+                          setIsCategoryMenuOpen(false);
+                        }}
+                        className={`p-2.5 rounded-2xl text-left flex items-center gap-2.5 transition-all group ${
+                          isActive
+                            ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 ring-2 ring-blue-500/30'
+                            : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/80 text-slate-700 dark:text-slate-200 border border-transparent hover:border-slate-200/60 dark:hover:border-slate-700/60'
+                        }`}
+                      >
+                        {/* Category Icon Badge */}
+                        <div
+                          className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${
+                            isActive
+                              ? 'bg-white/20 text-white'
+                              : cat.color
+                          }`}
+                        >
+                          <Icon className="w-4 h-4" />
+                        </div>
+
+                        {/* Category Name & Count */}
+                        <div className="flex-1 min-w-0">
+                          <div className={`text-xs font-bold leading-tight truncate ${isActive ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>
+                            {cat.label}
+                          </div>
+                          {count != null && (
+                            <div className={`text-[10px] mt-0.5 truncate ${isActive ? 'text-blue-100' : 'text-slate-400 dark:text-slate-500'}`}>
+                              {count} {count === 1 ? 'place' : 'places'}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Checkmark when active */}
+                        {isActive && (
+                          <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                            <Check className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Popover Footer */}
+                <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 px-1">
+                  <span>{MASTER_CAMPUS_FEATURES.length} Verified Facilities</span>
+                  <span className="font-mono">Presidency University GIS</span>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* ================================================================= */}
@@ -609,35 +848,6 @@ export default function Header({
             )}
           </div>
         </div>
-      </div>
-
-      {/* ================================================================= */}
-      {/* 3. GOOGLE MAPS HORIZONTALLY SCROLLABLE CATEGORY CHIPS             */}
-      {/* ================================================================= */}
-      <div
-        onWheel={(e) => e.stopPropagation()}
-        onTouchMove={(e) => e.stopPropagation()}
-        data-prevent-map-zoom="true"
-        className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar max-w-[calc(100vw-24px)] pl-0.5 py-1 overscroll-contain isolate-scroll touch-pan-x"
-      >
-        {categories.map((cat) => {
-          const Icon = cat.icon;
-          const isActive = activeCategory === cat.id;
-          return (
-            <button
-              key={cat.id}
-              onClick={() => onCategorySelect(cat.id)}
-              className={`h-8 px-3.5 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all shadow-gmap-floating active:scale-95 ${
-                isActive
-                  ? 'bg-[#1a73e8] text-white border border-[#1a73e8] shadow-md font-bold'
-                  : 'bg-white/95 dark:bg-[#202124]/95 text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700/80 hover:bg-slate-50 dark:hover:bg-slate-700/60 backdrop-blur-md'
-              }`}
-            >
-              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
-              <span>{cat.label}</span>
-            </button>
-          );
-        })}
       </div>
     </div>
   );
