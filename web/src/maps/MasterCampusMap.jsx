@@ -263,7 +263,8 @@ export default function MasterCampusMap({
   onAdminClickMap = null,
   isAdminEditorActive = false,
   language = 'en',
-  isModalOpen = false
+  isModalOpen = false,
+  kmlOverlays = null
 }) {
   const containerRef = useRef(null);
   const imageWrapperRef = useRef(null);
@@ -1116,6 +1117,62 @@ export default function MasterCampusMap({
 
               return null;
             })}
+
+            {/* KML DEMO GEOMETRIES OVERLAY (Active only in KML Demo modes) */}
+            {kmlOverlays && (
+              <g className="kml-demo-overlay-layer">
+                {/* 1. Campus Boundary (Blue dashed outline) */}
+                {kmlOverlays.showCampusBoundary && kmlOverlays.campusBoundaryPoints && (
+                  <polygon
+                    points={kmlOverlays.campusBoundaryPoints}
+                    fill="rgba(56, 189, 248, 0.08)"
+                    stroke="#0284c7"
+                    strokeWidth="3.5"
+                    strokeDasharray="8 5"
+                    className="cursor-pointer transition-all hover:stroke-[#38bdf8]"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (kmlOverlays.onSelectPolygon) kmlOverlays.onSelectPolygon('campus_boundary');
+                    }}
+                  >
+                    <title>Presidency University - Campus Boundary (24 GPS Nodes)</title>
+                  </polygon>
+                )}
+
+                {/* 2. Main Lawn (Green transparent fill with clear green border) */}
+                {kmlOverlays.showMainLawn && kmlOverlays.mainLawnPoints && (
+                  <g>
+                    <polygon
+                      points={kmlOverlays.mainLawnPoints}
+                      fill="rgba(34, 197, 94, 0.45)"
+                      stroke="#15803d"
+                      strokeWidth="3.5"
+                      className="cursor-pointer transition-all hover:fill-[rgba(34,197,94,0.60)] hover:stroke-[#166534]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (kmlOverlays.onSelectPolygon) kmlOverlays.onSelectPolygon('main_lawn');
+                      }}
+                    >
+                      <title>Main Lawn (14 Surveyed GPS Nodes, 3.61 Acres)</title>
+                    </polygon>
+                    {/* Centered Main Lawn Label */}
+                    <text
+                      x={kmlOverlays.mainLawnCenter ? kmlOverlays.mainLawnCenter[0] : 505}
+                      y={kmlOverlays.mainLawnCenter ? kmlOverlays.mainLawnCenter[1] : 605}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fill="#0f172a"
+                      fontSize="14"
+                      fontWeight="900"
+                      letterSpacing="1"
+                      className="select-none pointer-events-none drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)]"
+                    >
+                      MAIN LAWN
+                    </text>
+                  </g>
+                )}
+              </g>
+            )}
           </svg>
 
           {/* ============================================================= */}
