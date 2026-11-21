@@ -543,6 +543,7 @@ export default function CampusMap({
   walkingPaths = [],
   selectedLocation,
   onSelectLocation,
+  onStartNavigation,
   activeRoute,
   onClearRoute,
   isPickingCoordinates,
@@ -1008,17 +1009,67 @@ export default function CampusMap({
         {/* ------------------------------------------------------------- */}
         {walkingPaths.map((p) => {
           if (!p.geometry || p.geometry.length < 2) return null;
+          const isKmlPath = p.pathId === 'path_kml_main_gate_to_d_block' ||
+                            p.sourceType === 'kml_import' ||
+                            (p.source && String(p.source).toLowerCase().includes('kml'));
+
           return (
             <Polyline
               key={p.pathId}
               positions={p.geometry}
               pathOptions={{
-                color: p.status === 'active' ? '#9aa0a6' : '#ea4335',
-                weight: 2.5,
-                opacity: 0.5,
-                dashArray: '3, 5'
+                color: isKmlPath ? '#0284c7' : (p.status === 'active' ? '#9aa0a6' : '#ea4335'),
+                weight: isKmlPath ? 4 : 2.5,
+                opacity: isKmlPath ? 0.9 : 0.5,
+                dashArray: isKmlPath ? null : '3, 5'
               }}
-            />
+            >
+              <Tooltip sticky>
+                <div className="font-bold text-xs text-slate-900 flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${isKmlPath ? 'bg-sky-500' : 'bg-slate-400'}`}></span>
+                  <span>{p.name || 'Walking Path'}</span>
+                </div>
+                <div className="text-[10px] text-slate-600">
+                  {p.distanceMeters} m · {isKmlPath ? 'Google Earth KML Surveyed' : 'Pedestrian Walkway'}
+                </div>
+              </Tooltip>
+              <Popup>
+                <div className="p-1 min-w-[210px]">
+                  <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5 mb-1">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
+                    <span>{p.name}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-600 mb-2 space-y-0.5">
+                    <div><strong>Distance:</strong> {p.distanceMeters} meters (~{p.estimatedWalkingMinutes || Math.max(1, Math.round(p.distanceMeters / 75))} mins walk)</div>
+                    <div><strong>Status:</strong> <span className="text-emerald-600 font-bold">Verified Surveyed Route</span></div>
+                    {p.pointCount && <div><strong>GPS Coordinates:</strong> {p.pointCount} surveyed points</div>}
+                    <div><strong>Source:</strong> {p.source || 'Google Earth KML'}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onStartNavigation) {
+                        onStartNavigation({
+                          routeId: `route_${p.pathId}`,
+                          name: p.name,
+                          geometry: p.geometry,
+                          distanceMeters: p.distanceMeters,
+                          estimatedWalkingMinutes: p.estimatedWalkingMinutes || Math.max(1, Math.round(p.distanceMeters / 75)),
+                          startLocation: p.startLocation || { name: 'Main Gate', lat: p.geometry[0][0], lng: p.geometry[0][1] },
+                          endLocation: p.endLocation || { name: 'D Block', lat: p.geometry[p.geometry.length - 1][0], lng: p.geometry[p.geometry.length - 1][1] }
+                        });
+                      } else if (onOpenRoutePlanning) {
+                        onOpenRoutePlanning('node_main_gate', 'bld_d_block');
+                      }
+                    }}
+                    className="w-full py-1.5 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+                  >
+                    <NavigationIcon className="w-3.5 h-3.5" />
+                    <span>Navigate This Route</span>
+                  </button>
+                </div>
+              </Popup>
+            </Polyline>
           );
         })}
 

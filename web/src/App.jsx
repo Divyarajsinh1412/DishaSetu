@@ -420,9 +420,9 @@ export default function App() {
             walkingPaths={walkingPaths}
             selectedLocation={selectedLocation}
             onSelectLocation={(loc) => setSelectedLocation(loc)}
+            onStartNavigation={handleStartNavigation}
             activeRoute={activeRoute}
             onClearRoute={() => setActiveRoute(null)}
-            onStartNavigation={handleStartNavigation}
             onOpenIndoor={handleOpenIndoorMap}
             onOpenBuildingPopup={handleOpenBuildingPopup}
             onOpenIndoorMap={handleOpenIndoorMap}
@@ -472,6 +472,7 @@ export default function App() {
             walkingPaths={walkingPaths}
             selectedLocation={selectedLocation}
             onSelectLocation={(loc) => setSelectedLocation(loc)}
+            onStartNavigation={handleStartNavigation}
             activeRoute={activeRoute}
             onClearRoute={() => setActiveRoute(null)}
             isPickingCoordinates={isPickingCoordinates}

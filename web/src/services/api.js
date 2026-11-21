@@ -654,6 +654,18 @@ export const createWalkingPathApi = async (pathData, token) => {
   return await res.json();
 };
 
+export const importKmlPathApi = async (kmlPayload, token) => {
+  const res = await appFetch('/api/admin/paths/import-kml', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify(kmlPayload)
+  });
+  return await res.json();
+};
+
 export const updateWalkingPathApi = async (pathId, updates, token) => {
   const res = await appFetch(`/api/admin/paths/${pathId}`, {
     method: 'PUT',

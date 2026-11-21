@@ -19,6 +19,7 @@ import { COMPLETE_CAMPUS_CATALOG } from '../data/campusCatalog.js';
 import { NAVIGATION_NODES, WALKING_PATHS } from '../data/pedestrianGraphData.js';
 import routingServiceInstance from './routingService.js';
 import { getDbStatus } from '../config/db.js';
+import { parseKml } from '../utils/kmlParser.js';
 
 // Campus Coordinate Bounding Box for Presidency University validation
 export const CAMPUS_VALIDATION_BOUNDS = {
@@ -1061,6 +1062,121 @@ export const CampusService = {
 
     syncService.broadcast('path:deleted', { pathId });
     return true;
+  },
+
+  syncKmlPathToMemory(pathDoc, routeDoc) {
+    if (pathDoc) {
+      const existingIdx = memoryStore.walkingPaths.findIndex(p => p.pathId === pathDoc.pathId);
+      if (existingIdx >= 0) {
+        memoryStore.walkingPaths[existingIdx] = pathDoc;
+      } else {
+        memoryStore.walkingPaths.unshift(pathDoc);
+      }
+      routingServiceInstance.updateGraph(null, memoryStore.walkingPaths);
+    }
+    if (routeDoc) {
+      const existingRouteIdx = memoryStore.routes.findIndex(r => r.routeId === routeDoc.routeId);
+      if (existingRouteIdx >= 0) {
+        memoryStore.routes[existingRouteIdx] = routeDoc;
+      } else {
+        memoryStore.routes.unshift(routeDoc);
+      }
+    }
+  },
+
+  async importKmlPath(kmlPayload, adminUser = { email: 'admin@presidency.ac.in', role: 'super_admin' }) {
+    const { kmlContent, fileName = 'Untitled map project.kml', pathName, startNode, endNode, routeType, notes } = kmlPayload;
+    if (!kmlContent) {
+      throw new Error('KML content is required for path import.');
+    }
+
+    const parsed = parseKml(kmlContent, fileName, {
+      name: pathName,
+      startNode,
+      endNode,
+      routeType,
+      notes
+    });
+
+    const slug = (parsed.name || 'imported').toLowerCase().replace(/[^a-z0-9]+/g, '_').substring(0, 32);
+    const pathId = `path_kml_${slug}`;
+
+    const newPath = {
+      pathId,
+      name: parsed.name,
+      geometry: parsed.coordinates,
+      startNode: parsed.startNode,
+      endNode: parsed.endNode,
+      distanceMeters: parsed.distanceMeters,
+      estimatedWalkingMinutes: parsed.estimatedWalkingMinutes,
+      accessibility: parsed.accessibility !== false,
+      hasStairs: false,
+      hasRamp: true,
+      pathType: 'main_avenue',
+      routeType: parsed.routeType || 'Walking',
+      verificationStatus: 'Verified',
+      status: 'active',
+    active: true,
+      surfaceType: 'Paved Walkway & Tiles',
+      sourceFileName: parsed.sourceFileName,
+      source: 'Google Earth KML',
+      sourceType: 'kml_import',
+      campus: 'Presidency University Bengaluru',
+      startLocation: parsed.startLocation,
+      endLocation: parsed.endLocation,
+      pointCount: parsed.pointCount,
+      active: true,
+      notes: parsed.notes || `Surveyed GPS route imported from ${parsed.sourceFileName}.`,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    const dbStatus = getDbStatus();
+    if (dbStatus.connected) {
+      try {
+        await WalkingPath.findOneAndUpdate({ pathId }, { $set: newPath }, { upsert: true, new: true });
+
+        const routeDoc = {
+          routeId: `route_${slug}`,
+          name: parsed.name,
+          startLocation: parsed.startLocation,
+          endLocation: parsed.endLocation,
+          geometry: parsed.coordinates,
+          distanceMeters: parsed.distanceMeters,
+          estimatedWalkingMinutes: parsed.estimatedWalkingMinutes,
+          routeType: 'pedestrian',
+          accessible: true,
+          verified: true,
+          sourceFileName: parsed.sourceFileName,
+          source: 'Google Earth KML',
+          campus: 'Presidency University Bengaluru',
+          status: 'published',
+          updatedAt: new Date()
+        };
+        await Route.findOneAndUpdate({ routeId: routeDoc.routeId }, { $set: routeDoc }, { upsert: true, new: true });
+      } catch (err) {
+        console.warn('[CampusService] KML import DB save warning:', err.message);
+      }
+    }
+
+    this.syncKmlPathToMemory(newPath);
+
+    this.logAudit(
+      'import_kml_path',
+      adminUser.email,
+      adminUser.role,
+      'walking_path',
+      newPath.pathId,
+      {
+        name: newPath.name,
+        pointCount: parsed.pointCount,
+        distanceMeters: newPath.distanceMeters,
+        sourceFileName: newPath.sourceFileName
+      }
+    );
+
+    syncService.broadcast('path:created', newPath);
+    return newPath;
   },
 
   calculateRoute(options) {

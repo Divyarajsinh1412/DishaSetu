@@ -29,7 +29,12 @@ import {
   Sliders,
   Radio,
   FileSpreadsheet,
-  LocateFixed
+  LocateFixed,
+  FileCode,
+  Download,
+  Copy,
+  FileText,
+  Check
 } from 'lucide-react';
 import {
   createBuildingApi,
@@ -45,10 +50,12 @@ import {
   createWalkingPathApi,
   updateWalkingPathApi,
   deleteWalkingPathApi,
+  importKmlPathApi,
   calculateRouteApi
 } from '../../services/api';
 import { clientRoutingEngine } from '../../services/routingEngine';
 import { NAVIGATION_NODES } from '../../services/pedestrianGraphData';
+import { parseKml } from '../../utils/kmlParser';
 
 export default function AdminDashboard({
   isOpen,
@@ -87,6 +94,21 @@ export default function AdminDashboard({
 
   // Phase 3A: Walking Paths Editor State
   const [showPathModal, setShowPathModal] = useState(false);
+  const [showKmlModal, setShowKmlModal] = useState(false);
+  const [kmlFile, setKmlFile] = useState(null);
+  const [parsedKmlData, setParsedKmlData] = useState(null);
+  const [kmlForm, setKmlForm] = useState({
+    name: 'Main Gate → D Block',
+    startNode: 'node_main_gate',
+    endNode: 'node_d_block_ent',
+    routeType: 'Walking',
+    notes: ''
+  });
+  const [kmlLoading, setKmlLoading] = useState(false);
+  const [selectedCoordinatesPath, setSelectedCoordinatesPath] = useState(null);
+  const [copiedCoords, setCopiedCoords] = useState(false);
+  const [editPathModal, setEditPathModal] = useState(null);
+
   const [pathForm, setPathForm] = useState({
     name: '',
     startNode: 'node_main_gate',
@@ -417,6 +439,120 @@ export default function AdminDashboard({
       onRefreshData();
     } catch (err) {
       alert(`Failed to delete path: ${err.message}`);
+    }
+  };
+
+  // KML File Selection & Real-Time Parsing Handler
+  const handleKmlFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setKmlFile(file);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target.result;
+        const parsed = parseKml(text, file.name);
+        setParsedKmlData({ ...parsed, kmlContent: text });
+        setKmlForm(prev => ({
+          ...prev,
+          name: parsed.name,
+          startNode: parsed.startNode,
+          endNode: parsed.endNode,
+          notes: `Imported from ${file.name} (${parsed.pointCount} surveyed GPS points, ${parsed.distanceMeters}m).`
+        }));
+      } catch (err) {
+        alert(`Error parsing KML: ${err.message}`);
+        setParsedKmlData(null);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // KML Import Form Submission Handler
+  const handleImportKmlSubmit = async (e) => {
+    e.preventDefault();
+    if (!parsedKmlData) {
+      alert('Please select a valid KML file first.');
+      return;
+    }
+    setKmlLoading(true);
+    try {
+      const payload = {
+        kmlContent: parsedKmlData.kmlContent,
+        fileName: parsedKmlData.sourceFileName,
+        pathName: kmlForm.name,
+        startNode: kmlForm.startNode,
+        endNode: kmlForm.endNode,
+        routeType: kmlForm.routeType,
+        notes: kmlForm.notes
+      };
+      await importKmlPathApi(payload, token);
+      setShowKmlModal(false);
+      setKmlFile(null);
+      setParsedKmlData(null);
+      if (onRefreshData) onRefreshData();
+      alert(`Verified KML route "${kmlForm.name}" imported and registered into campus walking network successfully!`);
+    } catch (err) {
+      alert(`Failed to import KML: ${err.message}`);
+    } finally {
+      setKmlLoading(false);
+    }
+  };
+
+  // Copy GPS Coordinates to Clipboard
+  const handleCopyCoordinates = (geometry) => {
+    if (!geometry) return;
+    navigator.clipboard.writeText(JSON.stringify(geometry, null, 2));
+    setCopiedCoords(true);
+    setTimeout(() => setCopiedCoords(false), 2000);
+  };
+
+  // Export / Download KML File
+  const handleDownloadKml = (pathItem) => {
+    if (!pathItem || !pathItem.geometry || pathItem.geometry.length === 0) return;
+    const coordString = pathItem.geometry.map(p => `${p[1]},${p[0]},0`).join(' ');
+    const kmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>${pathItem.name}</name>
+    <Placemark>
+      <name>${pathItem.name}</name>
+      <LineString>
+        <coordinates>
+          ${coordString}
+        </coordinates>
+      </LineString>
+    </Placemark>
+  </Document>
+</kml>`;
+    const blob = new Blob([kmlContent], { type: 'application/vnd.google-earth.kml+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${pathItem.name.replace(/[^a-z0-9]+/gi, '_')}.kml`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // Edit Path Metadata Handler
+  const handleSavePathEdit = async (e) => {
+    e.preventDefault();
+    if (!editPathModal) return;
+    try {
+      await updateWalkingPathApi(editPathModal.pathId, {
+        name: editPathModal.name,
+        verificationStatus: editPathModal.verificationStatus || 'Verified',
+        accessibility: editPathModal.accessibility,
+        status: editPathModal.status,
+        notes: editPathModal.notes
+      }, token);
+      setEditPathModal(null);
+      if (onRefreshData) onRefreshData();
+      alert(`Path "${editPathModal.name}" updated successfully.`);
+    } catch (err) {
+      alert(`Failed to update path: ${err.message}`);
     }
   };
 
@@ -1212,12 +1348,20 @@ export default function AdminDashboard({
                     Manage navigable campus walking edges, toggle temporary construction/event closures, and test shortest-path Dijkstra routing.
                   </p>
                 </div>
-                <button
-                  onClick={() => setShowPathModal(true)}
-                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-all self-start sm:self-auto"
-                >
-                  <Plus className="w-4 h-4" /> Add Walking Path
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowKmlModal(true)}
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition-all self-start sm:self-auto"
+                  >
+                    <Upload className="w-4 h-4" /> Import KML Route
+                  </button>
+                  <button
+                    onClick={() => setShowPathModal(true)}
+                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-all self-start sm:self-auto"
+                  >
+                    <Plus className="w-4 h-4" /> Add Walking Path
+                  </button>
+                </div>
               </div>
 
               {/* Metrics Row */}
@@ -1253,70 +1397,113 @@ export default function AdminDashboard({
                   </h3>
 
                   <div className="space-y-2 max-h-[500px] overflow-y-auto pr-1">
-                    {(walkingPaths.length > 0 ? walkingPaths : []).map((path) => (
-                      <div
-                        key={path.pathId}
-                        className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
-                          path.status === 'active'
-                            ? 'bg-[#1e293b]/70 border-slate-800'
-                            : 'bg-red-950/20 border-red-500/40'
-                        }`}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-bold text-xs text-white truncate">{path.name}</span>
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold uppercase ${
-                              path.status === 'active'
-                                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                            }`}>
-                              {path.status}
-                            </span>
-                            {path.accessibility && (
-                              <span className="text-[10px] text-sky-400 flex items-center gap-0.5">
-                                <Accessibility className="w-3 h-3" /> Step-free
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-slate-400 flex items-center gap-1.5 truncate">
-                            <span className="font-mono text-slate-300">{path.startNode}</span>
-                            <span>&rarr;</span>
-                            <span className="font-mono text-slate-300">{path.endNode}</span>
-                            <span>&bull;</span>
-                            <span className="text-white font-semibold">{path.distanceMeters} m</span>
-                          </div>
-                        </div>
+                    {(walkingPaths.length > 0 ? walkingPaths : []).map((path) => {
+                      const isKmlPath = path.pathId === 'path_kml_main_gate_to_d_block' ||
+                                        path.sourceType === 'kml_import' ||
+                                        (path.source && String(path.source).toLowerCase().includes('kml')) ||
+                                        path.pointCount > 2;
 
-                        {/* Controls */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            onClick={() => handleTogglePathStatus(path)}
-                            title={path.status === 'active' ? 'Mark as Closed (Maintenance/Event)' : 'Mark as Active'}
-                            className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-colors ${
-                              path.status === 'active'
-                                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
-                                : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
-                            }`}
-                          >
-                            {path.status === 'active' ? 'Close Path' : 'Reopen'}
-                          </button>
-                          <button
-                            onClick={() => handleTogglePathAccessibility(path)}
-                            title="Toggle Wheelchair Accessibility"
-                            className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
-                          >
-                            <Accessibility className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeletePath(path.pathId)}
-                            title="Delete Path"
-                            className="p-1.5 rounded-lg bg-slate-800 text-rose-400 hover:text-rose-300"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                      return (
+                        <div
+                          key={path.pathId}
+                          className={`p-3 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                            path.status === 'active'
+                              ? (isKmlPath ? 'bg-sky-950/30 border-sky-600/50' : 'bg-[#1e293b]/70 border-slate-800')
+                              : 'bg-red-950/20 border-red-500/40'
+                          }`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <span className="font-bold text-xs text-white truncate">{path.name}</span>
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold uppercase ${
+                                path.status === 'active'
+                                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                  : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                              }`}>
+                                {path.status}
+                              </span>
+                              {isKmlPath && (
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-sky-500/20 text-sky-300 border border-sky-500/40 flex items-center gap-1">
+                                  <span>KML Surveyed</span>
+                                  <span className="opacity-80">({path.pointCount || path.geometry?.length} pts)</span>
+                                </span>
+                              )}
+                              {path.accessibility && (
+                                <span className="text-[10px] text-sky-400 flex items-center gap-0.5">
+                                  <Accessibility className="w-3 h-3" /> Step-free
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-slate-400 flex flex-wrap items-center gap-1.5">
+                              <span className="font-mono text-slate-300">{path.startNode}</span>
+                              <span>&rarr;</span>
+                              <span className="font-mono text-slate-300">{path.endNode}</span>
+                              <span>&bull;</span>
+                              <span className="text-white font-semibold">{path.distanceMeters} m</span>
+                              {path.estimatedWalkingMinutes && (
+                                <>
+                                  <span>&bull;</span>
+                                  <span className="text-slate-300">~{path.estimatedWalkingMinutes} mins walk</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Controls */}
+                          <div className="flex flex-wrap items-center gap-1.5 shrink-0">
+                            {/* View GPS Coordinates */}
+                            <button
+                              onClick={() => setSelectedCoordinatesPath(path)}
+                              title="View GPS Coordinates Table (LineString)"
+                              className="px-2 py-1 rounded-lg bg-sky-500/15 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 text-[10px] font-bold flex items-center gap-1 transition-colors"
+                            >
+                              <FileCode className="w-3.5 h-3.5" />
+                              <span>GPS ({path.geometry?.length || 0})</span>
+                            </button>
+
+                            {/* Edit Path Details */}
+                            <button
+                              onClick={() => setEditPathModal(path)}
+                              title="Edit Path Metadata"
+                              className="p-1.5 rounded-lg bg-slate-800 text-amber-400 hover:text-amber-300 transition-colors"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+
+                            {/* Close / Reopen */}
+                            <button
+                              onClick={() => handleTogglePathStatus(path)}
+                              title={path.status === 'active' ? 'Mark as Closed (Maintenance/Event)' : 'Mark as Active'}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-bold border transition-colors ${
+                                path.status === 'active'
+                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
+                                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                              }`}
+                            >
+                              {path.status === 'active' ? 'Close Path' : 'Reopen'}
+                            </button>
+
+                            {/* Accessibility */}
+                            <button
+                              onClick={() => handleTogglePathAccessibility(path)}
+                              title="Toggle Wheelchair Accessibility"
+                              className="p-1.5 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
+                            >
+                              <Accessibility className="w-3.5 h-3.5" />
+                            </button>
+
+                            {/* Delete */}
+                            <button
+                              onClick={() => handleDeletePath(path.pathId)}
+                              title="Delete Path"
+                              className="p-1.5 rounded-lg bg-slate-800 text-rose-400 hover:text-rose-300"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -1953,6 +2140,341 @@ export default function AdminDashboard({
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-emerald-600/30"
                 >
                   Add Path to Network
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* KML Import Reusable Modal */}
+      {showKmlModal && (
+        <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-xl bg-[#0f172a] border border-slate-700 rounded-2xl shadow-2xl p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center">
+                  <Upload className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-white">Import Verified KML Walking Path</h3>
+                  <p className="text-[11px] text-slate-400">Upload a Google Earth KML file to register surveyed coordinates</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowKmlModal(false);
+                  setKmlFile(null);
+                  setParsedKmlData(null);
+                }}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleImportKmlSubmit} className="space-y-4">
+              {/* File upload input */}
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1.5">Select KML File (.kml)</label>
+                <div className="border-2 border-dashed border-slate-700 hover:border-sky-500/60 rounded-xl p-4 text-center cursor-pointer bg-slate-900/50 transition-colors relative">
+                  <input
+                    type="file"
+                    accept=".kml,application/vnd.google-earth.kml+xml"
+                    onChange={handleKmlFileChange}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div className="flex flex-col items-center justify-center gap-2 pointer-events-none">
+                    <Upload className="w-6 h-6 text-sky-400" />
+                    {kmlFile ? (
+                      <div className="text-xs font-semibold text-emerald-400">
+                        {kmlFile.name} ({(kmlFile.size / 1024).toFixed(1)} KB)
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-xs font-semibold text-white">Click or drag & drop a KML file here</div>
+                        <div className="text-[11px] text-slate-400">Preserves original GPS coordinates & LineString sequence</div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Parsed KML Information Preview */}
+              {parsedKmlData && (
+                <div className="p-3.5 bg-sky-950/40 border border-sky-500/30 rounded-xl space-y-2 text-xs">
+                  <div className="flex items-center justify-between font-bold text-sky-300 border-b border-sky-500/20 pb-1.5">
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      KML Parsed Successfully
+                    </span>
+                    <span className="text-[11px] font-mono bg-sky-500/20 px-2 py-0.5 rounded text-sky-200">
+                      {parsedKmlData.pointCount} GPS Points
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-300">
+                    <div>Distance: <span className="font-bold text-white font-mono">{parsedKmlData.distanceMeters} m</span></div>
+                    <div>Walking Time: <span className="font-bold text-white font-mono">~{parsedKmlData.estimatedWalkingMinutes} min</span></div>
+                    <div className="col-span-2 text-slate-400 text-[10px]">
+                      Start: [{parsedKmlData.geometry[0][0].toFixed(6)}, {parsedKmlData.geometry[0][1].toFixed(6)}] &rarr; End: [{parsedKmlData.geometry[parsedKmlData.geometry.length - 1][0].toFixed(6)}, {parsedKmlData.geometry[parsedKmlData.geometry.length - 1][1].toFixed(6)}]
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Path Name */}
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">Route / Path Name</label>
+                <input
+                  type="text"
+                  required
+                  value={kmlForm.name}
+                  onChange={(e) => setKmlForm({ ...kmlForm, name: e.target.value })}
+                  placeholder="e.g. Main Gate → D Block"
+                  className="w-full px-3 py-2 bg-[#1e293b] border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-sky-500"
+                />
+              </div>
+
+              {/* Node Junction Mapping */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1">Start Campus Node</label>
+                  <select
+                    value={kmlForm.startNode}
+                    onChange={(e) => setKmlForm({ ...kmlForm, startNode: e.target.value })}
+                    className="w-full px-2.5 py-2 bg-[#1e293b] border border-slate-700 rounded-xl text-xs text-white"
+                  >
+                    {NAVIGATION_NODES.map(n => (
+                      <option key={n.nodeId} value={n.nodeId}>
+                        {n.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1">End Campus Node</label>
+                  <select
+                    value={kmlForm.endNode}
+                    onChange={(e) => setKmlForm({ ...kmlForm, endNode: e.target.value })}
+                    className="w-full px-2.5 py-2 bg-[#1e293b] border border-slate-700 rounded-xl text-xs text-white"
+                  >
+                    {NAVIGATION_NODES.map(n => (
+                      <option key={n.nodeId} value={n.nodeId}>
+                        {n.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Route Type */}
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">Route Type</label>
+                <select
+                  value={kmlForm.routeType}
+                  onChange={(e) => setKmlForm({ ...kmlForm, routeType: e.target.value })}
+                  className="w-full px-2.5 py-2 bg-[#1e293b] border border-slate-700 rounded-xl text-xs text-white"
+                >
+                  <option value="Walking">Walking</option>
+                  <option value="Wheelchair Accessible">Wheelchair Accessible</option>
+                  <option value="Campus Transit">Campus Transit / Shuttle</option>
+                  <option value="Bicycle">Bicycle Path</option>
+                </select>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">Notes / Verification Details</label>
+                <textarea
+                  rows="2"
+                  value={kmlForm.notes}
+                  onChange={(e) => setKmlForm({ ...kmlForm, notes: e.target.value })}
+                  placeholder="Additional survey context, ground notes, or landmark details"
+                  className="w-full px-3 py-2 bg-[#1e293b] border border-slate-700 rounded-xl text-xs text-white"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowKmlModal(false);
+                    setKmlFile(null);
+                    setParsedKmlData(null);
+                  }}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={kmlLoading || !parsedKmlData}
+                  className="px-5 py-2 bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow-lg shadow-sky-600/30 transition-all flex items-center gap-1.5"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  {kmlLoading ? 'Importing Route...' : 'Register in Campus Walking Network'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* View GPS Coordinates Modal */}
+      {selectedCoordinatesPath && (
+        <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl bg-[#0f172a] border border-slate-700 rounded-2xl shadow-2xl p-6 space-y-4 max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-sky-500/20 text-sky-400 flex items-center justify-center">
+                  <FileCode className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-white">Surveyed GPS Coordinates</h3>
+                  <p className="text-[11px] text-slate-400">
+                    {selectedCoordinatesPath.name} &bull; {selectedCoordinatesPath.geometry?.length || 0} Points &bull; {selectedCoordinatesPath.distanceMeters || '~423'}m
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleCopyCoordinates(selectedCoordinatesPath.geometry)}
+                  className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                >
+                  {copiedCoords ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedCoords ? 'Copied!' : 'Copy JSON'}</span>
+                </button>
+                <button
+                  onClick={() => handleDownloadKml(selectedCoordinatesPath)}
+                  className="px-3 py-1.5 rounded-xl bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download KML</span>
+                </button>
+                <button
+                  onClick={() => setSelectedCoordinatesPath(null)}
+                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-y-auto flex-1 pr-1 space-y-1">
+              <div className="sticky top-0 bg-[#0f172a] grid grid-cols-12 py-2 px-3 text-[11px] font-bold text-slate-400 border-b border-slate-800">
+                <div className="col-span-2">Point #</div>
+                <div className="col-span-5">Latitude (Lat)</div>
+                <div className="col-span-5">Longitude (Lng)</div>
+              </div>
+              {selectedCoordinatesPath.geometry?.map((pt, idx) => (
+                <div
+                  key={idx}
+                  className="grid grid-cols-12 py-1.5 px-3 rounded-lg text-xs font-mono hover:bg-slate-800/60 transition-colors border-b border-slate-800/40 text-slate-300"
+                >
+                  <div className="col-span-2 text-sky-400 font-bold">{idx + 1}</div>
+                  <div className="col-span-5 select-all">{pt[0]?.toFixed(8)}</div>
+                  <div className="col-span-5 select-all">{pt[1]?.toFixed(8)}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="shrink-0 pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
+              <div>Source: {selectedCoordinatesPath.sourceFileName || 'Google Earth Survey'}</div>
+              <button
+                onClick={() => setSelectedCoordinatesPath(null)}
+                className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-semibold"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Path Metadata Modal */}
+      {editPathModal && (
+        <div className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-[#0f172a] border border-slate-700 rounded-2xl shadow-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="font-bold text-base text-white">Edit Walking Path</h3>
+              <button onClick={() => setEditPathModal(null)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePathEdit} className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">Path Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editPathModal.name}
+                  onChange={(e) => setEditPathModal({ ...editPathModal, name: e.target.value })}
+                  className="w-full px-3 py-2 bg-[#1e293b] border border-slate-700 rounded-xl text-xs text-white"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">Verification Status</label>
+                <select
+                  value={editPathModal.verificationStatus || 'Verified'}
+                  onChange={(e) => setEditPathModal({ ...editPathModal, verificationStatus: e.target.value })}
+                  className="w-full px-2.5 py-2 bg-[#1e293b] border border-slate-700 rounded-xl text-xs text-white"
+                >
+                  <option value="KML Surveyed">KML Surveyed (Survey Grade)</option>
+                  <option value="Verified">Verified Walking Path</option>
+                  <option value="GPS Captured">GPS Captured</option>
+                  <option value="Draft">Draft / Pending Ground Truth</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">Operational Status</label>
+                <select
+                  value={editPathModal.status || 'active'}
+                  onChange={(e) => setEditPathModal({ ...editPathModal, status: e.target.value })}
+                  className="w-full px-2.5 py-2 bg-[#1e293b] border border-slate-700 rounded-xl text-xs text-white"
+                >
+                  <option value="active">Active (Open to Pedestrians)</option>
+                  <option value="closed">Closed (Construction / Maintenance / Event)</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1 text-xs">
+                <label className="flex items-center gap-2 text-slate-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editPathModal.accessibility}
+                    onChange={(e) => setEditPathModal({ ...editPathModal, accessibility: e.target.checked })}
+                    className="rounded bg-slate-800 border-slate-700 text-sky-500"
+                  />
+                  <span>Wheelchair Accessible (Step-free)</span>
+                </label>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">Notes / Landmarks</label>
+                <textarea
+                  rows="2"
+                  value={editPathModal.notes || ''}
+                  onChange={(e) => setEditPathModal({ ...editPathModal, notes: e.target.value })}
+                  className="w-full px-3 py-2 bg-[#1e293b] border border-slate-700 rounded-xl text-xs text-white"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditPathModal(null)}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-blue-600/30"
+                >
+                  Save Changes
                 </button>
               </div>
             </form>

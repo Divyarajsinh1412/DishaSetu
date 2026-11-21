@@ -77,19 +77,19 @@ export const COMPLETE_CAMPUS_CATALOG = [
     shortCode: 'PU-D-BLOCK',
     category: 'Academic',
     description: 'Engineering instructional complex, CAD/CAM mechanical studios, civil hydraulics labs, and smart lecture theaters.',
-    coordinates: { lat: 13.170563, lng: 77.535573 },
-    entranceCoordinates: { lat: 13.170550, lng: 77.535610 },
+    coordinates: { lat: 13.16915723332783, lng: 77.53391962930635 },
+    entranceCoordinates: { lat: 13.16915723332783, lng: 77.53391962930635 },
     entrances: [
       {
         entranceId: 'ent_d_block_main',
-        name: 'D Block East Main Entrance',
-        coordinates: { lat: 13.170550, lng: 77.535610 },
+        name: 'D Block Main Entrance (Surveyed)',
+        coordinates: { lat: 13.16915723332783, lng: 77.53391962930635 },
         isAccessible: true,
         isPrimary: true,
         hasRamp: true
       }
     ],
-    coordinateSource: 'Google Maps Manual',
+    coordinateSource: 'Google Earth KML Survey',
     gpsAccuracy: 2.5,
     surveyDate: '2026-11-17',
     surveyedBy: 'Presidency GIS Survey Team',

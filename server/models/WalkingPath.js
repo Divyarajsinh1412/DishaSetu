@@ -68,6 +68,49 @@ const WalkingPathSchema = new mongoose.Schema({
     type: String,
     default: 'Paved Tiles'
   },
+  sourceFileName: {
+    type: String,
+    default: 'manual'
+  },
+  source: {
+    type: String,
+    default: 'Manual Entry'
+  },
+  sourceType: {
+    type: String,
+    enum: ['kml_import', 'survey', 'manual', 'gis_catalog'],
+    default: 'kml_import'
+  },
+  routeType: {
+    type: String,
+    default: 'Walking'
+  },
+  campus: {
+    type: String,
+    default: 'Presidency University Bengaluru'
+  },
+  startLocation: {
+    name: String,
+    lat: Number,
+    lng: Number
+  },
+  endLocation: {
+    name: String,
+    lat: Number,
+    lng: Number
+  },
+  estimatedWalkingMinutes: {
+    type: Number,
+    default: 1
+  },
+  pointCount: {
+    type: Number,
+    default: 0
+  },
+  active: {
+    type: Boolean,
+    default: true
+  },
   notes: String
 }, { timestamps: true });
 

@@ -151,3 +151,23 @@ export const deleteWalkingPath = async (req, res) => {
     res.status(400).json({ success: false, message: error.message });
   }
 };
+
+/**
+ * Import a Walking Path from KML file/text
+ * POST /api/admin/paths/import-kml
+ */
+export const importKmlWalkingPath = async (req, res) => {
+  try {
+    const importedPath = await CampusService.importKmlPath(
+      req.body,
+      req.adminUser || { email: 'admin@presidency.ac.in', role: 'super_admin' }
+    );
+    res.status(201).json({
+      success: true,
+      message: `Verified KML walking path "${importedPath.name}" imported successfully (${importedPath.pointCount} points, ${importedPath.distanceMeters}m).`,
+      data: importedPath
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};

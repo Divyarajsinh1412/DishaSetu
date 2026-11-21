@@ -53,6 +53,18 @@ const RouteSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  sourceFileName: {
+    type: String,
+    default: 'manual'
+  },
+  source: {
+    type: String,
+    default: 'Presidency University GIS'
+  },
+  campus: {
+    type: String,
+    default: 'Presidency University Bengaluru'
+  },
   status: {
     type: String,
     enum: ['published', 'draft', 'pending'],

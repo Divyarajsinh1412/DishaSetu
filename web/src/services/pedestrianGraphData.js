@@ -12,7 +12,7 @@ export const NAVIGATION_NODES = [
   {
     nodeId: 'node_main_gate',
     name: 'Presidency University – Main Gate Entrance Portal',
-    coordinates: [13.1717995, 77.5361915],
+    coordinates: [13.17174576988432, 77.53609409799955],
     nodeType: 'gate',
     associatedLocationId: 'loc_main_gate',
     isAccessible: true
@@ -99,8 +99,8 @@ export const NAVIGATION_NODES = [
   },
   {
     nodeId: 'node_d_block_ent',
-    name: 'D Block (Mechanical & Civil) East Entrance Door',
-    coordinates: [13.1705500, 77.5356100],
+    name: 'D Block (Mechanical & Civil Engineering) Entrance Door',
+    coordinates: [13.16915723332783, 77.53391962930635],
     nodeType: 'building_entrance',
     associatedLocationId: 'loc_d_block',
     isAccessible: true
@@ -292,6 +292,329 @@ export const NAVIGATION_NODES = [
 
 // Verified Pedestrian Walking Paths (Edges)
 export const WALKING_PATHS = [
+  // 0. VERIFIED KML SURVEYED ROUTE: Main Gate to D Block (Google Earth KML 72-point line)
+  {
+    pathId: 'path_kml_main_gate_to_d_block',
+    name: 'Main Gate → D Block',
+    startNode: 'node_main_gate',
+    endNode: 'node_d_block_ent',
+    geometry: [
+    [
+        13.17174576988432,
+        77.53609409799955
+    ],
+    [
+        13.17169863045853,
+        77.53608210855332
+    ],
+    [
+        13.1716383910603,
+        77.53605042839274
+    ],
+    [
+        13.17159359517197,
+        77.53604282665427
+    ],
+    [
+        13.17155101268326,
+        77.53603556812003
+    ],
+    [
+        13.17150754216009,
+        77.5360266924011
+    ],
+    [
+        13.17147941299077,
+        77.53602121419446
+    ],
+    [
+        13.17144588088828,
+        77.53601171550024
+    ],
+    [
+        13.17141548831614,
+        77.53600297805718
+    ],
+    [
+        13.17137149118117,
+        77.53598567076828
+    ],
+    [
+        13.17133931695116,
+        77.53596697295295
+    ],
+    [
+        13.17129818385298,
+        77.53595081617756
+    ],
+    [
+        13.17126896775573,
+        77.5359411946154
+    ],
+    [
+        13.17123972989239,
+        77.53592854020138
+    ],
+    [
+        13.17121308196014,
+        77.53592266244777
+    ],
+    [
+        13.17116699802034,
+        77.53589854624452
+    ],
+    [
+        13.1711155427013,
+        77.53586947061237
+    ],
+    [
+        13.17106666095199,
+        77.53584975560692
+    ],
+    [
+        13.17101448049524,
+        77.53581892871577
+    ],
+    [
+        13.17096051921789,
+        77.53579461787281
+    ],
+    [
+        13.17090689078972,
+        77.53576844077367
+    ],
+    [
+        13.17086562762542,
+        77.53574429064513
+    ],
+    [
+        13.17081162128503,
+        77.5357160467174
+    ],
+    [
+        13.17077800877276,
+        77.53569572249197
+    ],
+    [
+        13.17074490791287,
+        77.53567244764086
+    ],
+    [
+        13.17070499547361,
+        77.53564837922956
+    ],
+    [
+        13.17065386094593,
+        77.53561271930327
+    ],
+    [
+        13.17060860411526,
+        77.53558093956185
+    ],
+    [
+        13.17054935948529,
+        77.53555036633993
+    ],
+    [
+        13.17050113223478,
+        77.5355247736367
+    ],
+    [
+        13.17045012729626,
+        77.53549435194522
+    ],
+    [
+        13.17041064690491,
+        77.53547015697703
+    ],
+    [
+        13.17036640154106,
+        77.5354482317468
+    ],
+    [
+        13.17031826377981,
+        77.53541890680094
+    ],
+    [
+        13.17027002008206,
+        77.53539640838453
+    ],
+    [
+        13.17023498177819,
+        77.53537430972969
+    ],
+    [
+        13.1701820732767,
+        77.53534727991693
+    ],
+    [
+        13.17013954577857,
+        77.535323185103
+    ],
+    [
+        13.17009937034263,
+        77.5353022563515
+    ],
+    [
+        13.170051369734,
+        77.53527533003101
+    ],
+    [
+        13.17000868061955,
+        77.53524802486159
+    ],
+    [
+        13.16997249936164,
+        77.53523380553656
+    ],
+    [
+        13.16993464625497,
+        77.53521593309777
+    ],
+    [
+        13.16988366156734,
+        77.53518247499464
+    ],
+    [
+        13.169870695201,
+        77.53516452941227
+    ],
+    [
+        13.16983919235103,
+        77.53512610343617
+    ],
+    [
+        13.16981046335518,
+        77.53508194930586
+    ],
+    [
+        13.16984171658533,
+        77.53499372472088
+    ],
+    [
+        13.16987083894686,
+        77.53492970791183
+    ],
+    [
+        13.16986296632206,
+        77.53486744885356
+    ],
+    [
+        13.16979586272434,
+        77.53479484326571
+    ],
+    [
+        13.16972675792108,
+        77.53474772529633
+    ],
+    [
+        13.16964474898791,
+        77.53471726692706
+    ],
+    [
+        13.16957497737892,
+        77.5346907315059
+    ],
+    [
+        13.1694851705393,
+        77.53465797397705
+    ],
+    [
+        13.16940533551286,
+        77.53463137716737
+    ],
+    [
+        13.16933242293897,
+        77.53460062340486
+    ],
+    [
+        13.16925010470841,
+        77.53458177362035
+    ],
+    [
+        13.16918752404643,
+        77.53453792902008
+    ],
+    [
+        13.16915625214984,
+        77.53448600665828
+    ],
+    [
+        13.16915107133306,
+        77.5344453900895
+    ],
+    [
+        13.16913915771938,
+        77.53437656453819
+    ],
+    [
+        13.16912708583898,
+        77.53433825948261
+    ],
+    [
+        13.16911315488541,
+        77.53428686284192
+    ],
+    [
+        13.16911541318982,
+        77.53424813807851
+    ],
+    [
+        13.16911466856421,
+        77.53419928510363
+    ],
+    [
+        13.16911420430902,
+        77.53414280804282
+    ],
+    [
+        13.16913034561081,
+        77.53407626682362
+    ],
+    [
+        13.1691503981058,
+        77.53402067342786
+    ],
+    [
+        13.1691532256497,
+        77.53397599366181
+    ],
+    [
+        13.16915320163163,
+        77.53394490986271
+    ],
+    [
+        13.16915723332783,
+        77.53391962930635
+    ]
+],
+    distanceMeters: 423,
+    estimatedWalkingMinutes: 6,
+    accessibility: true,
+    hasStairs: false,
+    hasRamp: true,
+    pathType: 'main_avenue',
+    routeType: 'Walking',
+    verificationStatus: 'Verified',
+    status: 'active',
+    active: true,
+    surfaceType: 'Paved Walkway & Tiles',
+    sourceFileName: 'Untitled map project.kml',
+    source: 'Google Earth KML',
+    campus: 'Presidency University Bengaluru',
+    startLocation: {
+      name: 'Presidency University – Main Gate',
+      lat: 13.17174576988432,
+      lng: 77.53609409799955
+    },
+    endLocation: {
+      name: 'D Block',
+      lat: 13.16915723332783,
+      lng: 77.53391962930635
+    },
+    pointCount: 72,
+    notes: 'Actual surveyed walking path from Presidency University Main Gate to D Block imported from Google Earth KML.'
+  },
   // 1. Main Gate to Avenue Origin Plaza
   {
     pathId: 'path_gate_to_avenue',
@@ -306,6 +629,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'main_avenue',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
 
@@ -323,6 +647,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'main_avenue',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
   {
@@ -338,6 +663,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'main_avenue',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
 
@@ -356,6 +682,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'parking_access',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
 
@@ -374,6 +701,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'main_avenue',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
 
@@ -391,6 +719,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'building_access',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
 
@@ -408,6 +737,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'main_avenue',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
 
@@ -426,6 +756,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'main_avenue',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
   {
@@ -441,6 +772,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'building_access',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
   {
@@ -457,6 +789,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'building_access',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
 
@@ -474,6 +807,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'main_avenue',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
   {
@@ -489,6 +823,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'building_access',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
 
@@ -506,6 +841,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'main_avenue',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
   {
@@ -521,6 +857,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'building_access',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
 
@@ -539,6 +876,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'main_avenue',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
   {
@@ -553,7 +891,7 @@ export const WALKING_PATHS = [
     distanceMeters: 5,
     accessibility: true,
     pathType: 'building_access',
-    status: 'active',
+    status: 'closed',
     verificationStatus: 'Verified'
   },
 
@@ -572,6 +910,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'main_avenue',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
   {
@@ -587,6 +926,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'building_access',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
 
@@ -604,6 +944,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'main_avenue',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
   {
@@ -619,6 +960,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'facility_entrance',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
 
@@ -636,6 +978,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'main_avenue',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
   {
@@ -651,6 +994,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'building_access',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
 
@@ -668,6 +1012,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'main_avenue',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
   {
@@ -683,6 +1028,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'facility_entrance',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
 
@@ -700,6 +1046,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'main_avenue',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
   {
@@ -715,6 +1062,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'building_access',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
   {
@@ -730,6 +1078,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'main_avenue',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
   {
@@ -745,6 +1094,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'building_access',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
 
@@ -762,6 +1112,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'main_avenue',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
 
@@ -780,6 +1131,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'secondary_walkway',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
 
@@ -798,6 +1150,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'secondary_walkway',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
   {
@@ -813,6 +1166,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'building_access',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
 
@@ -832,6 +1186,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'sports_access',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
   {
@@ -848,6 +1203,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'sports_access',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
 
@@ -866,6 +1222,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'sports_access',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
   {
@@ -883,6 +1240,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'gate_access',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   },
   {
@@ -898,6 +1256,7 @@ export const WALKING_PATHS = [
     accessibility: true,
     pathType: 'secondary_walkway',
     status: 'active',
+    active: true,
     verificationStatus: 'Verified'
   }
 ];
