@@ -4,8 +4,6 @@
  * Normalized coordinate space: X (0.0 to 1.0), Y (0.0 to 1.0) on 583 x 829 Master Reference Map.
  */
 
-import { MAIN_LAWN_NORMALIZED_COORDINATES } from './gardenAreaCoords';
-
 export const MASTER_CAMPUS_FEATURES = [
   // ==============================================================
   // 1. ACADEMIC & ADMINISTRATIVE BUILDINGS (CLICKABLE POLYGONS)
@@ -499,18 +497,24 @@ export const MASTER_CAMPUS_FEATURES = [
   // ==============================================================
   {
     featureId: 'feat_main_lawn',
-    featureName: 'Main Lawn / Garden Area',
+    featureName: 'Main Lawn',
     code: 'PU-MAIN-LAWN',
     category: 'Garden',
     type: 'polygon',
-    normalizedX: 0.5550,
-    normalizedY: 0.4150,
-    polygonCoordinates: MAIN_LAWN_NORMALIZED_COORDINATES,
-    description: 'Expansive central campus green lawn providing peaceful student relaxation, garden walkways, and grand ceremonial avenue view (Authoritative Google Earth KML Surveyed).',
-    latitude: 13.17032,
-    longitude: 77.53605,
-    status: 'Verified',
-    coordinateSource: 'Google Earth KML Survey (gardenArea.kml)'
+    normalizedX: 0.5850,
+    normalizedY: 0.4200,
+    polygonCoordinates: [
+      [0.550, 0.255],
+      [0.680, 0.285],
+      [0.620, 0.540],
+      [0.545, 0.580],
+      [0.485, 0.580],
+      [0.540, 0.255]
+    ],
+    description: 'Lush expansive central campus green lawn providing peaceful student relaxation, garden paths, and grand ceremonial avenue view.',
+    latitude: 13.17135,
+    longitude: 77.53675,
+    status: 'Verified'
   },
   {
     featureId: 'feat_fountain',

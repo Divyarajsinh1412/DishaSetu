@@ -219,12 +219,12 @@ let memoryStore = {
     },
     {
       featureId: 'feature_campus_garden_area',
-      name: 'Main Lawn / Garden Area',
+      name: 'Presidency Campus Central Garden',
       category: 'garden',
       geometryType: 'Polygon',
       coordinates: VERIFIED_CAMPUS_DATA.campusGardenArea.map(p => [p.lat, p.lng]),
-      style: { color: '#15803d', fillColor: '#22c55e', weight: 2.5, opacity: 0.95, fillOpacity: 0.32 },
-      metadata: { description: 'Authoritative surveyed Main Lawn and Central Garden polygon (77 GPS points from gardenArea.kml).' },
+      style: { color: '#15803d', fillColor: '#22c55e', weight: 2, opacity: 0.9, fillOpacity: 0.4 },
+      metadata: { description: 'Campus garden polygon preserved with 19 ordered boundary points without simplification.' },
       verified: true,
       status: 'published'
     },
