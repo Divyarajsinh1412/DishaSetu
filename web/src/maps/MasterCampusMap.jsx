@@ -1097,44 +1097,6 @@ export default function MasterCampusMap({
           <span className="hidden sm:inline">Main Gate</span>
           <span className="sm:hidden">Gate</span>
         </button>
-        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 shrink-0" />
-        <button
-          type="button"
-          onClick={() => {
-            if (activeRoute) {
-              if (onClearRoute) onClearRoute();
-            } else {
-              if (onStartNavigation) {
-                onStartNavigation({
-                  startLocationId: 'node_main_gate',
-                  startNodeId: 'node_main_gate',
-                  startLocation: { name: 'Main Gate', lat: 13.17115, lng: 77.53785, locationId: 'loc_main_gate' },
-                  endLocationId: 'node_d_block_ent',
-                  endNodeId: 'node_d_block_ent',
-                  endLocation: { name: 'D Block', lat: 13.17068, lng: 77.53565, buildingId: 'bld_d_block' },
-                  distanceMeters: 765,
-                  estimatedMinutes: 8,
-                  mode: 'walking'
-                });
-              } else if (onOpenRoutePlanning) {
-                onOpenRoutePlanning('node_main_gate', 'bld_d_block');
-              } else {
-                const walkFeat = allCampusFeatures.find(f => f.featureId === 'feat_walking_corridor_main_to_d');
-                if (walkFeat) handleSelectFeature(walkFeat);
-              }
-            }
-          }}
-          className={`px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 shrink-0 border ${
-            activeRoute
-              ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border-orange-500/40 shadow-sm'
-              : 'hover:bg-slate-100 dark:hover:bg-slate-700/60 border-transparent text-slate-700 dark:text-slate-300'
-          }`}
-          title={activeRoute ? "End Route Navigation" : "Navigate Main Gate → D Block Pathway"}
-        >
-          <Footprints className={`w-3.5 h-3.5 ${activeRoute ? 'text-orange-500' : 'text-slate-500'}`} />
-          <span className="hidden sm:inline">Walking Area</span>
-          <span className="sm:hidden">Walk</span>
-        </button>
         {activeRoute && (
           <>
             <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 shrink-0" />
@@ -1144,6 +1106,7 @@ export default function MasterCampusMap({
               className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 text-rose-600 font-bold transition-colors flex items-center gap-1 shrink-0"
               title="End Active Navigation Route"
             >
+              <X className="w-3.5 h-3.5" />
               <span>End Route ✕</span>
             </button>
           </>
@@ -1214,8 +1177,8 @@ export default function MasterCampusMap({
               if (feat.polygonCoordinates && feat.polygonCoordinates.length > 2) {
                 const isPathway = feat.category === 'Pathway' || feat.category === 'Route';
 
-                // HIDE route by default on normal map: only appear when user wants to navigate (activeRoute is active, or user specifically selected/searched this pathway, or pathway filter is active)
-                if (isPathway && !activeRoute && !isSelected && activeCategory?.toLowerCase() !== 'pathway') {
+                // HIDE route by default on normal map: only appear when user is actively navigating
+                if (isPathway && !activeRoute) {
                   return null;
                 }
 
@@ -1273,6 +1236,21 @@ export default function MasterCampusMap({
                     onClick={(e) => {
                       e.stopPropagation();
                       handleSelectFeature(feat);
+                      const isAcademicBuilding = feat.category === 'Academic' || feat.hasIndoorMap;
+                      if (isAcademicBuilding && onOpenBuildingPopup) {
+                        onOpenBuildingPopup({
+                          _id: feat.buildingId || feat.featureId,
+                          buildingId: feat.buildingId || feat.featureId,
+                          name: feat.featureName,
+                          code: feat.code,
+                          shortCode: feat.code,
+                          category: feat.category,
+                          totalFloors: feat.totalFloors || 3,
+                          hasIndoorMap: feat.hasIndoorMap,
+                          description: feat.description,
+                          departments: feat.departments || []
+                        });
+                      }
                     }}
                     onMouseEnter={() => setHoveredFeature(feat)}
                     onMouseLeave={() => setHoveredFeature(null)}
@@ -1314,6 +1292,21 @@ export default function MasterCampusMap({
                     onClick={(e) => {
                       e.stopPropagation();
                       handleSelectFeature(feat);
+                      const isAcademicBuilding = feat.category === 'Academic' || feat.hasIndoorMap;
+                      if (isAcademicBuilding && onOpenBuildingPopup) {
+                        onOpenBuildingPopup({
+                          _id: feat.buildingId || feat.featureId,
+                          buildingId: feat.buildingId || feat.featureId,
+                          name: feat.featureName,
+                          code: feat.code,
+                          shortCode: feat.code,
+                          category: feat.category,
+                          totalFloors: feat.totalFloors || 3,
+                          hasIndoorMap: feat.hasIndoorMap,
+                          description: feat.description,
+                          departments: feat.departments || []
+                        });
+                      }
                     }}
                     onMouseEnter={() => setHoveredFeature(feat)}
                     onMouseLeave={() => setHoveredFeature(null)}
@@ -1524,20 +1517,30 @@ export default function MasterCampusMap({
             const isSelected = activeSelected?.featureId === feat.featureId;
             const isPathway = feat.category === 'Pathway' || feat.category === 'Route';
 
-            // HIDE route pin by default: only appear when selected or when explicitly viewing Pathway category
-            if (isPathway && !isSelected && activeCategory?.toLowerCase() !== 'pathway') {
+            // HIDE route pin by default: only appear when activeRoute is active
+            if (isPathway && !activeRoute) {
               return null;
             }
 
-            // Pin visibility:
-            // 1. Always show pin if feature is SELECTED
-            // 2. Always show pins if user has an active SEARCH
-            // 3. Always show pins if a specific CATEGORY is filtered (e.g., Cafes, Sports, Parking)
-            // 4. In default overview, keep academic buildings clean so map typography is completely unobstructed;
-            //    only show key landmarks (Main Gate, Gate 2, Central Fountain, Hatti Kaapi cafe)
+            // Check if feature is an academic building or has a polygon footprint
+            const hasPolygon = Boolean(feat.polygonCoordinates && feat.polygonCoordinates.length > 2);
+            const isBuilding = feat.category === 'Academic' || feat.category === 'Administrative' || feat.buildingId || /block/i.test(feat.featureName);
+
+            // Clean architectural map styling:
+            // Campus buildings are already drawn and labeled with high-resolution typography on the official campus master map.
+            // DO NOT render redundant generic circular pins over buildings by default — this blocks map text and crowds the quad.
+            // Only render a pin over a building if:
+            // 1. It is explicitly SELECTED by the user (shows pin + detailed place popup)
+            // 2. The user has an active search query that matches this specific building
             const hasActiveSearch = Boolean(localSearch || searchQuery);
-            const isSpecificCategoryFilter = activeCategory && activeCategory !== 'all';
-            const isKeyAmenity = feat.category === 'Cafe' || feat.category === 'Gate' || feat.featureId === 'feat_fountain';
+            if (hasPolygon && isBuilding && !isSelected && !hasActiveSearch) {
+              return null;
+            }
+
+            // For non-polygon standalone amenities (Cafes, Gates, Central Fountain):
+            // Show pin if selected, if searched, if specific category filter is active, or if key landmark
+            const isSpecificCategoryFilter = activeCategory && activeCategory !== 'all' && activeCategory.toLowerCase() !== 'academic';
+            const isKeyAmenity = feat.code === 'PU-CAFE-D-BLOCK' || feat.featureId === 'feat_fountain' || feat.featureId === 'feat_main_gate';
 
             const shouldShowPin = isSelected || hasActiveSearch || isSpecificCategoryFilter || isKeyAmenity;
             if (!shouldShowPin) {
@@ -1547,7 +1550,6 @@ export default function MasterCampusMap({
             const Icon = getCategoryIcon(feat.category);
             const style = getCategoryStyle(feat.category);
             const isHattiKappi = feat.code === 'PU-CAFE-D-BLOCK' || feat.featureId === 'feat_food_d_block' || /hatti kappi/i.test(feat.featureName);
-            const isBuilding = feat.category === 'Academic' || feat.category === 'Administrative' || feat.buildingId || /block/i.test(feat.featureName);
             const ratingData = hattiKappiCafe?.rating || { average: 4.8, count: 4 };
             const showPopupBelow = feat.normalizedY < 0.45;
 

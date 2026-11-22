@@ -891,6 +891,40 @@ export const deleteIndoorFloorApi = async (floorId, token) => {
   return await res.json();
 };
 
+export const createIndoorRoomApi = async (floorId, roomData, token) => {
+  const res = await appFetch(`/api/indoor/floors/${floorId}/rooms`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(roomData)
+  });
+  return await res.json();
+};
+
+export const updateIndoorRoomApi = async (floorId, roomId, updates, token) => {
+  const res = await appFetch(`/api/indoor/floors/${floorId}/rooms/${roomId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(updates)
+  });
+  return await res.json();
+};
+
+export const deleteIndoorRoomApi = async (floorId, roomId, token) => {
+  const res = await appFetch(`/api/indoor/floors/${floorId}/rooms/${roomId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  return await res.json();
+};
+
 export const fetchIndoorGraph = async (buildingId, floorNumber) => {
   try {
     const query = new URLSearchParams();

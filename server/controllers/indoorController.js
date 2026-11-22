@@ -1,27 +1,59 @@
+import mongoose from 'mongoose';
 import Floor from '../models/Floor.js';
 import Room from '../models/Room.js';
 import IndoorNode from '../models/IndoorNode.js';
 import IndoorPath from '../models/IndoorPath.js';
 import { getDbStatus } from '../config/db.js';
 import syncService from '../services/syncService.js';
-import { D_BLOCK_ALL_FLOORS, generateDBlockGraph, D_BLOCK_BUILDING_INFO } from '../data/dBlockFloorDataset.js';
+import {
+  CAMPUS_ALL_FLOORS,
+  CAMPUS_BLOCKS_INFO,
+  generateCampusIndoorGraph,
+  calculateRoomBounds
+} from '../data/campusFloorsDataset.js';
 
-const dBlockGraph = generateDBlockGraph();
+const campusGraph = generateCampusIndoorGraph();
 
-// Initial in-memory floor datasets (D Block 6 floors + legacy CSE floors fallback)
+// Helper to safely build Floor query without triggering Mongoose CastError on _id
+function getFloorQuery(id) {
+  if (!id) return { floorId: id };
+  return mongoose.isValidObjectId(id) ? { $or: [{ floorId: id }, { _id: id }] } : { floorId: id };
+}
+
+// Initial in-memory floor datasets (All 6 blocks: D, E, F, L, N, M)
 let memoryFloors = [
-  ...D_BLOCK_ALL_FLOORS
+  ...CAMPUS_ALL_FLOORS
 ];
 
-// Initial memory indoor nodes
+// Initial memory indoor nodes & paths
 let memoryIndoorNodes = [
-  ...dBlockGraph.nodes
+  ...campusGraph.nodes
+];
+let memoryIndoorPaths = [
+  ...campusGraph.paths
 ];
 
-// Initial memory indoor paths
-let memoryIndoorPaths = [
-  ...dBlockGraph.paths
-];
+/**
+ * Flexible matching helper for any campus building ID / shortCode / name
+ */
+function isBuildingMatch(targetKey, queryStr) {
+  if (!queryStr) return false;
+  const q = String(queryStr).toLowerCase().trim();
+  const meta = CAMPUS_BLOCKS_INFO[targetKey];
+  if (!meta) return false;
+
+  const bId = meta.buildingId.toLowerCase();
+  const sCode = meta.shortCode.toLowerCase();
+  const bName = meta.name.toLowerCase();
+  const letter = meta.blockLetter.toLowerCase();
+
+  if (q === bId || q === sCode || q === bName || q === letter) return true;
+  if (q === `${letter}-block` || q === `${letter}_block` || q === `${letter} block`) return true;
+  if (q.includes(`bld_${letter}`)) return true;
+  if (letter === 'm' && (q.includes('som') || q.includes('mba'))) return true;
+  if (letter === 'd' && q.includes('d-block')) return true;
+  return false;
+}
 
 // Controller Handlers
 export const getFloors = async (req, res) => {
@@ -32,12 +64,26 @@ export const getFloors = async (req, res) => {
     if (dbStatus.connected) {
       let query = {};
       if (buildingId) {
-        if (/d[-_]?block/i.test(buildingId) || buildingId === 'PU-D-BLOCK') {
-          query = { $or: [{ buildingId: 'bld_d_block' }, { buildingShortCode: 'PU-D-BLOCK' }] };
+        // Resolve exact building key
+        const matchedKey = Object.keys(CAMPUS_BLOCKS_INFO).find(k => isBuildingMatch(k, buildingId));
+        if (matchedKey) {
+          const meta = CAMPUS_BLOCKS_INFO[matchedKey];
+          query = {
+            $or: [
+              { buildingId: meta.buildingId },
+              { buildingShortCode: meta.shortCode },
+              { buildingShortCode: meta.shortCode.toUpperCase() }
+            ]
+          };
+          // Also handle SOM/M block alias
+          if (meta.blockLetter === 'M') {
+            query.$or.push({ buildingId: 'bld_som_block' }, { buildingId: 'bld_m_block' }, { buildingShortCode: 'PU-SOM-BLOCK' }, { buildingShortCode: 'PU-M-BLOCK' });
+          }
         } else {
           query = { $or: [{ buildingId }, { buildingShortCode: buildingId }] };
         }
       }
+
       const floors = await Floor.find(query).sort({ floorNumber: 1 });
       if (floors && floors.length > 0) {
         return res.json({ success: true, count: floors.length, data: floors });
@@ -46,8 +92,14 @@ export const getFloors = async (req, res) => {
 
     let list = [...memoryFloors];
     if (buildingId) {
-      if (/d[-_]?block/i.test(buildingId) || buildingId === 'PU-D-BLOCK') {
-        list = list.filter(f => f.buildingId === 'bld_d_block' || f.buildingShortCode === 'PU-D-BLOCK');
+      const matchedKey = Object.keys(CAMPUS_BLOCKS_INFO).find(k => isBuildingMatch(k, buildingId));
+      if (matchedKey) {
+        const meta = CAMPUS_BLOCKS_INFO[matchedKey];
+        list = list.filter(f =>
+          f.buildingId === meta.buildingId ||
+          f.buildingShortCode === meta.shortCode ||
+          (meta.blockLetter === 'M' && (f.buildingId === 'bld_som_block' || f.buildingId === 'bld_m_block'))
+        );
       } else {
         list = list.filter(f => f.buildingId === buildingId || f.buildingShortCode === buildingId);
       }
@@ -64,7 +116,7 @@ export const getFloorById = async (req, res) => {
     const dbStatus = getDbStatus();
 
     if (dbStatus.connected) {
-      const floor = await Floor.findOne({ $or: [{ floorId: id }, { _id: id }] });
+      const floor = await Floor.findOne(getFloorQuery(id));
       if (floor) return res.json({ success: true, data: floor });
     }
 
@@ -104,7 +156,7 @@ export const updateFloor = async (req, res) => {
 
     if (dbStatus.connected) {
       updated = await Floor.findOneAndUpdate(
-        { $or: [{ floorId: id }, { _id: id }] },
+        getFloorQuery(id),
         { $set: updates },
         { new: true }
       );
@@ -129,7 +181,7 @@ export const deleteFloor = async (req, res) => {
     const dbStatus = getDbStatus();
 
     if (dbStatus.connected) {
-      await Floor.findOneAndDelete({ $or: [{ floorId: id }, { _id: id }] });
+      await Floor.findOneAndDelete(getFloorQuery(id));
     }
 
     const idx = memoryFloors.findIndex(f => f.floorId === id || f._id === id);
@@ -142,7 +194,78 @@ export const deleteFloor = async (req, res) => {
   }
 };
 
-// Admin Room Modification API
+// Admin Room Modification APIs: Create, Update, Delete
+export const createRoom = async (req, res) => {
+  try {
+    const { floorId } = req.params;
+    const {
+      roomNumber,
+      name,
+      category = 'Classroom',
+      type = 'Classroom',
+      department,
+      capacity = 60,
+      isAccessible = true,
+      status = 'Operational'
+    } = req.body;
+
+    if (!roomNumber) {
+      return res.status(400).json({ success: false, message: 'Room number is required.' });
+    }
+
+    const dbStatus = getDbStatus();
+    let targetFloor = null;
+
+    if (dbStatus.connected) {
+      targetFloor = await Floor.findOne(getFloorQuery(floorId));
+    }
+    if (!targetFloor) {
+      targetFloor = memoryFloors.find(f => f.floorId === floorId || f._id === floorId);
+    }
+
+    if (!targetFloor) {
+      return res.status(404).json({ success: false, message: 'Floor not found' });
+    }
+
+    const existingRooms = targetFloor.rooms || [];
+    const newIndex = existingRooms.length;
+    const { bounds, entrancePoint } = calculateRoomBounds(newIndex + 1, newIndex);
+
+    const newRoom = {
+      roomId: `rm_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      roomNumber: roomNumber.trim().toUpperCase(),
+      name: name ? name.trim() : `${roomNumber} – ${type}`,
+      category,
+      type,
+      department: department || targetFloor.buildingName || 'Academic Quad',
+      bounds,
+      entrancePoint,
+      qrCodeId: `QR-${targetFloor.buildingShortCode || 'BLD'}-${roomNumber}`,
+      isAccessible: Boolean(isAccessible),
+      capacity: Number(capacity) || 60,
+      status
+    };
+
+    if (dbStatus.connected) {
+      await Floor.findOneAndUpdate(
+        getFloorQuery(floorId),
+        { $push: { rooms: newRoom } }
+      );
+    }
+
+    const memFloor = memoryFloors.find(f => f.floorId === floorId || f._id === floorId);
+    if (memFloor) {
+      if (!memFloor.rooms) memFloor.rooms = [];
+      memFloor.rooms.push(newRoom);
+    }
+
+    syncService.broadcast('indoor:room_created', { floorId, room: newRoom });
+    res.status(201).json({ success: true, data: newRoom });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
 export const updateRoom = async (req, res) => {
   try {
     const { floorId, roomId } = req.params;
@@ -156,7 +279,7 @@ export const updateRoom = async (req, res) => {
         updateFields[`rooms.$.${key}`] = val;
       }
       updatedFloor = await Floor.findOneAndUpdate(
-        { $or: [{ floorId }, { _id: floorId }], 'rooms.roomId': roomId },
+        { ...getFloorQuery(floorId), 'rooms.roomId': roomId },
         { $set: updateFields },
         { new: true }
       );
@@ -178,6 +301,30 @@ export const updateRoom = async (req, res) => {
   }
 };
 
+export const deleteRoom = async (req, res) => {
+  try {
+    const { floorId, roomId } = req.params;
+    const dbStatus = getDbStatus();
+
+    if (dbStatus.connected) {
+      await Floor.findOneAndUpdate(
+        getFloorQuery(floorId),
+        { $pull: { rooms: { roomId } } }
+      );
+    }
+
+    const memFloor = memoryFloors.find(f => f.floorId === floorId || f._id === floorId);
+    if (memFloor && memFloor.rooms) {
+      memFloor.rooms = memFloor.rooms.filter(r => r.roomId !== roomId);
+    }
+
+    syncService.broadcast('indoor:room_deleted', { floorId, roomId });
+    res.json({ success: true, message: `Room ${roomId} deleted from floor ${floorId}.` });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
 // Indoor Graph & Navigation APIs
 export const getIndoorGraph = async (req, res) => {
   try {
@@ -186,8 +333,11 @@ export const getIndoorGraph = async (req, res) => {
     let paths = [...memoryIndoorPaths];
 
     if (buildingId) {
-      nodes = nodes.filter(n => n.buildingId === buildingId || (/d[-_]?block/i.test(buildingId) && n.buildingId === 'bld_d_block'));
-      paths = paths.filter(p => p.buildingId === buildingId || (/d[-_]?block/i.test(buildingId) && p.buildingId === 'bld_d_block'));
+      const matchedKey = Object.keys(CAMPUS_BLOCKS_INFO).find(k => isBuildingMatch(k, buildingId));
+      const targetBldId = matchedKey ? CAMPUS_BLOCKS_INFO[matchedKey].buildingId : buildingId;
+
+      nodes = nodes.filter(n => n.buildingId === targetBldId || (targetBldId === 'bld_som_block' && n.buildingId === 'bld_m_block'));
+      paths = paths.filter(p => p.buildingId === targetBldId || (targetBldId === 'bld_som_block' && p.buildingId === 'bld_m_block'));
     }
     if (floorNumber !== undefined) {
       const flNum = parseInt(floorNumber);
@@ -218,11 +368,11 @@ export const calculateIndoorRoute = async (req, res) => {
       accessibleOnly = false
     } = req.body;
 
-    const isDBlock = !buildingId || /d[-_]?block/i.test(buildingId) || buildingId === 'PU-D-BLOCK';
-    const targetBldId = isDBlock ? 'bld_d_block' : buildingId;
+    const matchedKey = Object.keys(CAMPUS_BLOCKS_INFO).find(k => isBuildingMatch(k, buildingId));
+    const targetBldId = matchedKey ? CAMPUS_BLOCKS_INFO[matchedKey].buildingId : 'bld_d_block';
 
-    const nodes = memoryIndoorNodes.filter(n => n.buildingId === targetBldId);
-    const paths = memoryIndoorPaths.filter(p => p.buildingId === targetBldId);
+    const nodes = memoryIndoorNodes.filter(n => n.buildingId === targetBldId || (targetBldId === 'bld_som_block' && n.buildingId === 'bld_m_block'));
+    const paths = memoryIndoorPaths.filter(p => p.buildingId === targetBldId || (targetBldId === 'bld_som_block' && p.buildingId === 'bld_m_block'));
 
     // Resolve start node
     let startNode = nodes.find(n => n.nodeId === startNodeId);
@@ -230,7 +380,6 @@ export const calculateIndoorRoute = async (req, res) => {
       startNode = nodes.find(n => n.linkedRoomId === startRoomId);
     }
     if (!startNode) {
-      // Default to ground floor entrance
       startNode = nodes.find(n => n.nodeType === 'building_entrance' && n.floorNumber === 0) || nodes[0];
     }
 
@@ -240,7 +389,6 @@ export const calculateIndoorRoute = async (req, res) => {
       destNode = nodes.find(n => n.linkedRoomId === destRoomId);
     }
     if (!destNode && destRoomId) {
-      // match by room number inside linkedRoomId
       destNode = nodes.find(n => n.nodeId.toLowerCase().includes(destRoomId.toLowerCase()));
     }
     if (!destNode) {
@@ -251,7 +399,6 @@ export const calculateIndoorRoute = async (req, res) => {
     const isMultiFloor = startNode.floorNumber !== destNode.floorNumber;
 
     if (!isMultiFloor) {
-      // Direct Single-Floor Dijkstra
       const result = solveIndoorDijkstra(nodes, paths, startNode.nodeId, destNode.nodeId, accessibleOnly);
       if (!result) {
         return res.status(404).json({ success: false, message: 'No indoor path found on this floor.' });
@@ -269,8 +416,6 @@ export const calculateIndoorRoute = async (req, res) => {
         }
       });
     } else {
-      // Multi-Floor Routing via Elevator or Staircase
-      const transitionType = accessibleOnly ? 'elevator' : 'staircase';
       const startTransitionNode = nodes.find(
         n => n.floorNumber === startNode.floorNumber &&
              (accessibleOnly ? n.nodeType === 'elevator' : (n.nodeType === 'elevator' || n.nodeType === 'staircase'))
@@ -284,13 +429,11 @@ export const calculateIndoorRoute = async (req, res) => {
         return res.status(404).json({ success: false, message: 'No vertical connection (stairs/elevator) found connecting these floors.' });
       }
 
-      // Leg 1: Start floor -> Stair/Elevator
       const leg1 = solveIndoorDijkstra(nodes, paths, startNode.nodeId, startTransitionNode.nodeId, accessibleOnly) || { distance: 10, nodeSequence: [startNode.nodeId, startTransitionNode.nodeId] };
-      // Leg 2: Stair/Elevator on dest floor -> Destination
       const leg2 = solveIndoorDijkstra(nodes, paths, destTransitionNode.nodeId, destNode.nodeId, accessibleOnly) || { distance: 10, nodeSequence: [destTransitionNode.nodeId, destNode.nodeId] };
 
       const floorDiff = Math.abs(destNode.floorNumber - startNode.floorNumber);
-      const verticalDistance = floorDiff * 8; // 8 meters per floor
+      const verticalDistance = floorDiff * 8;
       const totalDistance = leg1.distance + leg2.distance + verticalDistance;
 
       const fullInstructions = [
@@ -320,9 +463,6 @@ export const calculateIndoorRoute = async (req, res) => {
   }
 };
 
-/**
- * Dijkstra's Shortest Path Algorithm for Indoor Graph
- */
 function solveIndoorDijkstra(nodes, paths, startId, destId, accessibleOnly = false) {
   const nodeMap = new Map(nodes.map(n => [n.nodeId, n]));
   if (!nodeMap.has(startId) || !nodeMap.has(destId)) return null;
@@ -390,9 +530,6 @@ function solveIndoorDijkstra(nodes, paths, startId, destId, accessibleOnly = fal
   };
 }
 
-/**
- * Natural language turn-by-turn guidance generator
- */
 function generateIndoorInstructions(nodeSequence, nodes) {
   if (!nodeSequence || nodeSequence.length < 2) return ['Arrived at destination.'];
   const nodeMap = new Map(nodes.map(n => [n.nodeId, n]));

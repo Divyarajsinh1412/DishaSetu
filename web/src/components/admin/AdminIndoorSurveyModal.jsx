@@ -36,13 +36,14 @@ import {
 
 // Campus Buildings available for Indoor Survey
 const CAMPUS_BUILDINGS = [
-  { id: 'bld_d_block', name: 'D Block', code: 'PU-D-BLOCK', floors: 6 },
-  { id: 'bld_e_block', name: 'E Block', code: 'PU-E-BLOCK', floors: 5 },
-  { id: 'bld_f_block', name: 'F Block', code: 'PU-F-BLOCK', floors: 5 },
-  { id: 'bld_l_block', name: 'L Block', code: 'PU-L-BLOCK', floors: 5 },
+  { id: 'bld_d_block', name: 'D Block', code: 'PU-D-BLOCK', floors: 3 },
+  { id: 'bld_e_block', name: 'E Block', code: 'PU-E-BLOCK', floors: 3 },
+  { id: 'bld_f_block', name: 'F Block', code: 'PU-F-BLOCK', floors: 3 },
+  { id: 'bld_l_block', name: 'L Block', code: 'PU-L-BLOCK', floors: 3 },
+  { id: 'bld_n_block', name: 'N Block', code: 'PU-N-BLOCK', floors: 3 },
+  { id: 'bld_som_block', name: 'M Block (MBA / SOM)', code: 'PU-M-BLOCK', floors: 3 },
   { id: 'bld_admission', name: 'Admission Block', code: 'PU-ADM-BLOCK', floors: 3 },
   { id: 'bld_h_block', name: 'H Block', code: 'PU-H-BLOCK', floors: 4 },
-  { id: 'bld_som_block', name: 'MBA / SOM Block', code: 'PU-SOM-BLOCK', floors: 4 },
   { id: 'bld_library', name: 'Central Library', code: 'PU-LIBRARY', floors: 3 }
 ];
 

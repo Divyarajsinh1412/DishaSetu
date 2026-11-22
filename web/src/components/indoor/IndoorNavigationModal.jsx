@@ -26,27 +26,44 @@ import {
   Save,
   Check,
   Plus,
+  Trash2,
   ArrowUpDown,
   LocateFixed,
-  CornerUpRight
+  CornerUpRight,
+  FlaskConical,
+  GraduationCap,
+  Sparkles,
+  Info
 } from 'lucide-react';
 import {
   fetchIndoorFloors,
   fetchIndoorGraph,
   calculateIndoorRouteApi,
-  updateIndoorFloorApi
+  updateIndoorFloorApi,
+  createIndoorFloorApi,
+  deleteIndoorFloorApi,
+  createIndoorRoomApi,
+  updateIndoorRoomApi,
+  deleteIndoorRoomApi
 } from '../../services/api';
-import { D_BLOCK_FALLBACK_FLOORS, D_BLOCK_INFO } from '../../data/dBlockFloorsFallback.js';
+import {
+  CAMPUS_BLOCKS_INFO,
+  getBuildingFloorsFallback,
+  getRoomCodePrefix,
+  getFloorName,
+  calculateRoomBounds
+} from '../../data/campusFloorsDataset';
 
 /**
  * Top-Down 2D Architectural Indoor Navigation for Presidency University
- * Starting with D Block (6 Floors: Ground to Fifth).
- * Default View matches the ChatGPT Design Preview layout (Image 1):
- * - SELECT FLOOR 3x2 pill grid (Ground to Fifth)
- * - Centered Floor Title (D BLOCK – GROUND FLOOR)
- * - 6-Room Grid with Central Corridor (DG01-DG03 / CORRIDOR / DG04-DG06)
- * - Selected Destination Bottom Card with Down Arrow Action Button
- * - Toggleable SVG Blueprint view with graph A* routing and Admin Editor
+ * Supports D, E, F, L, N, and M Blocks
+ * 
+ * Rules:
+ * - D Block: ALL rooms are LABS (DGL01, DFL01, DSL01...)
+ * - E, F, L, N, M Blocks: ALL rooms are CLASSROOMS (EG01.., FG01.., LG01.., NG01.., MG01..)
+ * - Multi-Floor: Ground Floor, First Floor, Second Floor
+ * - Unverified Layout Banner: "⚠️ Schematic Floor Layout • Unverified Architectural Reference"
+ * - Full Admin Management: Add Floor, Add Room, Edit Room, Delete Room, Categorization
  */
 export default function IndoorNavigationModal({
   isOpen,
@@ -59,18 +76,29 @@ export default function IndoorNavigationModal({
   onOpenIndoorSurvey = null,
   isEmbedded = false
 }) {
-  // Building Selection (defaults to D Block)
-  const [selectedBuildingId, setSelectedBuildingId] = useState(
-    () => initialBuilding?.buildingId || initialBuilding?.shortCode || initialBuilding?._id || 'bld_d_block'
-  );
+  // Building Selection
+  const [selectedBuildingId, setSelectedBuildingId] = useState(() => {
+    const b = initialBuilding?.buildingId || initialBuilding?.code || initialBuilding?.shortCode || initialBuilding?._id;
+    if (b) {
+      const q = String(b).toLowerCase();
+      if (q.includes('d-block') || q === 'd') return 'bld_d_block';
+      if (q.includes('e-block') || q === 'e') return 'bld_e_block';
+      if (q.includes('f-block') || q === 'f') return 'bld_f_block';
+      if (q.includes('l-block') || q === 'l') return 'bld_l_block';
+      if (q.includes('n-block') || q === 'n') return 'bld_n_block';
+      if (q.includes('m-block') || q.includes('som') || q === 'm') return 'bld_som_block';
+      return b;
+    }
+    return 'bld_d_block';
+  });
 
-  const [floors, setFloors] = useState(D_BLOCK_FALLBACK_FLOORS);
+  const [floors, setFloors] = useState(() => getBuildingFloorsFallback('bld_d_block'));
   const [currentFloorNumber, setCurrentFloorNumber] = useState(0);
-  const [selectedRoom, setSelectedRoom] = useState(D_BLOCK_FALLBACK_FLOORS[0].rooms[0]); // default DG01
+  const [selectedRoom, setSelectedRoom] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [startPoint, setStartPoint] = useState('entrance'); // 'entrance', 'elevator', 'stairs'
   const [isNavigating, setIsNavigating] = useState(true);
-  const [layoutMode, setLayoutMode] = useState('card'); // 'card' (Image 1 ChatGPT preview) | 'blueprint' (SVG canvas)
+  const [layoutMode, setLayoutMode] = useState('card'); // 'card' | 'blueprint'
   const [isModalFullscreen, setIsModalFullscreen] = useState(false);
   const searchInputRef = useRef(null);
 
@@ -87,41 +115,63 @@ export default function IndoorNavigationModal({
   const [editForm, setEditForm] = useState({
     roomNumber: '',
     name: '',
-    category: 'Laboratory',
+    category: 'Classroom',
+    type: 'Classroom',
     department: '',
     status: 'Operational'
   });
-  const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
+
+  // Admin Add Room State
+  const [showAddRoomModal, setShowAddRoomModal] = useState(false);
+  const [addRoomForm, setAddRoomForm] = useState({
+    roomNumber: '',
+    name: '',
+    category: 'Classroom',
+    type: 'Classroom',
+    department: '',
+    capacity: 60
+  });
+
+  // Admin Add Floor State
+  const [showAddFloorModal, setShowAddFloorModal] = useState(false);
+  const [addFloorForm, setAddFloorForm] = useState({
+    floorNumber: 3,
+    floorName: 'Third Floor'
+  });
+
+  const [notificationMsg, setNotificationMsg] = useState('');
+  const showNotification = (msg) => {
+    setNotificationMsg(msg);
+    setTimeout(() => setNotificationMsg(''), 3500);
+  };
 
   // Sync with initialBuilding prop
   useEffect(() => {
     if (initialBuilding) {
-      const bId = initialBuilding.buildingId || initialBuilding.shortCode || initialBuilding._id || 'bld_d_block';
-      setSelectedBuildingId(bId);
+      const b = initialBuilding.buildingId || initialBuilding.code || initialBuilding.shortCode || initialBuilding._id || initialBuilding.name;
+      const q = String(b).toLowerCase();
+      let targetId = 'bld_d_block';
+      if (q.includes('d-block') || q === 'pu-d-block' || q === 'd block' || q === 'd') targetId = 'bld_d_block';
+      else if (q.includes('e-block') || q === 'pu-e-block' || q === 'e block' || q === 'e') targetId = 'bld_e_block';
+      else if (q.includes('f-block') || q === 'pu-f-block' || q === 'f block' || q === 'f') targetId = 'bld_f_block';
+      else if (q.includes('l-block') || q === 'pu-l-block' || q === 'l block' || q === 'l') targetId = 'bld_l_block';
+      else if (q.includes('n-block') || q === 'pu-n-block' || q === 'n block' || q === 'n') targetId = 'bld_n_block';
+      else if (q.includes('m-block') || q.includes('som') || q === 'pu-m-block' || q === 'm block' || q === 'm') targetId = 'bld_som_block';
+      else targetId = initialBuilding.buildingId || 'bld_d_block';
+
+      setSelectedBuildingId(targetId);
+
+      if (initialBuilding.selectedFloor !== undefined) {
+        setCurrentFloorNumber(Number(initialBuilding.selectedFloor));
+      }
     }
   }, [initialBuilding, isOpen]);
 
-  // Handle initialMode ('view' vs 'navigate')
-  useEffect(() => {
-    if (isOpen && initialMode === 'navigate') {
-      setIsNavigating(true);
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 150);
-    } else if (isOpen) {
-      setIsNavigating(true);
-    }
-  }, [isOpen, initialMode]);
-
   // Active Building Meta
   const currentBuilding = useMemo(() => {
-    const isD = selectedBuildingId === 'bld_d_block' ||
-                selectedBuildingId === 'PU-D-BLOCK' ||
-                /d[-_]?block/i.test(selectedBuildingId || '') ||
-                /d[-_]?block/i.test(initialBuilding?.name || '');
-    if (isD) {
-      return D_BLOCK_INFO;
-    }
+    const meta = CAMPUS_BLOCKS_INFO[selectedBuildingId];
+    if (meta) return meta;
+
     const found = buildings.find(b =>
       b._id === selectedBuildingId ||
       b.buildingId === selectedBuildingId ||
@@ -129,76 +179,67 @@ export default function IndoorNavigationModal({
       b.name === selectedBuildingId
     );
     if (found) return found;
-    if (initialBuilding && (initialBuilding.buildingId === selectedBuildingId || initialBuilding.shortCode === selectedBuildingId)) {
-      return initialBuilding;
-    }
-    return D_BLOCK_INFO;
-  }, [buildings, selectedBuildingId, initialBuilding]);
+
+    return CAMPUS_BLOCKS_INFO.bld_d_block;
+  }, [buildings, selectedBuildingId]);
+
+  const isDBlock = currentBuilding.blockLetter === 'D' || /d[-_]?block/i.test(currentBuilding.name || '');
 
   // Load floors from MongoDB Atlas with fallback
   useEffect(() => {
     if (!isOpen && !isEmbedded) return;
 
-    const isD = selectedBuildingId === 'bld_d_block' ||
-                selectedBuildingId === 'PU-D-BLOCK' ||
-                /d[-_]?block/i.test(selectedBuildingId || '') ||
-                /d[-_]?block/i.test(currentBuilding?.name || '');
+    const fallback = getBuildingFloorsFallback(selectedBuildingId);
+    setFloors(fallback);
 
     fetchIndoorFloors(selectedBuildingId)
       .then(data => {
         if (data && data.length > 0) {
           setFloors(data);
-          const gFloor = data.find(f => f.floorNumber === 0) || data[0];
-          setCurrentFloorNumber(gFloor.floorNumber);
-          if (gFloor.rooms?.length > 0) {
-            setSelectedRoom(gFloor.rooms[0]);
+          const active = data.find(f => f.floorNumber === currentFloorNumber) || data[0];
+          setCurrentFloorNumber(active.floorNumber);
+
+          if (initialBuilding?.focusRoom) {
+            const matchedRoom = active.rooms?.find(r => r.roomNumber.toLowerCase() === initialBuilding.focusRoom.toLowerCase());
+            if (matchedRoom) {
+              setSelectedRoom(matchedRoom);
+              return;
+            }
+          }
+          if (active.rooms?.length > 0) {
+            setSelectedRoom(active.rooms[0]);
           } else {
             setSelectedRoom(null);
           }
-        } else if (isD) {
-          setFloors(D_BLOCK_FALLBACK_FLOORS);
-          setCurrentFloorNumber(0);
-          setSelectedRoom(D_BLOCK_FALLBACK_FLOORS[0].rooms[0]);
-        } else {
-          setFloors([]);
-          setSelectedRoom(null);
         }
       })
       .catch(() => {
-        if (isD) {
-          setFloors(D_BLOCK_FALLBACK_FLOORS);
-          setCurrentFloorNumber(0);
-          setSelectedRoom(D_BLOCK_FALLBACK_FLOORS[0].rooms[0]);
-        } else {
-          setFloors([]);
-          setSelectedRoom(null);
+        // Fallback already active
+        if (fallback.length > 0 && fallback[0].rooms?.length > 0) {
+          setSelectedRoom(fallback[0].rooms[0]);
         }
       });
-  }, [isOpen, isEmbedded, selectedBuildingId, currentBuilding]);
+  }, [isOpen, isEmbedded, selectedBuildingId]);
 
   // Active Floor Object
   const activeFloor = useMemo(() => {
-    return floors.find(f => f.floorNumber === currentFloorNumber) || floors[0] || D_BLOCK_FALLBACK_FLOORS[0];
-  }, [floors, currentFloorNumber]);
+    return floors.find(f => f.floorNumber === currentFloorNumber) || floors[0] || getBuildingFloorsFallback(selectedBuildingId)[0];
+  }, [floors, currentFloorNumber, selectedBuildingId]);
 
-  // Split rooms into Top Row (01..03) and Bottom Row (04..06)
+  // Dynamic Room Splitting: Adapts to ANY number of rooms along corridor
   const topRowRooms = useMemo(() => {
     if (!activeFloor?.rooms || activeFloor.rooms.length === 0) return [];
-    if (activeFloor.rooms.length >= 6) {
-      return activeFloor.rooms.slice(0, 3);
-    }
-    return activeFloor.rooms.slice(0, Math.ceil(activeFloor.rooms.length / 2));
+    const topCount = Math.ceil(activeFloor.rooms.length / 2);
+    return activeFloor.rooms.slice(0, topCount);
   }, [activeFloor]);
 
   const bottomRowRooms = useMemo(() => {
     if (!activeFloor?.rooms || activeFloor.rooms.length === 0) return [];
-    if (activeFloor.rooms.length >= 6) {
-      return activeFloor.rooms.slice(3, 6);
-    }
-    return activeFloor.rooms.slice(Math.ceil(activeFloor.rooms.length / 2));
+    const topCount = Math.ceil(activeFloor.rooms.length / 2);
+    return activeFloor.rooms.slice(topCount);
   }, [activeFloor]);
 
-  // Handle Search: Automatically switch floors if room found on another floor
+  // Handle Search
   const handleSearch = (query) => {
     setSearchQuery(query);
     if (!query.trim()) return;
@@ -254,84 +295,55 @@ export default function IndoorNavigationModal({
     setPosition({ x: 0, y: 0 });
   };
 
-  // Calculate Walkable Indoor Route for Blueprint SVG
-  const routePathD = useMemo(() => {
-    if (!selectedRoom) return null;
-
-    const door = selectedRoom.entrancePoint || { x: 190, y: 235 };
-    const corridorY = 270;
-
-    let startX = 480;
-    let startY = 495;
-
-    if (startPoint === 'stairs') {
-      startX = 915;
-      startY = corridorY;
-    } else if (startPoint === 'elevator') {
-      startX = 885;
-      startY = corridorY;
-    } else {
-      if (currentFloorNumber === 0) {
-        startX = 480;
-        startY = 495;
-      } else {
-        startX = 885;
-        startY = corridorY;
-      }
-    }
-
-    if (startY !== corridorY) {
-      return `M ${startX} ${startY} L ${startX} ${corridorY} L ${door.x} ${corridorY} L ${door.x} ${door.y}`;
-    } else {
-      return `M ${startX} ${corridorY} L ${door.x} ${corridorY} L ${door.x} ${door.y}`;
-    }
-  }, [selectedRoom, startPoint, currentFloorNumber]);
-
   // Turn-by-turn instruction summary
   const routeInstructions = useMemo(() => {
     if (!selectedRoom) return [];
     const isGround = currentFloorNumber === 0;
     const roomNum = selectedRoom.roomNumber;
+    const bName = currentBuilding.name;
 
     if (startPoint === 'entrance' && isGround) {
       return [
-        { icon: '🚪', text: 'Enter D Block via Main Ground Entrance Portal' },
-        { icon: '🚶', text: 'Walk north along entrance breezeway to Central Corridor' },
+        { icon: '🚪', text: `Enter ${bName} via Main Ground Entrance Portal` },
+        { icon: '🚶', text: 'Walk north along the entrance foyer to the Central Corridor' },
         { icon: '↔️', text: `Proceed along Central Corridor to Room ${roomNum}` },
         { icon: '🎯', text: `Turn into entrance of ${selectedRoom.name}` }
       ];
     } else if (startPoint === 'elevator' || !isGround) {
       return [
-        { icon: '🛗', text: `Take Central Elevator to ${activeFloor?.floorName || 'Floor'}` },
-        { icon: '↔️', text: `Walk west along Central Corridor toward Room ${roomNum}` },
+        { icon: '🛗', text: `Take Central Accessible Elevator to ${activeFloor?.floorName || 'Floor'}` },
+        { icon: '↔️', text: `Proceed along Central Corridor toward Room ${roomNum}` },
         { icon: '🎯', text: `Turn into entrance of ${selectedRoom.name}` }
       ];
     } else {
       return [
         { icon: '🪜', text: `Take East Main Staircase to ${activeFloor?.floorName || 'Floor'}` },
-        { icon: '↔️', text: `Walk west along Central Corridor to Room ${roomNum}` },
+        { icon: '↔️', text: `Walk along Central Corridor to Room ${roomNum}` },
         { icon: '🎯', text: `Arrive at ${selectedRoom.name}` }
       ];
     }
-  }, [selectedRoom, startPoint, currentFloorNumber, activeFloor]);
+  }, [selectedRoom, startPoint, currentFloorNumber, activeFloor, currentBuilding]);
 
-  // Admin Editing Handlers
+  // ==========================================
+  // ADMIN HANDLERS (Add/Edit/Delete Room & Floor)
+  // ==========================================
   const handleOpenEditRoom = (room, e) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     setEditingRoom(room);
     setEditForm({
       roomNumber: room.roomNumber,
       name: room.name,
-      category: room.category || 'Laboratory',
-      department: room.department || '',
+      category: room.category || (isDBlock ? 'Laboratory' : 'Classroom'),
+      type: room.type || (isDBlock ? 'Laboratory' : 'Classroom'),
+      department: room.department || currentBuilding.departments?.[0] || '',
       status: room.status || 'Operational'
     });
   };
 
   const handleSaveRoomEdit = async () => {
-    if (!editingRoom) return;
+    if (!editingRoom || !activeFloor) return;
+    const token = localStorage.getItem('dishasetu_admin_token') || 'demo_token';
 
-    const token = localStorage.getItem('dishasetu_admin_token');
     const updatedRooms = activeFloor.rooms.map(r => {
       if (r.roomId === editingRoom.roomId) {
         return {
@@ -339,6 +351,8 @@ export default function IndoorNavigationModal({
           roomNumber: editForm.roomNumber,
           name: editForm.name,
           category: editForm.category,
+          type: editForm.category,
+          roomType: editForm.category.toLowerCase().includes('lab') ? 'lab' : 'classroom',
           department: editForm.department,
           status: editForm.status
         };
@@ -360,87 +374,228 @@ export default function IndoorNavigationModal({
         roomNumber: editForm.roomNumber,
         name: editForm.name,
         category: editForm.category,
+        type: editForm.category,
+        roomType: editForm.category.toLowerCase().includes('lab') ? 'lab' : 'classroom',
         department: editForm.department,
         status: editForm.status
       });
     }
 
     try {
-      if (token) {
-        await updateIndoorFloorApi(activeFloor.floorId, { rooms: updatedRooms }, token);
-      }
-      setSaveSuccessMsg(`Saved ${editForm.roomNumber} successfully to database.`);
-      setTimeout(() => setSaveSuccessMsg(''), 3000);
+      await updateIndoorRoomApi(activeFloor.floorId, editingRoom.roomId, editForm, token);
+      showNotification(`Saved room ${editForm.roomNumber} successfully.`);
     } catch (err) {
-      console.warn('Could not persist to Atlas, saved in local session:', err.message);
+      showNotification(`Updated room ${editForm.roomNumber} in active session.`);
     }
 
     setEditingRoom(null);
   };
 
-  if (!isOpen && !isEmbedded) return null;
+  const handleDeleteRoom = async (room, e) => {
+    if (e) e.stopPropagation();
+    if (!confirm(`Are you sure you want to delete room ${room.roomNumber}?`)) return;
 
-  // The inner content component
+    const token = localStorage.getItem('dishasetu_admin_token') || 'demo_token';
+    const updatedRooms = activeFloor.rooms.filter(r => r.roomId !== room.roomId);
+
+    const updatedFloors = floors.map(f => {
+      if (f.floorId === activeFloor.floorId) {
+        return { ...f, rooms: updatedRooms };
+      }
+      return f;
+    });
+    setFloors(updatedFloors);
+
+    if (selectedRoom?.roomId === room.roomId) {
+      setSelectedRoom(updatedRooms[0] || null);
+    }
+
+    try {
+      await deleteIndoorRoomApi(activeFloor.floorId, room.roomId, token);
+      showNotification(`Room ${room.roomNumber} deleted.`);
+    } catch (err) {
+      showNotification(`Room ${room.roomNumber} removed from session.`);
+    }
+  };
+
+  const handleOpenAddRoom = () => {
+    const blockLetter = currentBuilding.blockLetter || 'D';
+    const prefix = getRoomCodePrefix(blockLetter, currentFloorNumber);
+    const existingCount = activeFloor?.rooms?.length || 0;
+    const nextSeq = String(existingCount + 1).padStart(2, '0');
+    const autoRoomNumber = `${prefix}${nextSeq}`;
+
+    setAddRoomForm({
+      roomNumber: autoRoomNumber,
+      name: `${autoRoomNumber} – ${isDBlock ? 'New Laboratory' : 'New Lecture Classroom'}`,
+      category: isDBlock ? 'Laboratory' : 'Classroom',
+      type: isDBlock ? 'Laboratory' : 'Classroom',
+      department: currentBuilding.departments?.[0] || 'Academic Quad',
+      capacity: isDBlock ? 35 : 60
+    });
+    setShowAddRoomModal(true);
+  };
+
+  const handleSaveNewRoom = async () => {
+    if (!addRoomForm.roomNumber.trim()) return;
+    const token = localStorage.getItem('dishasetu_admin_token') || 'demo_token';
+
+    const existingRooms = activeFloor?.rooms || [];
+    const newIndex = existingRooms.length;
+    const { bounds, entrancePoint } = calculateRoomBounds(newIndex + 1, newIndex);
+
+    const newRoomObj = {
+      roomId: `rm_${currentBuilding.blockLetter.toLowerCase()}_${currentFloorNumber}_${Date.now()}`,
+      roomNumber: addRoomForm.roomNumber.trim().toUpperCase(),
+      name: addRoomForm.name.trim(),
+      category: addRoomForm.category,
+      type: addRoomForm.category,
+      roomType: addRoomForm.category.toLowerCase().includes('lab') ? 'lab' : 'classroom',
+      department: addRoomForm.department,
+      bounds,
+      entrancePoint,
+      qrCodeId: `QR-${currentBuilding.shortCode}-${addRoomForm.roomNumber}`,
+      isAccessible: true,
+      capacity: Number(addRoomForm.capacity) || 60,
+      status: 'Operational'
+    };
+
+    const updatedRooms = [...existingRooms, newRoomObj];
+    const updatedFloors = floors.map(f => {
+      if (f.floorId === activeFloor.floorId) {
+        return { ...f, rooms: updatedRooms };
+      }
+      return f;
+    });
+    setFloors(updatedFloors);
+    setSelectedRoom(newRoomObj);
+
+    try {
+      await createIndoorRoomApi(activeFloor.floorId, newRoomObj, token);
+      showNotification(`Room ${newRoomObj.roomNumber} created successfully.`);
+    } catch (err) {
+      showNotification(`Room ${newRoomObj.roomNumber} added to current session.`);
+    }
+
+    setShowAddRoomModal(false);
+  };
+
+  const handleOpenAddFloor = () => {
+    const nextFloorNum = floors.length;
+    setAddFloorForm({
+      floorNumber: nextFloorNum,
+      floorName: getFloorName(nextFloorNum)
+    });
+    setShowAddFloorModal(true);
+  };
+
+  const handleSaveNewFloor = async () => {
+    const token = localStorage.getItem('dishasetu_admin_token') || 'demo_token';
+    const newFloorObj = {
+      floorId: `flr_${currentBuilding.blockLetter.toLowerCase()}_${addFloorForm.floorNumber}`,
+      buildingId: currentBuilding.buildingId,
+      buildingShortCode: currentBuilding.shortCode,
+      buildingName: currentBuilding.name,
+      floorNumber: Number(addFloorForm.floorNumber),
+      floorName: addFloorForm.floorName,
+      dimensions: { widthMeters: 80, heightMeters: 50, scalePixelsPerMeter: 12 },
+      rooms: [],
+      staircases: [],
+      elevators: [],
+      emergencyExits: [],
+      status: 'published'
+    };
+
+    const updatedFloors = [...floors, newFloorObj].sort((a, b) => a.floorNumber - b.floorNumber);
+    setFloors(updatedFloors);
+    setCurrentFloorNumber(newFloorObj.floorNumber);
+    setSelectedRoom(null);
+
+    try {
+      await createIndoorFloorApi(newFloorObj, token);
+      showNotification(`${newFloorObj.floorName} created successfully.`);
+    } catch (err) {
+      showNotification(`${newFloorObj.floorName} added to current session.`);
+    }
+
+    setShowAddFloorModal(false);
+  };
+
+  const handleDeleteFloor = async () => {
+    if (!activeFloor) return;
+    if (floors.length <= 1) {
+      alert('Cannot delete the only remaining floor of this building.');
+      return;
+    }
+    if (!confirm(`Are you sure you want to delete ${activeFloor.floorName} and all its rooms?`)) return;
+
+    const token = localStorage.getItem('dishasetu_admin_token') || 'demo_token';
+    const updatedFloors = floors.filter(f => f.floorId !== activeFloor.floorId);
+    setFloors(updatedFloors);
+    setCurrentFloorNumber(updatedFloors[0].floorNumber);
+    setSelectedRoom(updatedFloors[0].rooms?.[0] || null);
+
+    try {
+      await deleteIndoorFloorApi(activeFloor.floorId, token);
+      showNotification(`${activeFloor.floorName} deleted.`);
+    } catch (err) {
+      showNotification(`${activeFloor.floorName} removed from session.`);
+    }
+  };
+
+  // Content Wrapper
   const content = (
-    <div
-      onWheel={(e) => e.stopPropagation()}
-      onTouchMove={(e) => e.stopPropagation()}
-      data-prevent-map-zoom="true"
-      className={`relative flex flex-col w-full h-full bg-[#0d0f14] text-slate-100 select-none overflow-hidden overscroll-contain isolate-scroll ${
-        isEmbedded ? '' : 'rounded-3xl border border-slate-800 shadow-2xl'
-      }`}
-    >
+    <div className="w-full h-full bg-[#0d111a] border border-slate-700/80 rounded-3xl shadow-2xl flex flex-col overflow-hidden text-slate-100 font-sans">
+      
       {/* ============================================================== */}
-      {/* 1. TOP HEADER: D BLOCK – INDOOR NAVIGATION (Design Preview)    */}
+      {/* 1. TOP HEADER & ACCENT BAR                                     */}
       {/* ============================================================== */}
-      <div className="px-5 py-3.5 bg-[#090b10] border-b border-slate-800/90 flex items-center justify-between shrink-0">
+      <div className="px-5 py-3.5 bg-gradient-to-r from-slate-900 via-[#131722] to-slate-900 border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-600 p-0.5 shadow-lg shadow-emerald-500/20">
-            <div className="w-full h-full bg-[#0d0f14] rounded-[10px] flex items-center justify-center">
-              <DoorOpen className="w-5 h-5 text-emerald-400" />
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="font-extrabold text-base tracking-tight text-white">
-                {currentBuilding.name} – Indoor Navigation
-              </h2>
-              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-                selectedBuildingId === 'PU-D-BLOCK' || selectedBuildingId === 'bld_d_block'
-                  ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
-                  : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
-              }`}>
-                {selectedBuildingId === 'PU-D-BLOCK' || selectedBuildingId === 'bld_d_block'
-                  ? 'Verified Architectural Layout'
-                  : 'Illustrative Layout · Survey Pending'}
-              </span>
-              {isAdminMode && (
-                <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
-                  Admin Active
-                </span>
+          <div className={`w-10 h-10 rounded-2xl p-0.5 shadow-lg shrink-0 ${
+            isDBlock
+              ? 'bg-gradient-to-tr from-sky-500 to-indigo-600 shadow-sky-500/20'
+              : 'bg-gradient-to-tr from-emerald-500 to-teal-600 shadow-emerald-500/20'
+          }`}>
+            <div className="w-full h-full bg-[#0d111a] rounded-[14px] flex items-center justify-center">
+              {isDBlock ? (
+                <FlaskConical className="w-5 h-5 text-sky-400" />
+              ) : (
+                <GraduationCap className="w-5 h-5 text-emerald-400" />
               )}
             </div>
-            <div className="text-xs text-slate-400 hidden sm:flex items-center gap-2 mt-0.5">
-              <span>Presidency University Bengaluru</span>
-              <span>•</span>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono">
+                {currentBuilding.shortCode}
+              </span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                isDBlock
+                  ? 'bg-sky-500/20 text-sky-300 border-sky-500/30'
+                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+              }`}>
+                {isDBlock ? 'ALL ROOMS ARE LABS' : 'ALL ROOMS ARE CLASSROOMS'}
+              </span>
+            </div>
+
+            {/* Building Switcher Dropdown */}
+            <div className="mt-0.5 flex items-center gap-2">
               <select
                 value={selectedBuildingId}
-                onChange={e => setSelectedBuildingId(e.target.value)}
-                className="bg-[#181c25] text-sky-300 text-xs font-semibold rounded-lg px-2 py-0.5 border border-slate-700 focus:outline-none focus:border-emerald-500 cursor-pointer"
+                onChange={e => {
+                  setSelectedBuildingId(e.target.value);
+                  setCurrentFloorNumber(0);
+                }}
+                className="bg-transparent text-sm sm:text-base font-black text-white hover:text-emerald-400 focus:outline-none cursor-pointer tracking-tight"
               >
-                <option value="PU-D-BLOCK">D Block (6 Floors Verified)</option>
-                <option value="PU-E-BLOCK">E Block – School of CSE &amp; AI (Survey Pending)</option>
-                <option value="PU-F-BLOCK">F Block – Information Science (Survey Pending)</option>
-                <option value="PU-L-BLOCK">L Block – Electronics &amp; Robotics (Survey Pending)</option>
-                <option value="PU-H-BLOCK">H Block – Admissions &amp; Admin (Survey Pending)</option>
-                <option value="PU-MBA-SOM">MBA / SOM Block (Survey Pending)</option>
-                {buildings && buildings.map(b => (
-                  !['PU-D-BLOCK', 'PU-E-BLOCK', 'PU-F-BLOCK', 'PU-L-BLOCK', 'PU-H-BLOCK', 'PU-MBA-SOM'].includes(b.shortCode) && (
-                    <option key={b._id || b.shortCode} value={b.shortCode || b.buildingId || b._id}>
-                      {b.name} ({b.shortCode})
-                    </option>
-                  )
-                ))}
+                <option value="bld_d_block" className="bg-[#181c25] text-white">D Block (Labs • Ground to 2nd Floor)</option>
+                <option value="bld_e_block" className="bg-[#181c25] text-white">E Block (Classrooms • Ground to 2nd Floor)</option>
+                <option value="bld_f_block" className="bg-[#181c25] text-white">F Block (Classrooms • Ground to 2nd Floor)</option>
+                <option value="bld_l_block" className="bg-[#181c25] text-white">L Block (Classrooms • Ground to 2nd Floor)</option>
+                <option value="bld_n_block" className="bg-[#181c25] text-white">N Block (Classrooms • Ground to 2nd Floor)</option>
+                <option value="bld_som_block" className="bg-[#181c25] text-white">M Block (Classrooms • Ground to 2nd Floor)</option>
               </select>
             </div>
           </div>
@@ -475,10 +630,10 @@ export default function IndoorNavigationModal({
                 ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/30'
                 : 'bg-slate-800/80 hover:bg-slate-750 text-slate-300 hover:text-white border border-slate-700/60'
             }`}
-            title="Toggle Administrator Floor-Plan Editor"
+            title="Toggle Administrator Floor & Room Management"
           >
             <Shield className="w-3.5 h-3.5" />
-            <span className="hidden lg:inline">{isAdminMode ? 'Exit Admin' : 'Admin'}</span>
+            <span className="hidden sm:inline">{isAdminMode ? 'Exit Admin' : 'Admin'}</span>
           </button>
 
           {/* Outdoor Route Button */}
@@ -491,11 +646,11 @@ export default function IndoorNavigationModal({
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-bold rounded-xl border border-sky-500/30 transition-all"
             >
               <Compass className="w-3.5 h-3.5 text-sky-400" />
-              <span>Outdoor Map</span>
+              <span>Outdoor</span>
             </button>
           )}
 
-          {/* Fullscreen Toggle (only in modal mode) */}
+          {/* Fullscreen Toggle */}
           {!isEmbedded && (
             <button
               onClick={() => setIsModalFullscreen(prev => !prev)}
@@ -511,7 +666,7 @@ export default function IndoorNavigationModal({
             <button
               onClick={onClose}
               className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-              title="Close"
+              title="Close Modal"
             >
               <X className="w-5 h-5" />
             </button>
@@ -519,94 +674,104 @@ export default function IndoorNavigationModal({
         </div>
       </div>
 
-      {/* Save Success Banner */}
-      {saveSuccessMsg && (
-        <div className="px-5 py-2 bg-emerald-950/80 border-b border-emerald-500/40 text-xs text-emerald-300 flex items-center gap-2 shrink-0">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span>{saveSuccessMsg}</span>
+      {/* Notification Toast */}
+      {notificationMsg && (
+        <div className="bg-emerald-950 border-b border-emerald-500/40 px-4 py-2 text-xs font-bold text-emerald-200 flex items-center justify-between animate-in fade-in">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <span>{notificationMsg}</span>
+          </div>
+          <button onClick={() => setNotificationMsg('')} className="text-emerald-400 hover:text-white">
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
-      {/* Main Content Area */}
-      {floors.length === 0 ? (
-        /* Rule 5: Non-Surveyed Building Banner */
-        <div
-          onWheel={(e) => e.stopPropagation()}
-          onTouchMove={(e) => e.stopPropagation()}
-          data-prevent-map-zoom="true"
-          className="flex-1 flex items-center justify-center p-6 text-center overflow-y-auto overscroll-contain isolate-scroll"
-        >
-          <div className="max-w-md w-full bg-[#141822] border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-4">
-            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-lg">
-              <AlertTriangle className="w-8 h-8" />
-            </div>
+      {/* UNVERIFIED PLACEHOLDER LAYOUT BANNER (MANDATORY REQUIREMENT) */}
+      <div className="bg-amber-950/40 border-b border-amber-500/30 px-4 py-1.5 flex items-center justify-between text-[11px] text-amber-200 shrink-0">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          <span>
+            <strong>Schematic Floor Layout • Unverified Architectural Reference:</strong> Standardized corridor bay model. Exact room positions subject to upcoming indoor survey.
+          </span>
+        </div>
+        {onOpenIndoorSurvey && (
+          <button
+            onClick={() => onOpenIndoorSurvey({
+              building: currentBuilding.name,
+              floorNumber: currentFloorNumber,
+              roomNumber: selectedRoom?.roomNumber
+            })}
+            className="text-[10px] font-bold text-amber-300 hover:text-white bg-amber-900/60 hover:bg-amber-800 px-2.5 py-0.5 rounded-full border border-amber-500/40 flex items-center gap-1 shrink-0 ml-2"
+          >
+            <LocateFixed className="w-3 h-3" />
+            <span>Field Survey</span>
+          </button>
+        )}
+      </div>
 
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                Survey In Progress
-              </span>
-              <h3 className="text-lg font-black text-white mt-2">
-                Indoor Map Coming Soon
-              </h3>
-              <p className="text-xs text-slate-300 mt-2 leading-relaxed">
-                Indoor floor plans for this building are pending official GPS &amp; indoor layout survey.
-              </p>
-            </div>
-
-            <div className="p-3 bg-[#0a0d14] border border-slate-800 rounded-2xl text-left space-y-1.5 text-xs text-slate-300">
-              <div className="flex justify-between">
-                <span className="text-slate-400">Building Code:</span>
-                <span className="font-mono font-bold text-sky-400">{currentBuilding.shortCode || 'PU-BLD'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Planned Floors:</span>
-                <span className="font-bold text-white">{currentBuilding.totalFloors || 4} Floors</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Category:</span>
-                <span className="text-emerald-400">{currentBuilding.category || 'Academic Block'}</span>
-              </div>
-            </div>
-
-            <div className="pt-2 space-y-2">
-              <button
-                onClick={() => setSelectedBuildingId('PU-D-BLOCK')}
-                className="w-full py-2.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all hover:scale-[1.02]"
-              >
-                View D Block (Live 6-Floor Plan Demo)
-              </button>
-            </div>
+      {/* ADMIN TOOLBAR (When Admin Mode Active) */}
+      {isAdminMode && (
+        <div className="bg-slate-900 border-b border-amber-500/30 px-5 py-2.5 flex items-center justify-between gap-3 shrink-0 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-extrabold text-amber-400 flex items-center gap-1.5">
+              <Shield className="w-4 h-4" />
+              <span>Admin Floor & Room Controls:</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={handleOpenAddRoom}
+              className="py-1 px-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Room</span>
+            </button>
+            <button
+              onClick={handleOpenAddFloor}
+              className="py-1 px-3 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Floor</span>
+            </button>
+            <button
+              onClick={handleDeleteFloor}
+              className="py-1 px-3 bg-rose-600/80 hover:bg-rose-600 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-sm transition-all"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Delete Active Floor</span>
+            </button>
           </div>
         </div>
-      ) : layoutMode === 'card' ? (
-        /* ============================================================== */
-        /* 2. CARD ARCHITECTURAL VIEW: EXACT MATCH TO CHATGPT IMAGE 1    */
-        /* ============================================================== */
-        <div
-          onWheel={(e) => e.stopPropagation()}
-          onTouchMove={(e) => e.stopPropagation()}
-          data-prevent-map-zoom="true"
-          className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 flex flex-col items-center justify-start bg-[#0d0f14] overscroll-contain isolate-scroll"
-        >
-          <div className="w-full max-w-xl space-y-5 animate-in fade-in duration-150">
+      )}
+
+      {/* ============================================================== */}
+      {/* 2. MAIN BODY (CARD VIEW VS BLUEPRINT VIEW)                     */}
+      {/* ============================================================== */}
+      {layoutMode === 'card' ? (
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar">
+          <div className="max-w-2xl mx-auto space-y-4">
             
-            {/* Search Bar */}
-            <div className="relative w-full">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            {/* SEARCH ROOM INPUT */}
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 ref={searchInputRef}
                 type="text"
                 value={searchQuery}
                 onChange={e => handleSearch(e.target.value)}
-                placeholder="Search room (e.g. DG01, DG03, D304, Metrology...)"
+                placeholder={`Search room in ${currentBuilding.name} (e.g. ${isDBlock ? 'DGL01, DFL02' : 'EG01, EF02'}...)`}
                 className="w-full pl-10 pr-4 py-2.5 bg-[#181c25] border border-slate-700/80 rounded-2xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all shadow-inner"
               />
             </div>
 
-            {/* SELECT FLOOR (2 Rows x 3 Pills Grid) */}
+            {/* SELECT FLOOR (Pill Grid) */}
             <div>
-              <div className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2 px-1">
-                SELECT FLOOR
+              <div className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2 px-1 flex items-center justify-between">
+                <span>SELECT FLOOR</span>
+                <span className="text-[10px] text-slate-500 font-mono">
+                  {floors.length} Floors Available
+                </span>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {floors.map(flr => {
@@ -620,13 +785,16 @@ export default function IndoorNavigationModal({
                           setSelectedRoom(flr.rooms[0]);
                         }
                       }}
-                      className={`py-2.5 px-3 rounded-full text-xs font-bold transition-all text-center border ${
+                      className={`py-2 px-3 rounded-xl text-xs font-bold transition-all text-center border ${
                         isActive
                           ? 'bg-white text-slate-950 border-white shadow-lg ring-1 ring-white/60'
                           : 'bg-[#181c25] hover:bg-[#222733] text-slate-200 border-slate-700/60'
                       }`}
                     >
-                      {flr.floorName || `Floor ${flr.floorNumber}`}
+                      <span>{flr.floorName || `Floor ${flr.floorNumber}`}</span>
+                      <span className="block text-[10px] opacity-75 font-mono">
+                        Level {flr.floorNumber}
+                      </span>
                     </button>
                   );
                 })}
@@ -634,34 +802,47 @@ export default function IndoorNavigationModal({
             </div>
 
             {/* CENTERED FLOOR TITLE */}
-            <div className="text-center pt-3 pb-1">
+            <div className="text-center pt-2 pb-1">
               <h3 className="text-xs sm:text-sm font-black tracking-widest text-white uppercase">
                 {currentBuilding.name.toUpperCase()} – {activeFloor?.floorName?.toUpperCase() || `FLOOR ${currentFloorNumber}`}
               </h3>
+              <div className="text-[11px] text-slate-400 mt-0.5">
+                {isDBlock ? 'Engineering Laboratory Suites' : 'Lecture Classroom Suites'}
+              </div>
             </div>
 
-            {/* 6-ROOM ARCHITECTURAL GRID + CENTRAL CORRIDOR */}
+            {/* DYNAMIC SCHEMATIC ROOM GRID + CENTRAL CORRIDOR */}
             <div className="space-y-3">
-              {/* TOP ROW: DG01, DG02, DG03 */}
-              <div className="grid grid-cols-3 gap-3">
-                {topRowRooms.map(room => (
-                  <RoomCard
-                    key={room.roomId}
-                    room={room}
-                    isSelected={selectedRoom?.roomId === room.roomId}
-                    onClick={() => {
-                      setSelectedRoom(room);
-                      setIsNavigating(true);
-                    }}
-                    isAdminMode={isAdminMode}
-                    onEdit={(e) => handleOpenEditRoom(room, e)}
-                  />
-                ))}
-              </div>
+              {/* TOP ROW OF ROOMS */}
+              {topRowRooms.length > 0 ? (
+                <div className={`grid gap-3 ${
+                  topRowRooms.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'
+                }`}>
+                  {topRowRooms.map(room => (
+                    <RoomCard
+                      key={room.roomId}
+                      room={room}
+                      isDBlock={isDBlock}
+                      isSelected={selectedRoom?.roomId === room.roomId}
+                      onClick={() => {
+                        setSelectedRoom(room);
+                        setIsNavigating(true);
+                      }}
+                      isAdminMode={isAdminMode}
+                      onEdit={(e) => handleOpenEditRoom(room, e)}
+                      onDelete={(e) => handleDeleteRoom(room, e)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="p-3 text-center text-xs text-slate-500 bg-[#181c25]/50 rounded-xl">
+                  No rooms in top bay
+                </div>
+              )}
 
               {/* MIDDLE ROW: CENTRAL CORRIDOR */}
-              <div className="w-full bg-[#181c25] border border-slate-700/70 rounded-2xl py-4 px-4 flex flex-col items-center justify-center text-center shadow-lg transition-all hover:border-slate-600">
-                <div className="text-slate-400 text-lg font-bold mb-0.5 select-none leading-none">
+              <div className="w-full bg-[#181c25] border border-slate-700/70 rounded-2xl py-3 px-4 flex flex-col items-center justify-center text-center shadow-lg transition-all hover:border-slate-600">
+                <div className="text-slate-400 text-base font-bold select-none leading-none">
                   ⇆
                 </div>
                 <div className="text-xs sm:text-sm font-black tracking-widest text-slate-200 uppercase mt-0.5">
@@ -669,59 +850,59 @@ export default function IndoorNavigationModal({
                 </div>
               </div>
 
-              {/* BOTTOM ROW: DG04, DG05, DG06 */}
-              <div className="grid grid-cols-3 gap-3">
-                {bottomRowRooms.map(room => (
-                  <RoomCard
-                    key={room.roomId}
-                    room={room}
-                    isSelected={selectedRoom?.roomId === room.roomId}
-                    onClick={() => {
-                      setSelectedRoom(room);
-                      setIsNavigating(true);
-                    }}
-                    isAdminMode={isAdminMode}
-                    onEdit={(e) => handleOpenEditRoom(room, e)}
-                  />
-                ))}
-              </div>
+              {/* BOTTOM ROW OF ROOMS */}
+              {bottomRowRooms.length > 0 ? (
+                <div className={`grid gap-3 ${
+                  bottomRowRooms.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'
+                }`}>
+                  {bottomRowRooms.map(room => (
+                    <RoomCard
+                      key={room.roomId}
+                      room={room}
+                      isDBlock={isDBlock}
+                      isSelected={selectedRoom?.roomId === room.roomId}
+                      onClick={() => {
+                        setSelectedRoom(room);
+                        setIsNavigating(true);
+                      }}
+                      isAdminMode={isAdminMode}
+                      onEdit={(e) => handleOpenEditRoom(room, e)}
+                      onDelete={(e) => handleDeleteRoom(room, e)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="p-3 text-center text-xs text-slate-500 bg-[#181c25]/50 rounded-xl">
+                  No rooms in bottom bay
+                </div>
+              )}
             </div>
 
             {/* BOTTOM SELECTED DESTINATION PANEL */}
             {selectedRoom && (
               <div className="bg-[#181c25] border border-slate-800 rounded-2xl p-4 flex items-center justify-between shadow-2xl">
                 <div>
-                  <div className="font-extrabold text-sm sm:text-base text-white">
-                    Selected destination: {selectedRoom.roomNumber}
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-sm sm:text-base text-white">
+                      Selected: {selectedRoom.roomNumber}
+                    </span>
+                    <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
+                      isDBlock
+                        ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+                        : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                    }`}>
+                      {isDBlock ? 'LAB' : 'CLASSROOM'}
+                    </span>
                   </div>
                   <div className="text-xs text-slate-400 mt-0.5">
                     {activeFloor?.floorName || 'Ground Floor'} · {currentBuilding.name}
                   </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] font-semibold text-sky-400 bg-sky-950/60 border border-sky-500/30 px-3 py-0.5 rounded-full inline-block">
-                      Illustrative layout – awaiting survey
-                    </span>
-                    {onOpenIndoorSurvey && (
-                      <button
-                        type="button"
-                        onClick={() => onOpenIndoorSurvey({
-                          building: currentBuilding.name,
-                          floorNumber: currentFloorNumber,
-                          roomNumber: selectedRoom.roomNumber,
-                          name: selectedRoom.name,
-                          department: selectedRoom.department
-                        })}
-                        className="text-[11px] font-bold text-emerald-300 hover:text-white bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/40 px-2.5 py-0.5 rounded-full flex items-center gap-1 transition-all active:scale-95 shadow-sm"
-                        title="Survey coordinates for this room"
-                      >
-                        <LocateFixed className="w-3 h-3 text-emerald-400" />
-                        <span>Survey GPS</span>
-                      </button>
-                    )}
+                  <div className="text-xs text-slate-300 mt-1">
+                    {selectedRoom.name}
                   </div>
                 </div>
 
-                {/* Circular Action Button with Down Arrow (matches Image 1) */}
+                {/* Circular Action Button */}
                 <button
                   onClick={() => {
                     if (onOpenRoutePlanning) {
@@ -735,18 +916,10 @@ export default function IndoorNavigationModal({
                     }
                   }}
                   className="w-11 h-11 rounded-full bg-[#10131a] hover:bg-slate-800 border border-slate-700/80 flex items-center justify-center text-white transition-all hover:scale-105 active:scale-95 shadow-xl group shrink-0"
-                  title="Start Navigation to Destination"
+                  title="Start Navigation to this Room"
                 >
                   <ArrowDown className="w-5 h-5 text-slate-200 group-hover:text-emerald-400 transition-colors" />
                 </button>
-              </div>
-            )}
-
-            {/* Room Details Subtitle */}
-            {selectedRoom && (
-              <div className="px-2 text-center text-xs text-slate-500">
-                <span>{selectedRoom.name}</span>
-                {selectedRoom.department && <span> · {selectedRoom.department}</span>}
               </div>
             )}
           </div>
@@ -803,7 +976,7 @@ export default function IndoorNavigationModal({
               className="w-full h-auto max-h-[68vh] rounded-3xl border border-slate-800 shadow-2xl bg-[#0d0f14]"
             >
               <defs>
-                <pattern id="dBlockGrid2" width="20" height="20" patternUnits="userSpaceOnUse">
+                <pattern id="campusGrid2" width="20" height="20" patternUnits="userSpaceOnUse">
                   <path d="M 20 0 L 0 0 0 20" fill="none" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
                 </pattern>
                 <filter id="glowGreen2" x="-20%" y="-20%" width="140%" height="140%">
@@ -812,7 +985,7 @@ export default function IndoorNavigationModal({
                 </filter>
               </defs>
 
-              <rect width="960" height="540" fill="url(#dBlockGrid2)" rx="24" />
+              <rect width="960" height="540" fill="url(#campusGrid2)" rx="24" />
 
               {/* Central Corridor */}
               <g className="corridor-group">
@@ -880,123 +1053,48 @@ export default function IndoorNavigationModal({
                       y={b.y}
                       width={b.width}
                       height={b.height}
-                      fill={isSelected ? '#a7f3d0' : '#181c25'}
-                      stroke={isSelected ? '#059669' : '#2b3345'}
+                      fill={isSelected ? (isDBlock ? '#bae6fd' : '#a7f3d0') : '#181c25'}
+                      stroke={isSelected ? (isDBlock ? '#0284c7' : '#059669') : '#2b3345'}
                       strokeWidth={isSelected ? '3' : '1.5'}
                       rx="16"
                       className="transition-all duration-200"
                     />
 
-                    {/* Arched Door Icon */}
-                    <g
-                      transform={`translate(${b.x + b.width / 2 - 10}, ${b.y + 40})`}
-                      stroke={isSelected ? '#064e3b' : '#94a3b8'}
-                      strokeWidth="2"
-                      fill="none"
-                    >
-                      <path d="M 2 20 V 6 A 8 8 0 0 1 18 6 V 20" />
-                      <line x1="0" y1="20" x2="20" y2="20" />
-                      <circle cx="15" cy="12" r="1.5" fill={isSelected ? '#064e3b' : '#94a3b8'} />
-                    </g>
-
+                    {/* Room Type Pill inside SVG */}
                     <text
                       x={b.x + b.width / 2}
-                      y={b.y + 88}
-                      fill={isSelected ? '#064e3b' : '#ffffff'}
-                      fontSize="22"
-                      fontWeight="900"
-                      letterSpacing="1"
-                      textAnchor="middle"
-                    >
-                      {room.roomNumber}
-                    </text>
-
-                    <text
-                      x={b.x + b.width / 2}
-                      y={b.y + 115}
-                      fill={isSelected ? '#047857' : '#94a3b8'}
-                      fontSize="11"
-                      fontWeight="600"
-                      textAnchor="middle"
-                    >
-                      {room.name.length > 28 ? room.name.substring(0, 26) + '...' : room.name}
-                    </text>
-
-                    <text
-                      x={b.x + b.width / 2}
-                      y={b.y + 135}
-                      fill={isSelected ? '#065f46' : '#64748b'}
-                      fontSize="9.5"
+                      y={b.y + 25}
+                      fill={isSelected ? '#0369a1' : '#64748b'}
+                      fontSize="9"
                       fontWeight="bold"
+                      textAnchor="middle"
+                    >
+                      {isDBlock ? 'LABORATORY' : 'CLASSROOM'}
+                    </text>
+
+                    {/* Room Number */}
+                    <text
+                      x={b.x + b.width / 2}
+                      y={b.y + b.height / 2 + 10}
+                      fill={isSelected ? '#0f172a' : '#ffffff'}
+                      fontSize="17"
+                      fontWeight="900"
                       textAnchor="middle"
                       letterSpacing="0.5"
                     >
-                      {room.category || 'Laboratory'}
+                      {room.roomNumber}
                     </text>
-
-                    {isAdminMode && (
-                      <g
-                        onClick={(e) => handleOpenEditRoom(room, e)}
-                        className="cursor-pointer"
-                      >
-                        <rect
-                          x={b.x + b.width - 32}
-                          y={b.y + 8}
-                          width="24"
-                          height="24"
-                          fill="#f59e0b"
-                          rx="6"
-                        />
-                        <path
-                          d={`M ${b.x + b.width - 24} ${b.y + 23} L ${b.x + b.width - 15} ${b.y + 14} L ${b.x + b.width - 12} ${b.y + 17} Z`}
-                          fill="#0f172a"
-                        />
-                      </g>
-                    )}
                   </g>
                 );
               })}
-
-              {/* Animated Path Overlay */}
-              {isNavigating && routePathD && (
-                <g className="navigation-route-overlay pointer-events-none">
-                  <path
-                    d={routePathD}
-                    fill="none"
-                    stroke="#059669"
-                    strokeWidth="8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    opacity="0.4"
-                  />
-                  <path
-                    d={routePathD}
-                    fill="none"
-                    stroke="#10b981"
-                    strokeWidth="4"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeDasharray="8 6"
-                    className="animate-dash"
-                  />
-                  {selectedRoom?.entrancePoint && (
-                    <circle
-                      cx={selectedRoom.entrancePoint.x}
-                      cy={selectedRoom.entrancePoint.y}
-                      r="6"
-                      fill="#34d399"
-                      stroke="#ffffff"
-                      strokeWidth="2"
-                      filter="url(#glowGreen2)"
-                    />
-                  )}
-                </g>
-              )}
             </svg>
           </div>
         </div>
       )}
 
+      {/* ============================================================== */}
+      {/* 4. ADMIN MODALS: EDIT ROOM, ADD ROOM, ADD FLOOR                */}
+      {/* ============================================================== */}
       {/* Admin Edit Room Modal */}
       {editingRoom && (
         <div className="fixed inset-0 z-[700] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -1036,10 +1134,10 @@ export default function IndoorNavigationModal({
               </div>
 
               <div>
-                <label className="block text-slate-400 font-bold mb-1">Classification / Category</label>
+                <label className="block text-slate-400 font-bold mb-1">Room Classification / Type</label>
                 <select
                   value={editForm.category}
-                  onChange={e => setEditForm({ ...editForm, category: e.target.value })}
+                  onChange={e => setEditForm({ ...editForm, category: e.target.value, type: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white"
                 >
                   <option value="Classroom">Classroom</option>
@@ -1059,20 +1157,6 @@ export default function IndoorNavigationModal({
                   onChange={e => setEditForm({ ...editForm, department: e.target.value })}
                   className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white"
                 />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-bold mb-1">Operational Status</label>
-                <select
-                  value={editForm.status}
-                  onChange={e => setEditForm({ ...editForm, status: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white"
-                >
-                  <option value="Operational">Operational</option>
-                  <option value="Scheduled Lecture">Scheduled Lecture</option>
-                  <option value="Under Maintenance">Under Maintenance</option>
-                  <option value="Reserved">Reserved</option>
-                </select>
               </div>
             </div>
 
@@ -1094,15 +1178,168 @@ export default function IndoorNavigationModal({
           </div>
         </div>
       )}
+
+      {/* Admin Add Room Modal */}
+      {showAddRoomModal && (
+        <div className="fixed inset-0 z-[700] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full shadow-2xl text-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Plus className="w-5 h-5 text-emerald-400" />
+                <h4 className="font-extrabold text-base">Add Room to {activeFloor?.floorName}</h4>
+              </div>
+              <button
+                onClick={() => setShowAddRoomModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-400 font-bold mb-1">Room Code / Number</label>
+                <input
+                  type="text"
+                  value={addRoomForm.roomNumber}
+                  onChange={e => setAddRoomForm({ ...addRoomForm, roomNumber: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white font-mono"
+                  placeholder="e.g. EG07, DGL05"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-bold mb-1">Room Name &amp; Description</label>
+                <input
+                  type="text"
+                  value={addRoomForm.name}
+                  onChange={e => setAddRoomForm({ ...addRoomForm, name: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white"
+                  placeholder="e.g. Advanced AI Classroom"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-bold mb-1">Classification / Type</label>
+                <select
+                  value={addRoomForm.category}
+                  onChange={e => setAddRoomForm({ ...addRoomForm, category: e.target.value, type: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white"
+                >
+                  <option value="Classroom">Classroom</option>
+                  <option value="Laboratory">Laboratory</option>
+                  <option value="Faculty room">Faculty room</option>
+                  <option value="Office">Office</option>
+                  <option value="Seminar room">Seminar room</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-bold mb-1">Department</label>
+                <input
+                  type="text"
+                  value={addRoomForm.department}
+                  onChange={e => setAddRoomForm({ ...addRoomForm, department: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-bold mb-1">Capacity</label>
+                <input
+                  type="number"
+                  value={addRoomForm.capacity}
+                  onChange={e => setAddRoomForm({ ...addRoomForm, capacity: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white"
+                />
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+              <button
+                onClick={() => setShowAddRoomModal(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveNewRoom}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-600/30"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Room</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Add Floor Modal */}
+      {showAddFloorModal && (
+        <div className="fixed inset-0 z-[700] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full shadow-2xl text-slate-100">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <Layers className="w-5 h-5 text-sky-400" />
+                <h4 className="font-extrabold text-base">Add Floor to {currentBuilding.name}</h4>
+              </div>
+              <button
+                onClick={() => setShowAddFloorModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-400 font-bold mb-1">Floor Level Number</label>
+                <input
+                  type="number"
+                  value={addFloorForm.floorNumber}
+                  onChange={e => setAddFloorForm({ ...addFloorForm, floorNumber: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 font-bold mb-1">Floor Name</label>
+                <input
+                  type="text"
+                  value={addFloorForm.floorName}
+                  onChange={e => setAddFloorForm({ ...addFloorForm, floorName: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white"
+                  placeholder="e.g. Third Floor"
+                />
+              </div>
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+              <button
+                onClick={() => setShowAddFloorModal(false)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveNewFloor}
+                className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-sky-600/30"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Floor</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
-  // If embedded in App viewport:
   if (isEmbedded) {
     return content;
   }
 
-  // If modal dialog:
   return (
     <div
       onWheel={(e) => e.stopPropagation()}
@@ -1125,48 +1362,69 @@ export default function IndoorNavigationModal({
 }
 
 /**
- * Architectural Room Card matching ChatGPT Design Preview (Image 1)
+ * Architectural Room Card Component
  */
-function RoomCard({ room, isSelected, onClick, isAdminMode, onEdit }) {
+function RoomCard({ room, isDBlock, isSelected, onClick, isAdminMode, onEdit, onDelete }) {
+  const isLab = room.category === 'Laboratory' || room.type === 'Laboratory' || isDBlock;
+
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`relative rounded-2xl p-4 flex flex-col items-center justify-center transition-all cursor-pointer border ${
+      className={`relative rounded-2xl p-3 sm:p-4 flex flex-col items-center justify-center transition-all cursor-pointer border ${
         isSelected
-          ? 'bg-[#a7f3d0] border-[#a7f3d0] shadow-lg shadow-emerald-500/10 scale-[1.02]'
+          ? isLab
+            ? 'bg-[#bae6fd] border-[#38bdf8] shadow-lg shadow-sky-500/20 scale-[1.02]'
+            : 'bg-[#a7f3d0] border-[#34d399] shadow-lg shadow-emerald-500/20 scale-[1.02]'
           : 'bg-[#181c25] border-slate-700/70 hover:bg-[#202532] hover:border-slate-500 hover:scale-[1.01]'
       }`}
       style={{ minHeight: '105px' }}
     >
-      {/* Arched Doorway SVG Icon matching Image 1 */}
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="mb-2">
-        <path
-          d="M 5 21 V 8 A 7 7 0 0 1 19 8 V 21"
-          stroke={isSelected ? '#064e3b' : '#94a3b8'}
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-        <line x1="3" y1="21" x2="21" y2="21" stroke={isSelected ? '#064e3b' : '#94a3b8'} strokeWidth="2" strokeLinecap="round" />
-        <circle cx="16" cy="14" r="1.3" fill={isSelected ? '#064e3b' : '#94a3b8'} />
-      </svg>
+      {/* Category Badge */}
+      <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full mb-1 border ${
+        isSelected
+          ? isLab
+            ? 'bg-sky-800 text-sky-100 border-sky-900'
+            : 'bg-emerald-800 text-emerald-100 border-emerald-900'
+          : isLab
+            ? 'bg-sky-500/20 text-sky-400 border-sky-500/40'
+            : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+      }`}>
+        {isLab ? 'LAB' : 'CLASSROOM'}
+      </span>
 
       {/* Large Bold Room Number */}
       <span className={`text-base sm:text-lg font-black tracking-tight ${
-        isSelected ? 'text-[#064e3b]' : 'text-white'
+        isSelected ? (isLab ? 'text-[#0369a1]' : '#064e3b') : 'text-white'
       }`}>
         {room.roomNumber}
       </span>
 
-      {/* Admin Edit Trigger */}
+      {/* Subtitle Name */}
+      <span className={`text-[10px] mt-0.5 line-clamp-1 max-w-[150px] truncate text-center ${
+        isSelected ? 'text-slate-700 font-semibold' : 'text-slate-400'
+      }`}>
+        {room.name.replace(/^.*?–\s*/, '')}
+      </span>
+
+      {/* Admin Edit & Delete Triggers */}
       {isAdminMode && (
-        <span
-          onClick={onEdit}
-          className="absolute top-2 right-2 p-1 rounded-md bg-amber-500 text-slate-950 hover:bg-amber-400 transition-colors shadow"
-          title="Edit room"
-        >
-          <Edit3 className="w-3 h-3" />
-        </span>
+        <div className="absolute top-2 right-2 flex items-center gap-1">
+          <span
+            onClick={onEdit}
+            className="p-1 rounded-md bg-amber-500 text-slate-950 hover:bg-amber-400 transition-colors shadow"
+            title="Edit room"
+          >
+            <Edit3 className="w-3 h-3" />
+          </span>
+          <span
+            onClick={onDelete}
+            className="p-1 rounded-md bg-rose-600 text-white hover:bg-rose-500 transition-colors shadow"
+            title="Delete room"
+          >
+            <Trash2 className="w-3 h-3" />
+          </span>
+        </div>
       )}
     </button>
   );

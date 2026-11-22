@@ -380,9 +380,9 @@ export default function App() {
     setIsIndoorModalOpen(true);
   }, [targetIndoorBuilding, buildings]);
 
-  const handleStartIndoorNavigation = useCallback((bld) => {
+  const handleStartIndoorNavigation = useCallback((bld, room = null) => {
     const dBlock = buildings.find(b => b.shortCode === 'PU-D-BLOCK' || /d[-_]?block/i.test(b.name)) || { name: 'D Block', shortCode: 'PU-D-BLOCK', buildingId: 'bld_d_block' };
-    const target = bld || targetIndoorBuilding || dBlock;
+    const target = bld ? { ...bld, focusRoom: room?.roomNumber || bld.focusRoom } : (targetIndoorBuilding || dBlock);
     setTargetIndoorBuilding(target);
     setIndoorModalMode('navigate');
     setIsIndoorModalOpen(true);
