@@ -13,7 +13,6 @@ class AppConfig {
   static String _currentBaseUrl = defaultAndroidEmulatorUrl;
 
   static String get baseUrl => _currentBaseUrl;
-  static String get apiBaseUrl => _currentBaseUrl;
 
   /// Initialize and load saved Base URL from SharedPreferences
   static Future<void> init() async {
@@ -58,3 +57,4 @@ class AppConfig {
     }
   }
 }
+

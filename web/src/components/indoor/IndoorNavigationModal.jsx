@@ -238,17 +238,40 @@ export default function IndoorNavigationModal({
   }, [floors, currentFloorNumber, selectedBuildingId, currentBuilding]);
 
   // Dynamic Room Splitting: Adapts to ANY number of rooms along corridor
+  const isEBlock = currentBuilding.blockLetter === 'E';
+
+  const classrooms = useMemo(() => {
+    if (!activeFloor?.rooms) return [];
+    return activeFloor.rooms.filter(r => r.category === 'Classroom' || r.type === 'Classroom');
+  }, [activeFloor]);
+
+  const administrativeRooms = useMemo(() => {
+    if (!activeFloor?.rooms) return [];
+    return activeFloor.rooms.filter(r => r.category !== 'Classroom' && r.type !== 'Classroom');
+  }, [activeFloor]);
+
   const topRowRooms = useMemo(() => {
     if (!activeFloor?.rooms || activeFloor.rooms.length === 0) return [];
+    if (isEBlock && classrooms.length >= 6) {
+      return classrooms.slice(0, 3);
+    }
     const topCount = Math.ceil(activeFloor.rooms.length / 2);
     return activeFloor.rooms.slice(0, topCount);
-  }, [activeFloor]);
+  }, [activeFloor, isEBlock, classrooms]);
 
   const bottomRowRooms = useMemo(() => {
     if (!activeFloor?.rooms || activeFloor.rooms.length === 0) return [];
+    if (isEBlock && classrooms.length >= 6) {
+      return classrooms.slice(3, 6);
+    }
     const topCount = Math.ceil(activeFloor.rooms.length / 2);
     return activeFloor.rooms.slice(topCount);
-  }, [activeFloor]);
+  }, [activeFloor, isEBlock, classrooms]);
+
+  const oppositeWingRooms = useMemo(() => {
+    if (!isEBlock || activeFloor?.floorNumber === 0) return [];
+    return administrativeRooms;
+  }, [isEBlock, activeFloor, administrativeRooms]);
 
   // Handle Search
   const handleSearch = (query) => {
@@ -795,7 +818,13 @@ export default function IndoorNavigationModal({
                   {floors.length} Floors Available
                 </span>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className={`grid gap-2 ${
+                floors.length === 4
+                  ? 'grid-cols-2 sm:grid-cols-4'
+                  : floors.length > 4
+                  ? 'grid-cols-3 sm:grid-cols-5'
+                  : 'grid-cols-3'
+              }`}>
                 {floors.map(flr => {
                   const isActive = currentFloorNumber === flr.floorNumber;
                   return (
@@ -864,11 +893,12 @@ export default function IndoorNavigationModal({
 
               {/* MIDDLE ROW: CENTRAL CORRIDOR */}
               <div className="w-full bg-[#181c25] border border-slate-700/70 rounded-2xl py-3 px-4 flex flex-col items-center justify-center text-center shadow-lg transition-all hover:border-slate-600">
-                <div className="text-slate-400 text-base font-bold select-none leading-none">
-                  ⇆
-                </div>
-                <div className="text-xs sm:text-sm font-black tracking-widest text-slate-200 uppercase mt-0.5">
-                  CENTRAL CORRIDOR
+                <div className="flex items-center justify-between w-full px-2 sm:px-4 text-[10px] font-bold text-slate-400">
+                  <span className="flex items-center gap-1">← Towards F Block</span>
+                  <span className="text-xs sm:text-sm font-black tracking-widest text-slate-200 uppercase">
+                    CENTRAL CORRIDOR
+                  </span>
+                  <span className="flex items-center gap-1">Towards D Block →</span>
                 </div>
               </div>
 
@@ -896,6 +926,33 @@ export default function IndoorNavigationModal({
               ) : (
                 <div className="p-3 text-center text-xs text-slate-500 bg-[#181c25]/50 rounded-xl">
                   No rooms in bottom bay
+                </div>
+              )}
+
+              {/* OPPOSITE WING: FACULTY STAFF ROOMS & DEAN OFFICE */}
+              {oppositeWingRooms.length > 0 && (
+                <div className="pt-3 border-t border-slate-700/50">
+                  <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-widest text-amber-400 mb-2 px-1">
+                    <span>OPPOSITE WING • FACULTY & DEAN OFFICES</span>
+                    <span className="text-[10px] text-slate-500 font-mono">Opposite Side</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {oppositeWingRooms.map(room => (
+                      <RoomCard
+                        key={room.roomId}
+                        room={room}
+                        isDBlock={isDBlock}
+                        isSelected={selectedRoom?.roomId === room.roomId}
+                        onClick={() => {
+                          setSelectedRoom(room);
+                          setIsNavigating(true);
+                        }}
+                        isAdminMode={isAdminMode}
+                        onEdit={(e) => handleOpenEditRoom(room, e)}
+                        onDelete={(e) => handleDeleteRoom(room, e)}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -1392,6 +1449,10 @@ export default function IndoorNavigationModal({
  */
 function RoomCard({ room, isDBlock, isSelected, onClick, isAdminMode, onEdit, onDelete }) {
   const isLab = room.category === 'Laboratory' || room.type === 'Laboratory' || isDBlock;
+  const isStaffRoom = room.category === 'Staff Room' || room.type === 'Staff Room' || room.roomNumber?.toLowerCase().includes('staff') || room.roomNumber?.includes('SR');
+  const isOffice = room.category === 'Office' || room.type === 'Office' || room.roomNumber?.toLowerCase().includes('dean') || room.roomNumber?.includes('DEAN');
+
+  const badgeText = isLab ? 'LAB' : isStaffRoom ? 'STAFF ROOM' : isOffice ? 'OFFICE' : 'CLASSROOM';
 
   return (
     <button
@@ -1401,6 +1462,10 @@ function RoomCard({ room, isDBlock, isSelected, onClick, isAdminMode, onEdit, on
         isSelected
           ? isLab
             ? 'bg-[#bae6fd] border-[#38bdf8] shadow-lg shadow-sky-500/20 scale-[1.02]'
+            : isStaffRoom
+            ? 'bg-[#fef3c7] border-[#f59e0b] shadow-lg shadow-amber-500/20 scale-[1.02]'
+            : isOffice
+            ? 'bg-[#ede9fe] border-[#a855f7] shadow-lg shadow-purple-500/20 scale-[1.02]'
             : 'bg-[#a7f3d0] border-[#34d399] shadow-lg shadow-emerald-500/20 scale-[1.02]'
           : 'bg-[#181c25] border-slate-700/70 hover:bg-[#202532] hover:border-slate-500 hover:scale-[1.01]'
       }`}
@@ -1411,17 +1476,27 @@ function RoomCard({ room, isDBlock, isSelected, onClick, isAdminMode, onEdit, on
         isSelected
           ? isLab
             ? 'bg-sky-800 text-sky-100 border-sky-900'
+            : isStaffRoom
+            ? 'bg-amber-800 text-amber-100 border-amber-900'
+            : isOffice
+            ? 'bg-purple-800 text-purple-100 border-purple-900'
             : 'bg-emerald-800 text-emerald-100 border-emerald-900'
           : isLab
             ? 'bg-sky-500/20 text-sky-400 border-sky-500/40'
+            : isStaffRoom
+            ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+            : isOffice
+            ? 'bg-purple-500/20 text-purple-400 border-purple-500/40'
             : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
       }`}>
-        {isLab ? 'LAB' : 'CLASSROOM'}
+        {badgeText}
       </span>
 
       {/* Large Bold Room Number */}
       <span className={`text-base sm:text-lg font-black tracking-tight ${
-        isSelected ? (isLab ? 'text-[#0369a1]' : '#064e3b') : 'text-white'
+        isSelected
+          ? isLab ? 'text-[#0369a1]' : isStaffRoom ? 'text-[#b45309]' : isOffice ? 'text-[#6b21a8]' : '#064e3b'
+          : 'text-white'
       }`}>
         {room.roomNumber}
       </span>

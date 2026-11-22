@@ -286,6 +286,10 @@ export default function BuildingPopupModal({
                   {roomsOnFloor.map((rm) => {
                     const isSelected = selectedRoom?.roomId === rm.roomId;
                     const isLab = rm.category === 'Laboratory' || rm.type === 'Laboratory' || isDBlock;
+                    const isStaffRoom = rm.category === 'Staff Room' || rm.type === 'Staff Room' || rm.roomNumber?.toLowerCase().includes('staff') || rm.roomNumber?.includes('SR');
+                    const isOffice = rm.category === 'Office' || rm.type === 'Office' || rm.roomNumber?.toLowerCase().includes('dean') || rm.roomNumber?.includes('DEAN');
+                    const badgeText = isLab ? 'LAB' : isStaffRoom ? 'STAFF ROOM' : isOffice ? 'OFFICE' : 'CLASSROOM';
+
                     return (
                       <button
                         key={rm.roomId}
@@ -294,6 +298,10 @@ export default function BuildingPopupModal({
                           isSelected
                             ? isLab
                               ? 'bg-sky-950/80 border-sky-400 shadow-md shadow-sky-500/20 ring-1 ring-sky-400'
+                              : isStaffRoom
+                              ? 'bg-amber-950/80 border-amber-400 shadow-md shadow-amber-500/20 ring-1 ring-amber-400'
+                              : isOffice
+                              ? 'bg-purple-950/80 border-purple-400 shadow-md shadow-purple-500/20 ring-1 ring-purple-400'
                               : 'bg-emerald-950/80 border-emerald-400 shadow-md shadow-emerald-500/20 ring-1 ring-emerald-400'
                             : 'bg-[#182348]/70 hover:bg-[#1e2c5a] border-slate-700/60'
                         }`}
@@ -306,9 +314,13 @@ export default function BuildingPopupModal({
                           <span className={`text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded-full border ${
                             isLab
                               ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+                              : isStaffRoom
+                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                              : isOffice
+                              ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
                               : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                           }`}>
-                            {isLab ? 'LAB' : 'CLASSROOM'}
+                            {badgeText}
                           </span>
                         </div>
                         <div className="text-[10px] text-slate-400 truncate line-clamp-1">
@@ -337,9 +349,19 @@ export default function BuildingPopupModal({
                       <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
                         selectedRoom.category === 'Laboratory' || isDBlock
                           ? 'bg-sky-500/20 text-sky-300 border-sky-500/40'
+                          : selectedRoom.category === 'Staff Room' || selectedRoom.roomNumber?.toLowerCase().includes('staff') || selectedRoom.roomNumber?.includes('SR')
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                          : selectedRoom.category === 'Office' || selectedRoom.roomNumber?.toLowerCase().includes('dean') || selectedRoom.roomNumber?.includes('DEAN')
+                          ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
                           : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                       }`}>
-                        {selectedRoom.category === 'Laboratory' || isDBlock ? 'LAB' : 'CLASSROOM'}
+                        {selectedRoom.category === 'Laboratory' || isDBlock
+                          ? 'LAB'
+                          : selectedRoom.category === 'Staff Room' || selectedRoom.roomNumber?.toLowerCase().includes('staff') || selectedRoom.roomNumber?.includes('SR')
+                          ? 'STAFF ROOM'
+                          : selectedRoom.category === 'Office' || selectedRoom.roomNumber?.toLowerCase().includes('dean') || selectedRoom.roomNumber?.includes('DEAN')
+                          ? 'OFFICE'
+                          : 'CLASSROOM'}
                       </span>
                     </div>
                     <div className="text-xs font-medium text-slate-300 mt-0.5">

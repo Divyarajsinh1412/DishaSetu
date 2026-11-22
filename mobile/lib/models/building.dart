@@ -31,7 +31,7 @@ class Building {
     final String name = loc.name ?? '';
     final String sCode = loc.shortCode ?? 'PU-BLD';
     final String bId = loc.buildingId ?? loc.id ?? 'bld_${name.toLowerCase().replaceAll(' ', '_')}';
-    
+
     String bLetter = 'D';
     final match = RegExp(r'([A-Za-z])\s*[-_]?\s*block', caseSensitive: false).firstMatch(name);
     if (match != null) {
@@ -51,6 +51,7 @@ class Building {
     }
 
     final isLab = bLetter == 'D';
+    final totalFloors = bLetter == 'E' ? 4 : 3;
 
     return Building(
       buildingId: bId,
@@ -59,9 +60,13 @@ class Building {
       blockLetter: bLetter,
       category: loc.category ?? 'Academic',
       description: loc.description ?? '',
-      totalFloors: 3,
+      totalFloors: totalFloors,
       roomType: isLab ? 'Laboratory' : 'Classroom',
-      departments: isLab ? ['Engineering & Technology Labs'] : ['Lecture & Seminar Classrooms'],
+      departments: isLab
+          ? ['Engineering & Technology Labs']
+          : bLetter == 'E'
+              ? ['Computer Science & Engineering', 'Dean Directorate']
+              : ['Lecture & Seminar Classrooms'],
       latitude: loc.latitude,
       longitude: loc.longitude,
     );
@@ -102,3 +107,4 @@ class Building {
     );
   }
 }
+

@@ -24,7 +24,26 @@ class Room {
       type.toLowerCase() == 'laboratory' ||
       roomNumber.startsWith('D');
 
-  String get typeLabel => isLab ? 'LAB' : 'CLASSROOM';
+  bool get isStaffRoom =>
+      category.toLowerCase().contains('staff') ||
+      type.toLowerCase().contains('staff') ||
+      name.toLowerCase().contains('staff') ||
+      roomNumber.toLowerCase().contains('sr') ||
+      roomNumber.toLowerCase().contains('staff');
+
+  bool get isOffice =>
+      category.toLowerCase().contains('office') ||
+      type.toLowerCase().contains('office') ||
+      name.toLowerCase().contains('dean') ||
+      roomNumber.toLowerCase().contains('dean');
+
+  String get typeLabel {
+    if (isLab) return 'LAB';
+    if (isStaffRoom) return 'STAFF ROOM';
+    if (isOffice) return 'OFFICE';
+    return 'CLASSROOM';
+  }
+
   String get roomCode => roomNumber;
 
   factory Room.fromJson(Map<String, dynamic> json) {
@@ -77,3 +96,4 @@ class Floor {
     );
   }
 }
+

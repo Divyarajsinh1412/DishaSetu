@@ -31,8 +31,8 @@ export const CAMPUS_BLOCKS_INFO = {
     name: 'E Block',
     blockLetter: 'E',
     category: 'Academic',
-    description: 'Computer Science & Engineering lecture suites and algorithm classrooms.',
-    totalFloors: 3,
+    description: 'Computer Science & Engineering lecture suites, faculty staff rooms, and Dean offices.',
+    totalFloors: 4,
     roomType: 'Classroom',
     roomCategory: 'Classroom',
     departments: ['Computer Science & Engineering', 'Artificial Intelligence & Machine Learning'],
@@ -126,12 +126,9 @@ const BLOCK_ROOM_NAMES = {
   },
   E: {
     0: [
-      'Computer Science Lecture Classroom 01',
-      'Data Structures & Algorithms Classroom 02',
-      'Operating Systems Classroom 03',
-      'Software Engineering Classroom 04',
-      'Computer Networks Classroom 05',
-      'Database Management Systems Classroom 06'
+      'Staff Room 1 – Faculty Workstation Suite',
+      'Staff Room 2 – Senior Faculty & Research Mentors',
+      'Dean Office – School of Computer Science & Engineering'
     ],
     1: [
       'Artificial Intelligence Classroom 101',
@@ -148,6 +145,14 @@ const BLOCK_ROOM_NAMES = {
       'Mobile Application Dev Classroom 204',
       'Quantum Computing Classroom 205',
       'Internet of Things (IoT) Classroom 206'
+    ],
+    3: [
+      'Advanced Robotics & Cyber-Physical Systems 301',
+      'Deep Learning & Neural Networks 302',
+      'Cloud Architecture & Microservices 303',
+      'Blockchain & Distributed Ledgers 304',
+      'Natural Language Processing 305',
+      'Edge Computing & Embedded Systems 306'
     ]
   },
   F: {
@@ -262,9 +267,10 @@ export function getRoomCodePrefix(blockLetter, floorNumber) {
     if (floorNumber === 0) return 'DGL';
     if (floorNumber === 1) return 'DFL';
     if (floorNumber === 2) return 'DSL';
+    if (floorNumber === 3) return 'DTL';
     return `D${floorNumber}L`;
   }
-  const floorChar = floorNumber === 0 ? 'G' : floorNumber === 1 ? 'F' : floorNumber === 2 ? 'S' : `${floorNumber}`;
+  const floorChar = floorNumber === 0 ? 'G' : floorNumber === 1 ? 'F' : floorNumber === 2 ? 'S' : floorNumber === 3 ? 'T' : `${floorNumber}`;
   return `${b}${floorChar}`;
 }
 
@@ -311,8 +317,243 @@ export function calculateRoomBounds(totalRooms, roomIndex) {
   }
 }
 
+/**
+ * Generate E Block Floor (Exact matching user's handwritten architectural floor plan)
+ * - Ground Floor: ONLY Staff Room 1, Staff Room 2, and Dean Office
+ * - First Floor: EF01..EF06 classrooms + Opposite side Staff Room 1, Staff Room 2, Dean Office
+ * - Second Floor: ES01..ES06 classrooms + Opposite side Staff Room 1, Staff Room 2, Dean Office
+ * - Third Floor: ET01..ET06 classrooms + Opposite side Staff Room 1, Staff Room 2, Dean Office
+ */
+export function generateEBlockFloor(floorNumber) {
+  const meta = CAMPUS_BLOCKS_INFO.bld_e_block;
+  const floorName = getFloorName(floorNumber);
+  const floorId = `flr_e_${floorNumber}`;
+  const rooms = [];
+
+  if (floorNumber === 0) {
+    // Ground Floor: ONLY Staff Room 1, Staff Room 2, and Dean Office
+    rooms.push({
+      roomId: 'rm_e_0_sr01',
+      roomNumber: 'Staff Room 1',
+      code: 'Staff Room 1',
+      name: 'Staff Room 1 – Faculty Workstation Suite',
+      category: 'Staff Room',
+      type: 'Staff Room',
+      roomType: 'staff_room',
+      department: 'Computer Science & Engineering',
+      bounds: { x: 120, y: 140, width: 220, height: 220 },
+      entrancePoint: { x: 230, y: 360 },
+      qrCodeId: 'QR-PU-E-BLOCK-SR01',
+      isAccessible: true,
+      capacity: 25,
+      status: 'Operational'
+    });
+
+    rooms.push({
+      roomId: 'rm_e_0_sr02',
+      roomNumber: 'Staff Room 2',
+      code: 'Staff Room 2',
+      name: 'Staff Room 2 – Senior Faculty & Research Mentors',
+      category: 'Staff Room',
+      type: 'Staff Room',
+      roomType: 'staff_room',
+      department: 'Computer Science & Engineering',
+      bounds: { x: 380, y: 140, width: 220, height: 220 },
+      entrancePoint: { x: 490, y: 360 },
+      qrCodeId: 'QR-PU-E-BLOCK-SR02',
+      isAccessible: true,
+      capacity: 25,
+      status: 'Operational'
+    });
+
+    rooms.push({
+      roomId: 'rm_e_0_dean',
+      roomNumber: 'Dean Office',
+      code: 'Dean Office',
+      name: 'Dean Office – School of Computer Science & Engineering',
+      category: 'Office',
+      type: 'Office',
+      roomType: 'office',
+      department: 'Dean & Leadership Directorate',
+      bounds: { x: 640, y: 110, width: 240, height: 280 },
+      entrancePoint: { x: 760, y: 390 },
+      qrCodeId: 'QR-PU-E-BLOCK-DEAN',
+      isAccessible: true,
+      capacity: 15,
+      status: 'Operational'
+    });
+  } else {
+    // Floors 1, 2, 3: Two rows of 3 classrooms + Staff Rooms & Dean Office on opposite wing
+    const prefix = floorNumber === 1 ? 'EF' : floorNumber === 2 ? 'ES' : 'ET';
+    const classTitles = BLOCK_ROOM_NAMES.E[floorNumber] || [];
+
+    // Classroom Side: Top row (01, 02, 03)
+    for (let i = 0; i < 3; i++) {
+      const numStr = String(i + 1).padStart(2, '0');
+      const rNum = `${prefix}${numStr}`;
+      const title = classTitles[i] || `Classroom ${numStr}`;
+      const bounds = { x: 60 + i * 175, y: 50, width: 160, height: 160 };
+      rooms.push({
+        roomId: `rm_e_${floorNumber}${numStr}`,
+        roomNumber: rNum,
+        code: rNum,
+        name: `${rNum} – ${title}`,
+        category: 'Classroom',
+        type: 'Classroom',
+        roomType: 'classroom',
+        department: 'Computer Science & Engineering',
+        bounds,
+        entrancePoint: { x: bounds.x + 80, y: 220 },
+        qrCodeId: `QR-PU-E-BLOCK-${rNum}`,
+        isAccessible: true,
+        capacity: 60,
+        status: 'Operational'
+      });
+    }
+
+    // Classroom Side: Bottom row (04, 05, 06)
+    // As shown in sketch: EF06 is opposite EF01, EF05 opposite EF02, EF04 opposite EF03
+    const bottomRoomIndices = [4, 5, 6];
+    for (let i = 0; i < 3; i++) {
+      const num = bottomRoomIndices[i];
+      const numStr = String(num).padStart(2, '0');
+      const rNum = `${prefix}${numStr}`;
+      const title = classTitles[num - 1] || `Classroom ${numStr}`;
+      const bounds = { x: 60 + i * 175, y: 310, width: 160, height: 160 };
+      rooms.push({
+        roomId: `rm_e_${floorNumber}${numStr}`,
+        roomNumber: rNum,
+        code: rNum,
+        name: `${rNum} – ${title}`,
+        category: 'Classroom',
+        type: 'Classroom',
+        roomType: 'classroom',
+        department: 'Computer Science & Engineering',
+        bounds,
+        entrancePoint: { x: bounds.x + 80, y: 300 },
+        qrCodeId: `QR-PU-E-BLOCK-${rNum}`,
+        isAccessible: true,
+        capacity: 60,
+        status: 'Operational'
+      });
+    }
+
+    // Opposite Wing: Staff Rooms & Dean Office
+    rooms.push({
+      roomId: `rm_e_${floorNumber}_sr01`,
+      roomNumber: `${prefix}-SR01`,
+      code: 'Staff Room 1',
+      name: `Staff Room 1 – Faculty Office (Level ${floorNumber})`,
+      category: 'Staff Room',
+      type: 'Staff Room',
+      roomType: 'staff_room',
+      department: 'Computer Science & Engineering',
+      bounds: { x: 610, y: 50, width: 140, height: 160 },
+      entrancePoint: { x: 680, y: 220 },
+      qrCodeId: `QR-PU-E-BLOCK-${prefix}-SR01`,
+      isAccessible: true,
+      capacity: 20,
+      status: 'Operational'
+    });
+
+    rooms.push({
+      roomId: `rm_e_${floorNumber}_sr02`,
+      roomNumber: `${prefix}-SR02`,
+      code: 'Staff Room 2',
+      name: `Staff Room 2 – Systems & Networks Faculty (Level ${floorNumber})`,
+      category: 'Staff Room',
+      type: 'Staff Room',
+      roomType: 'staff_room',
+      department: 'Computer Science & Engineering',
+      bounds: { x: 770, y: 50, width: 140, height: 160 },
+      entrancePoint: { x: 840, y: 220 },
+      qrCodeId: `QR-PU-E-BLOCK-${prefix}-SR02`,
+      isAccessible: true,
+      capacity: 20,
+      status: 'Operational'
+    });
+
+    rooms.push({
+      roomId: `rm_e_${floorNumber}_dean`,
+      roomNumber: `${prefix}-DEAN`,
+      code: 'Dean Office',
+      name: `Dean Office – Executive Directorate (Level ${floorNumber})`,
+      category: 'Office',
+      type: 'Office',
+      roomType: 'office',
+      department: 'Dean & Leadership Directorate',
+      bounds: { x: 610, y: 310, width: 300, height: 160 },
+      entrancePoint: { x: 760, y: 300 },
+      qrCodeId: `QR-PU-E-BLOCK-${prefix}-DEAN`,
+      isAccessible: true,
+      capacity: 15,
+      status: 'Operational'
+    });
+  }
+
+  const staircases = [
+    {
+      stairId: `stair_e_east_${floorNumber}`,
+      name: 'East Main Staircase (Towards D Block)',
+      x: 935,
+      y: 270,
+      connectsFloors: [0, 1, 2, 3]
+    },
+    {
+      stairId: `stair_e_west_${floorNumber}`,
+      name: 'West Wing Staircase (Towards F Block)',
+      x: 25,
+      y: 270,
+      connectsFloors: [0, 1, 2, 3],
+      isEmergencyExit: true
+    }
+  ];
+
+  const elevators = [
+    {
+      elevatorId: `elev_e_central_${floorNumber}`,
+      name: 'Central Accessible Elevator',
+      x: 580,
+      y: 270,
+      connectsFloors: [0, 1, 2, 3],
+      isAccessible: true
+    }
+  ];
+
+  const emergencyExits = [
+    {
+      exitId: `exit_e_west_${floorNumber}`,
+      name: 'West Emergency Fire Exit',
+      x: 10,
+      y: 270
+    }
+  ];
+
+  return {
+    floorId,
+    buildingId: meta.buildingId,
+    buildingShortCode: meta.shortCode,
+    buildingName: meta.name,
+    floorNumber,
+    floorName,
+    dimensions: {
+      widthMeters: 80,
+      heightMeters: 50,
+      scalePixelsPerMeter: 12
+    },
+    rooms,
+    staircases,
+    elevators,
+    emergencyExits,
+    status: 'published'
+  };
+}
+
 export function generateBlockFloor(buildingKey, floorNumber, customRoomCount = null) {
   const meta = CAMPUS_BLOCKS_INFO[buildingKey] || CAMPUS_BLOCKS_INFO.bld_d_block;
+  if (meta.blockLetter === 'E') {
+    return generateEBlockFloor(floorNumber);
+  }
   const blockLetter = meta.blockLetter;
   const bLower = blockLetter.toLowerCase();
   const floorName = getFloorName(floorNumber);
