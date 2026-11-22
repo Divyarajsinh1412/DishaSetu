@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { getTranslation } from '../services/localization';
 import { MASTER_CAMPUS_FEATURES, WALKING_ROUTE_MAIN_TO_D_CENTERLINE } from '../data/masterMapFeatures.js';
+import { CAMPUS_VECTOR_LABELS } from '../data/campusVectorLabels.js';
 import { fetchCafes } from '../services/api';
 import { MAIN_GATE_TO_D_BLOCK_KML } from '../demo/mainGateToDBlockData.js';
 
@@ -320,6 +321,25 @@ export default function MasterCampusMap({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [hoveredFeature, setHoveredFeature] = useState(null);
   const [localSelectedFeature, setLocalSelectedFeature] = useState(null);
+
+  // Dynamic Multi-Resolution Base Map Loading (Switches to Ultra-HD 4K at high zoom)
+  const baseMapSrc = useMemo(() => {
+    if (scale >= 2.0) return '/maps/presidency-campus-master-map-hd.png';
+    if (scale >= 1.25) return '/maps/presidency-campus-master-map-2x.png';
+    return '/maps/presidency-campus-master-map.png';
+  }, [scale]);
+
+  // Preload higher-resolution map tiers in the background for zero-latency zoom transitions
+  useEffect(() => {
+    const preloads = [
+      '/maps/presidency-campus-master-map-2x.png',
+      '/maps/presidency-campus-master-map-hd.png'
+    ];
+    preloads.forEach(src => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, []);
 
   // Dynamic Cafe Ratings & Reviews from MongoDB
   const [liveCafes, setLiveCafes] = useState(() => (Array.isArray(cafes) && cafes.length > 0 ? cafes : []));
@@ -1128,15 +1148,18 @@ export default function MasterCampusMap({
           }}
           className="relative bg-white shadow-none border-0 overflow-hidden select-none"
         >
-          {/* Official Presidency University Master Campus Map Base Image */}
+          {/* Official Presidency University Master Campus Map Base Image (Multi-Resolution) */}
           <img
-            src="/maps/presidency-campus-master-map.png"
+            src={baseMapSrc}
             alt="Official Presidency University Campus Master Map"
-            className="w-full h-full object-contain pointer-events-none block"
+            style={{
+              imageRendering: scale > 1.4 ? '-webkit-optimize-contrast' : 'auto'
+            }}
+            className="w-full h-full object-contain pointer-events-none block transition-opacity duration-200"
             onError={(e) => {
-              if (!e.target.dataset.triedJpg) {
-                e.target.dataset.triedJpg = 'true';
-                e.target.src = '/maps/presidency-campus-master-map.jpg';
+              if (!e.target.dataset.triedFallback) {
+                e.target.dataset.triedFallback = 'true';
+                e.target.src = '/maps/presidency-campus-master-map.png';
               }
             }}
           />
@@ -1148,6 +1171,8 @@ export default function MasterCampusMap({
             className="absolute inset-0 w-full h-full pointer-events-auto z-15"
             viewBox="0 0 1000 1422"
             preserveAspectRatio="none"
+            shapeRendering="geometricPrecision"
+            textRendering="geometricPrecision"
           >
             <defs>
               <filter id="polyGlow" x="-20%" y="-20%" width="140%" height="140%">
@@ -1351,6 +1376,68 @@ export default function MasterCampusMap({
               </g>
             )}
 
+            {/* ============================================================= */}
+            {/* 3C. HIGH-PRECISION VECTOR CAMPUS LABELS (RAZOR-SHARP AT ANY ZOOM) */}
+            {/* ============================================================= */}
+            <g className="campus-vector-labels-layer pointer-events-none select-none">
+              {CAMPUS_VECTOR_LABELS.filter(lbl => scale >= lbl.minScale).map(lbl => {
+                const isHighlighted = activeSelected?.featureId === lbl.featureId || hoveredFeature?.featureId === lbl.featureId;
+                const dynamicFontSize = lbl.isMajor
+                  ? Math.max(11, Math.min(16, lbl.fontSize * (0.9 + 0.10 * Math.min(scale, 3.5))))
+                  : Math.max(9, Math.min(13, lbl.fontSize * (0.85 + 0.10 * Math.min(scale, 3.5))));
+                const haloWidth = scale >= 2.0 ? 3.5 : 2.5;
+
+                return (
+                  <g key={lbl.id} transform={`translate(${lbl.x}, ${lbl.y})`}>
+                    {/* Primary Title with High-Contrast Halo */}
+                    <text
+                      x="0"
+                      y={lbl.sub && scale >= 1.6 ? "-4" : "0"}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      style={{
+                        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                        fontWeight: isHighlighted ? 900 : (lbl.isMajor ? 800 : 700),
+                        fontSize: `${dynamicFontSize.toFixed(1)}px`,
+                        letterSpacing: '0.04em',
+                        fill: isHighlighted ? '#2563eb' : lbl.color,
+                        paintOrder: 'stroke fill',
+                        stroke: 'rgba(255, 255, 255, 0.98)',
+                        strokeWidth: `${haloWidth}px`,
+                        strokeLinejoin: 'round',
+                        strokeLinecap: 'round'
+                      }}
+                    >
+                      {lbl.name}
+                    </text>
+
+                    {/* Secondary Subtitle / Department (revealed on zoom) */}
+                    {lbl.sub && scale >= 1.6 && (
+                      <text
+                        x="0"
+                        y={`${(dynamicFontSize * 0.72 + 2).toFixed(1)}`}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        style={{
+                          fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                          fontWeight: 800,
+                          fontSize: `${(dynamicFontSize * 0.65).toFixed(1)}px`,
+                          letterSpacing: '0.05em',
+                          fill: '#475569',
+                          paintOrder: 'stroke fill',
+                          stroke: 'rgba(255, 255, 255, 0.95)',
+                          strokeWidth: '2.5px',
+                          strokeLinejoin: 'round'
+                        }}
+                      >
+                        {lbl.sub}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+            </g>
+
           </svg>
 
           {/* ============================================================= */}
@@ -1361,6 +1448,7 @@ export default function MasterCampusMap({
               className="absolute inset-0 w-full h-full pointer-events-none z-20"
               viewBox="0 0 1000 1422"
               preserveAspectRatio="none"
+              shapeRendering="geometricPrecision"
             >
               <defs>
                 <linearGradient id="routeGlow" x1="0%" y1="0%" x2="100%" y2="100%">
