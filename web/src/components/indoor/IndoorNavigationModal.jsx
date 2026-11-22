@@ -147,8 +147,16 @@ export default function IndoorNavigationModal({
       const targetId = resolveBuildingKey(b || 'bld_d_block');
       setSelectedBuildingId(targetId);
 
-      if (initialBuilding.selectedFloor !== undefined) {
-        setCurrentFloorNumber(Number(initialBuilding.selectedFloor));
+      const targetFloor = initialBuilding.selectedFloor !== undefined ? Number(initialBuilding.selectedFloor) : 0;
+      setCurrentFloorNumber(targetFloor);
+
+      const fb = getBuildingFloorsFallback(targetId);
+      const floorObj = fb.find(f => f.floorNumber === targetFloor) || fb[0];
+      if (initialBuilding.focusRoom) {
+        const found = floorObj?.rooms?.find(r => r.roomNumber.toLowerCase() === initialBuilding.focusRoom.toLowerCase());
+        setSelectedRoom(found || floorObj?.rooms?.[0] || null);
+      } else {
+        setSelectedRoom(floorObj?.rooms?.[0] || null);
       }
     }
   }, [initialBuilding, isOpen]);
@@ -588,8 +596,11 @@ export default function IndoorNavigationModal({
               <select
                 value={selectedBuildingId}
                 onChange={e => {
-                  setSelectedBuildingId(e.target.value);
+                  const targetKey = resolveBuildingKey(e.target.value);
+                  setSelectedBuildingId(targetKey);
                   setCurrentFloorNumber(0);
+                  const fb = getBuildingFloorsFallback(targetKey);
+                  setSelectedRoom(fb[0]?.rooms?.[0] || null);
                 }}
                 className="bg-transparent text-sm sm:text-base font-black text-white hover:text-emerald-400 focus:outline-none cursor-pointer tracking-tight"
               >
@@ -1349,6 +1360,10 @@ export default function IndoorNavigationModal({
 
   if (isEmbedded) {
     return content;
+  }
+
+  if (!isOpen) {
+    return null;
   }
 
   return (
