@@ -27,6 +27,12 @@ import {
   ADMISSION_BLOCK_CENTER
 } from './admissionBlockData.js';
 
+import {
+  D_BLOCK_KML,
+  D_BLOCK_BOUNDS,
+  D_BLOCK_CENTER
+} from './dBlockData.js';
+
 // Calibrated Perspective Homography Matrix for Master Campus Map (viewBox 0 0 1000 1422)
 // Accurately maps surveyed GPS coordinates to the illustrated campus master map
 const lat0 = 13.1700;
@@ -135,12 +141,39 @@ export const ADMISSION_BLOCK_GEOMETRY = {
   activeInDemo: true
 };
 
+// 4. D BLOCK (Surveyed Premier Engineering Academic Block)
+export const D_BLOCK_GEOMETRY = {
+  id: 'bld_d_block',
+  name: 'D Block',
+  label: 'D BLOCK',
+  category: 'Academic',
+  type: 'polygon',
+  sourceFile: 'D_Block.kml',
+  pointCount: 5,
+  uniqueVertexCount: 4,
+  isClosedRing: true,
+  coordinates: D_BLOCK_KML.coordinates,
+  rawPoints: D_BLOCK_KML.rawPoints,
+  bounds: D_BLOCK_BOUNDS,
+  gpsCenter: D_BLOCK_CENTER,
+  // Master map SVG coordinates corresponding to D Block on the illustrated master map
+  svgCenter: [202.5, 917.2],
+  metrics: D_BLOCK_KML.metrics,
+  style: {
+    fillColor: 'rgba(234, 179, 8, 0.55)', // Academic block gold fill
+    strokeColor: '#ca8a04',               // Darker gold border
+    strokeWidth: 2.5,
+    strokeOpacity: 0.95
+  },
+  activeInDemo: true
+};
+
 // Extensible Registry Array for future KML additions
-// Main Lawn, Main Gate → D Block, and Admission Block are registered as active geometries
 export const VERIFIED_CAMPUS_GEOMETRIES = [
   MAIN_LAWN_GEOMETRY,
   MAIN_GATE_TO_D_BLOCK_GEOMETRY,
-  ADMISSION_BLOCK_GEOMETRY
+  ADMISSION_BLOCK_GEOMETRY,
+  D_BLOCK_GEOMETRY
 ];
 
 export function getActiveDemoGeometries() {

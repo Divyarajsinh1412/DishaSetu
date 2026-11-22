@@ -27,8 +27,19 @@ export const MASTER_CAMPUS_FEATURES = [
     hasIndoorMap: true,
     description: 'Premier Academic Block housing Mechanical Engineering, Civil Engineering, and specialized engineering laboratories across 6 fully surveyed floors.',
     departments: ['Mechanical Engineering', 'Civil Engineering', 'Material Science Lab', 'Fluid Mechanics Lab', 'CAD/CAM Centre'],
-    latitude: 13.17068,
-    longitude: 77.53565,
+    latitude: 13.169369,
+    longitude: 77.533523,
+    gpsBounds: [
+      [13.169134, 77.533219],
+      [13.169604, 77.533826]
+    ],
+    gpsCoordinates: [
+      [13.169604, 77.533343],
+      [13.169320, 77.533219],
+      [13.169134, 77.533686],
+      [13.169412, 77.533826],
+      [13.169604, 77.533343]
+    ],
     status: 'Verified'
   },
   {
