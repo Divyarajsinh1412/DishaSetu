@@ -21,7 +21,8 @@ import {
   FlaskConical,
   BookOpen,
   DoorOpen,
-  ArrowRight
+  ArrowRight,
+  Users
 } from 'lucide-react';
 import {
   fetchIndoorFloors
