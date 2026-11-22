@@ -151,6 +151,107 @@ export async function seedKmlRoute() {
     }
 
     console.log(`[KMLSeed] Successfully seeded & persisted "${parsed.name}" (${parsed.distanceMeters}m) into MongoDB Atlas.`);
+
+    // 5. Seed D Block → E Block Surveyed Pathway
+    const dToEKmlPath = path.join(__dirname, '../data/kml/block_D_to_E_path.kml');
+    if (fs.existsSync(dToEKmlPath)) {
+      const dToEContent = fs.readFileSync(dToEKmlPath, 'utf8');
+      const parsedDToE = parseKml(dToEContent, 'block_D_to_E_path.kml', {
+        name: 'D Block → E Block Walkway',
+        startNode: 'node_d_block_ent',
+        endNode: 'node_e_block_ent',
+        routeType: 'Walking'
+      });
+
+      // Ensure E Block Entrance Node exists
+      const eNodeDoc = {
+        nodeId: 'node_e_block_ent',
+        name: 'E Block (Computer Science & Engineering) Entrance Door',
+        coordinates: {
+          lat: parsedDToE.coordinates[parsedDToE.coordinates.length - 1][0],
+          lng: parsedDToE.coordinates[parsedDToE.coordinates.length - 1][1]
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [
+            parsedDToE.coordinates[parsedDToE.coordinates.length - 1][1],
+            parsedDToE.coordinates[parsedDToE.coordinates.length - 1][0]
+          ]
+        },
+        nodeType: 'building_entrance',
+        associatedLocationId: 'loc_e_block',
+        isAccessible: true,
+        isActive: true
+      };
+
+      await NavigationNode.findOneAndUpdate(
+        { nodeId: 'node_e_block_ent' },
+        { $set: eNodeDoc },
+        { upsert: true, new: true }
+      ).catch(() => {});
+
+      const dToEPathId = 'path_kml_d_to_e_block';
+      const dToEPathPayload = {
+        pathId: dToEPathId,
+        name: parsedDToE.name,
+        geometry: parsedDToE.coordinates,
+        startNode: 'node_d_block_ent',
+        endNode: 'node_e_block_ent',
+        distanceMeters: parsedDToE.distanceMeters || 35.7,
+        estimatedWalkingMinutes: parsedDToE.estimatedWalkingMinutes || 0.5,
+        accessibility: true,
+        hasStairs: false,
+        hasRamp: true,
+        pathType: 'covered_walkway',
+        routeType: 'Walking',
+        verificationStatus: 'Verified',
+        status: 'active',
+        active: true,
+        surfaceType: 'Paved Walkway & Tiles',
+        sourceFileName: 'block_D_to_E_path.kml',
+        source: 'Google Earth KML',
+        sourceType: 'kml_import',
+        campus: 'Presidency University Bengaluru',
+        pointCount: parsedDToE.pointCount,
+        notes: 'Actual surveyed walkway connecting D Block and E Block.'
+      };
+
+      await WalkingPath.findOneAndUpdate(
+        { pathId: dToEPathId },
+        { $set: dToEPathPayload },
+        { upsert: true, new: true }
+      );
+
+      const dToERouteId = 'route_d_block_to_e_block';
+      const dToERoutePayload = {
+        routeId: dToERouteId,
+        name: 'D Block → E Block Walkway',
+        startLocation: 'D Block',
+        endLocation: 'E Block',
+        geometry: parsedDToE.coordinates,
+        distanceMeters: parsedDToE.distanceMeters || 35.7,
+        estimatedWalkingMinutes: parsedDToE.estimatedWalkingMinutes || 0.5,
+        routeType: 'pedestrian',
+        accessible: true,
+        verified: true,
+        sourceFileName: 'block_D_to_E_path.kml',
+        source: 'Google Earth KML',
+        campus: 'Presidency University Bengaluru',
+        status: 'published'
+      };
+
+      await Route.findOneAndUpdate(
+        { routeId: dToERouteId },
+        { $set: dToERoutePayload },
+        { upsert: true, new: true }
+      ).catch(() => {});
+
+      if (CampusService && CampusService.syncKmlPathToMemory) {
+        CampusService.syncKmlPathToMemory(dToEPathPayload, dToERoutePayload);
+      }
+      console.log(`[KMLSeed] Successfully seeded & persisted "${parsedDToE.name}" (${parsedDToE.distanceMeters || 35.7}m) into MongoDB Atlas.`);
+    }
+
     return savedPath;
   } catch (error) {
     console.error('[KMLSeed] Error seeding KML route:', error.message);

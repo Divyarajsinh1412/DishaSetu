@@ -51,6 +51,12 @@ import {
   L_BLOCK_CENTER
 } from './lBlockData.js';
 
+import {
+  D_TO_E_PATH_KML,
+  D_TO_E_PATH_BOUNDS,
+  D_TO_E_PATH_COORDINATES
+} from './dToEPathData.js';
+
 // Calibrated Perspective Homography Matrix for Master Campus Map (viewBox 0 0 1000 1422)
 // Accurately maps surveyed GPS coordinates to the illustrated campus master map
 const lat0 = 13.1700;
@@ -263,6 +269,37 @@ export const L_BLOCK_GEOMETRY = {
   activeInDemo: true
 };
 
+// 8. D BLOCK → E BLOCK PATHWAY (Surveyed Walkway Connection)
+export const D_TO_E_PATH_GEOMETRY = {
+  id: 'path_d_to_e',
+  name: 'D Block → E Block Walkway',
+  label: 'D → E PATH',
+  category: 'Pathway',
+  type: 'LineString',
+  sourceFile: 'block_D_to_E_path.kml',
+  pointCount: 8,
+  isClosedRing: false,
+  coordinates: D_TO_E_PATH_COORDINATES,
+  rawPoints: D_TO_E_PATH_KML.rawPoints,
+  bounds: D_TO_E_PATH_BOUNDS,
+  gpsCenter: [
+    (D_TO_E_PATH_BOUNDS[0][0] + D_TO_E_PATH_BOUNDS[1][0]) / 2,
+    (D_TO_E_PATH_BOUNDS[0][1] + D_TO_E_PATH_BOUNDS[1][1]) / 2
+  ],
+  svgCenter: [202.5, 954.5],
+  metrics: {
+    distanceMeters: D_TO_E_PATH_KML.distanceMeters,
+    estimatedWalkingMinutes: D_TO_E_PATH_KML.estimatedWalkingMinutes
+  },
+  style: {
+    strokeColor: '#f97316',
+    strokeWidth: 3.5,
+    strokeDasharray: '6 4',
+    strokeOpacity: 0.95
+  },
+  activeInDemo: true
+};
+
 // Extensible Registry Array for future KML additions
 export const VERIFIED_CAMPUS_GEOMETRIES = [
   MAIN_LAWN_GEOMETRY,
@@ -271,7 +308,8 @@ export const VERIFIED_CAMPUS_GEOMETRIES = [
   D_BLOCK_GEOMETRY,
   E_BLOCK_GEOMETRY,
   F_BLOCK_GEOMETRY,
-  L_BLOCK_GEOMETRY
+  L_BLOCK_GEOMETRY,
+  D_TO_E_PATH_GEOMETRY
 ];
 
 export function getActiveDemoGeometries() {

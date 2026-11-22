@@ -36,7 +36,11 @@ import {
   Sliders
 } from 'lucide-react';
 import { getTranslation } from '../services/localization';
-import { MASTER_CAMPUS_FEATURES, WALKING_ROUTE_MAIN_TO_D_CENTERLINE } from '../data/masterMapFeatures.js';
+import {
+  MASTER_CAMPUS_FEATURES,
+  WALKING_ROUTE_MAIN_TO_D_CENTERLINE,
+  WALKING_ROUTE_D_TO_E_CENTERLINE
+} from '../data/masterMapFeatures.js';
 import { fetchCafes } from '../services/api';
 import { MAIN_GATE_TO_D_BLOCK_KML } from '../demo/mainGateToDBlockData.js';
 
@@ -473,6 +477,27 @@ export default function MasterCampusMap({
       (activeRoute.endLocation?.name && /main gate/i.test(activeRoute.endLocation.name));
     if (isDBlockStart && isMainGateEnd) {
       return [...WALKING_ROUTE_MAIN_TO_D_CENTERLINE].reverse();
+    }
+
+    // Special Check: If active route is between D Block and E Block
+    const isEBlockEnd = activeRoute.endLocationId === 'node_e_block_ent' ||
+      activeRoute.endLocationId === 'bld_e_block' ||
+      activeRoute.endNodeId === 'node_e_block_ent' ||
+      activeRoute.endLocation?.locationId === 'loc_e_block' ||
+      activeRoute.endLocation?.buildingId === 'bld_e_block' ||
+      (activeRoute.endLocation?.name && /e block/i.test(activeRoute.endLocation.name));
+
+    if (isDBlockStart && isEBlockEnd) {
+      return WALKING_ROUTE_D_TO_E_CENTERLINE;
+    }
+
+    const isEBlockStart = activeRoute.startLocationId === 'node_e_block_ent' ||
+      activeRoute.startLocationId === 'bld_e_block' ||
+      activeRoute.startNodeId === 'node_e_block_ent' ||
+      (activeRoute.startLocation?.name && /e block/i.test(activeRoute.startLocation.name));
+
+    if (isEBlockStart && isDBlockEnd) {
+      return [...WALKING_ROUTE_D_TO_E_CENTERLINE].reverse();
     }
 
     const resolveNormalizedPoint = (nodeId, coords = null) => {

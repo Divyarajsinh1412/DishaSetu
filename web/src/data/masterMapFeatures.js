@@ -1046,6 +1046,27 @@ export const MASTER_CAMPUS_FEATURES = [
     latitude: 13.17065,
     longitude: 77.53585,
     status: 'Verified'
+  },
+  {
+    featureId: 'feat_path_d_to_e',
+    featureName: 'D Block → E Block Walkway',
+    code: 'PU-PATH-D-E',
+    category: 'Pathway',
+    type: 'polyline',
+    normalizedX: 0.2025,
+    normalizedY: 0.6710,
+    pathCoordinates: [
+      [0.2025, 0.6450],
+      [0.2025, 0.6620],
+      [0.2025, 0.6800],
+      [0.2025, 0.6975]
+    ],
+    description: 'Surveyed covered academic corridor connecting D Block (Mechanical & Civil Engineering) to E Block (Computer Science & Engineering).',
+    departments: ['Academic Quad Corridor', 'D Block Portal', 'E Block Portal'],
+    latitude: 13.16910,
+    longitude: 77.53366,
+    distanceMeters: 35.7,
+    status: 'Verified'
   }
 ];
 
@@ -1074,6 +1095,13 @@ export const WALKING_ROUTE_MAIN_TO_D_CENTERLINE = [
   { x: 0.2980, y: 0.6399 },
   { x: 0.2680, y: 0.6428 },
   { x: 0.2450, y: 0.6428 }  // D Block Entrance ("WAY TO A-K BLOCKS")
+];
+
+export const WALKING_ROUTE_D_TO_E_CENTERLINE = [
+  { x: 0.2025, y: 0.6450 }, // D Block Entrance
+  { x: 0.2025, y: 0.6620 },
+  { x: 0.2025, y: 0.6800 },
+  { x: 0.2025, y: 0.6975 }  // E Block Entrance
 ];
 
 export default MASTER_CAMPUS_FEATURES;
