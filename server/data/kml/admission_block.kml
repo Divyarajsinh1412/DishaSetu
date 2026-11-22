@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:ex="http://earth.google.com/kml/ext">
+<Document id="document">
+	<ex:extension>base64;CooBCoEBCn8KAggBEnkKdwokCiAKAwjQDxoHCNLtZRD_ASEAAAAAAADwPykAAAAAAAAAABgAEg8KCAitgO8HEP8BEKAfGAAaGgoHCP___wcQQBIICK2A7wcQ_wEYoB8gACgAIgkIARIFCP___wcqFwgBEggI____BxD_ARkAAAAAAADwPyAAEgQIARAA</ex:extension>
+	<name>Untitled map project</name>
+	<gx:CascadingStyle kml:id="__managed_style_07D45A48354339FC9296_highlight">
+		<ex:extension>base64;EgIYAQ</ex:extension>
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>4</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+				<displayMode>hide</displayMode>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_07D45A48354339FC9296_normal">
+		<ex:extension>base64;EgIYAQ</ex:extension>
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>2.66667</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+				<displayMode>hide</displayMode>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_07D45A48354339FC9296">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_07D45A48354339FC9296_normal</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_07D45A48354339FC9296_highlight</styleUrl>
+		</Pair>
+	</StyleMap>
+	<Placemark id="0DE930A3A04339FC9260">
+		<name>admission block</name>
+		<LookAt>
+			<longitude>77.53409250090466</longitude>
+			<latitude>13.16921851576345</latitude>
+			<altitude>925.1407965922095</altitude>
+			<heading>352.4940923048082</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>212.1755785679125</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_07D45A48354339FC9296</styleUrl>
+		<Polygon>
+			<outerBoundaryIs>
+				<LinearRing>
+					<coordinates>
+						77.53395987420603,13.16928027417512,0 77.53388059752243,13.16907345527522,0 77.53418933405754,13.16895307234977,0 77.53427046298394,13.16914604861018,0 77.53395987420603,13.16928027417512,0 
+					</coordinates>
+				</LinearRing>
+			</outerBoundaryIs>
+		</Polygon>
+	</Placemark>
+</Document>
+</kml>

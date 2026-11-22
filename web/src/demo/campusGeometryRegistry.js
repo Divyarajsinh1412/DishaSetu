@@ -13,13 +13,19 @@ import {
   MAIN_LAWN_KML,
   MAIN_LAWN_BOUNDS,
   MAIN_LAWN_CENTER
-} from './mainLawnDemoData';
+} from './mainLawnDemoData.js';
 
 import {
   MAIN_GATE_TO_D_BLOCK_KML,
   MAIN_GATE_TO_D_BLOCK_BOUNDS,
   MAIN_GATE_TO_D_BLOCK_CENTER
-} from './mainGateToDBlockData';
+} from './mainGateToDBlockData.js';
+
+import {
+  ADMISSION_BLOCK_KML,
+  ADMISSION_BLOCK_BOUNDS,
+  ADMISSION_BLOCK_CENTER
+} from './admissionBlockData.js';
 
 // Calibrated Perspective Homography Matrix for Master Campus Map (viewBox 0 0 1000 1422)
 // Accurately maps surveyed GPS coordinates to the illustrated campus master map
@@ -99,11 +105,42 @@ export const MAIN_GATE_TO_D_BLOCK_GEOMETRY = {
   activeInDemo: true
 };
 
+// 3. ADMISSION BLOCK (Surveyed Building Polygon)
+export const ADMISSION_BLOCK_GEOMETRY = {
+  id: 'admission_block',
+  name: 'Admission Block',
+  label: 'ADMISSION BLOCK',
+  category: 'Academic',
+  type: 'polygon',
+  sourceFile: 'admission_block.kml',
+  pointCount: 5,
+  uniqueVertexCount: 4,
+  isClosedRing: true,
+  coordinates: ADMISSION_BLOCK_KML.coordinates,
+  rawPoints: ADMISSION_BLOCK_KML.rawPoints,
+  bounds: ADMISSION_BLOCK_BOUNDS,
+  gpsCenter: ADMISSION_BLOCK_CENTER,
+  svgPoints: ADMISSION_BLOCK_KML.coordinates.map(([lat, lng]) => projectGpsToMasterMapSvg(lat, lng)),
+  svgPointsString: ADMISSION_BLOCK_KML.coordinates.map(([lat, lng]) => {
+    const [x, y] = projectGpsToMasterMapSvg(lat, lng);
+    return `${x},${y}`;
+  }).join(' '),
+  metrics: ADMISSION_BLOCK_KML.metrics,
+  style: {
+    fillColor: 'rgba(234, 179, 8, 0.55)', // Warm gold/yellow building fill
+    strokeColor: '#ca8a04',               // Darker golden border
+    strokeWidth: 2.5,
+    strokeOpacity: 0.95
+  },
+  activeInDemo: true
+};
+
 // Extensible Registry Array for future KML additions
-// Both Main Lawn and Main Gate → D Block are registered as active geometries
+// Main Lawn, Main Gate → D Block, and Admission Block are registered as active geometries
 export const VERIFIED_CAMPUS_GEOMETRIES = [
   MAIN_LAWN_GEOMETRY,
-  MAIN_GATE_TO_D_BLOCK_GEOMETRY
+  MAIN_GATE_TO_D_BLOCK_GEOMETRY,
+  ADMISSION_BLOCK_GEOMETRY
 ];
 
 export function getActiveDemoGeometries() {

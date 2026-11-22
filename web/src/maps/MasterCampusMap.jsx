@@ -37,7 +37,6 @@ import {
 } from 'lucide-react';
 import { getTranslation } from '../services/localization';
 import { MASTER_CAMPUS_FEATURES, WALKING_ROUTE_MAIN_TO_D_CENTERLINE } from '../data/masterMapFeatures.js';
-import { CAMPUS_VECTOR_LABELS } from '../data/campusVectorLabels.js';
 import { fetchCafes } from '../services/api';
 import { MAIN_GATE_TO_D_BLOCK_KML } from '../demo/mainGateToDBlockData.js';
 
@@ -1195,42 +1194,53 @@ export default function MasterCampusMap({
                   return null;
                 }
 
+                const isLawn = feat.featureId === 'feat_main_lawn' || feat.featureId === 'feat_dsa_lawn';
+
                 const pointsStr = feat.polygonCoordinates
                   .map(([px, py]) => `${(px * 1000).toFixed(1)},${(py * 1422).toFixed(1)}`)
                   .join(' ');
+
+                // Clean architectural map styling:
+                // Polygons are transparent by default so the high-resolution illustrated map artwork & text remain 100% visible and unblocked.
+                // When hovered or selected, they illuminate with crisp, elegant accents.
+                const polyFill = isSelected
+                  ? isPathway
+                    ? 'rgba(249, 115, 22, 0.85)'
+                    : 'rgba(37, 99, 235, 0.28)'
+                  : isHovered
+                  ? isPathway
+                    ? 'rgba(251, 146, 60, 0.75)'
+                    : 'rgba(56, 189, 248, 0.20)'
+                  : isPathway
+                  ? 'rgba(249, 115, 22, 0.70)'
+                  : isLawn
+                  ? 'rgba(34, 197, 94, 0.22)'
+                  : 'rgba(0, 0, 0, 0.001)'; // Invisible hit area for crisp overview
+
+                const polyStroke = isSelected
+                  ? isPathway
+                    ? '#ea580c'
+                    : '#2563eb'
+                  : isHovered
+                  ? isPathway
+                    ? '#f97316'
+                    : '#0284c7'
+                  : isPathway
+                  ? '#c2410c'
+                  : isLawn
+                  ? '#16a34a'
+                  : 'transparent';
+
+                const polyStrokeWidth = isSelected ? '3.5' : isHovered ? '2.5' : isLawn || isPathway ? '1.8' : '0';
 
                 return (
                   <polygon
                     key={feat.featureId}
                     points={pointsStr}
-                    fill={
-                      isSelected
-                        ? isPathway
-                          ? 'rgba(249, 115, 22, 0.85)'
-                          : 'rgba(16, 185, 129, 0.42)'
-                        : isHovered
-                        ? isPathway
-                          ? 'rgba(251, 146, 60, 0.75)'
-                          : 'rgba(56, 189, 248, 0.32)'
-                        : isPathway
-                        ? 'rgba(249, 115, 22, 0.70)'
-                        : style.fill
-                    }
-                    stroke={
-                      isSelected
-                        ? isPathway
-                          ? '#ea580c'
-                          : '#10b981'
-                        : isHovered
-                        ? isPathway
-                          ? '#f97316'
-                          : '#38bdf8'
-                        : isPathway
-                        ? '#c2410c'
-                        : style.stroke
-                    }
-                    strokeWidth={isSelected ? '3.5' : isHovered ? '3.0' : isPathway ? '2.5' : '1.8'}
-                    strokeDasharray={isSelected ? 'none' : isHovered ? '6 3' : 'none'}
+                    fill={polyFill}
+                    stroke={polyStroke}
+                    strokeWidth={polyStrokeWidth}
+                    strokeDasharray={isSelected ? 'none' : isHovered ? '5 2.5' : 'none'}
                     className="interactive-polygon cursor-pointer transition-all duration-150"
                     style={{
                       filter: isSelected ? 'url(#polyGlow)' : 'none'
@@ -1249,15 +1259,32 @@ export default function MasterCampusMap({
 
               // Circular Region (e.g. Fountain)
               if (feat.radius) {
+                const isFountain = feat.featureId === 'feat_fountain';
                 return (
                   <circle
                     key={feat.featureId}
                     cx={feat.normalizedX * 1000}
                     cy={feat.normalizedY * 1422}
                     r={feat.radius * 1000}
-                    fill={isSelected ? 'rgba(6, 182, 212, 0.45)' : isHovered ? 'rgba(56, 189, 248, 0.35)' : style.fill}
-                    stroke={isSelected ? '#06b6d4' : isHovered ? '#38bdf8' : style.stroke}
-                    strokeWidth={isSelected ? '4' : isHovered ? '3.5' : '2'}
+                    fill={
+                      isSelected
+                        ? 'rgba(6, 182, 212, 0.45)'
+                        : isHovered
+                        ? 'rgba(56, 189, 248, 0.35)'
+                        : isFountain
+                        ? 'rgba(6, 182, 212, 0.18)'
+                        : 'rgba(0, 0, 0, 0.001)'
+                    }
+                    stroke={
+                      isSelected
+                        ? '#0891b2'
+                        : isHovered
+                        ? '#06b6d4'
+                        : isFountain
+                        ? '#0891b2'
+                        : 'transparent'
+                    }
+                    strokeWidth={isSelected ? '3.5' : isHovered ? '2.5' : isFountain ? '1.5' : '0'}
                     className="interactive-polygon cursor-pointer transition-all duration-150"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1376,68 +1403,6 @@ export default function MasterCampusMap({
               </g>
             )}
 
-            {/* ============================================================= */}
-            {/* 3C. HIGH-PRECISION VECTOR CAMPUS LABELS (RAZOR-SHARP AT ANY ZOOM) */}
-            {/* ============================================================= */}
-            <g className="campus-vector-labels-layer pointer-events-none select-none">
-              {CAMPUS_VECTOR_LABELS.filter(lbl => scale >= lbl.minScale).map(lbl => {
-                const isHighlighted = activeSelected?.featureId === lbl.featureId || hoveredFeature?.featureId === lbl.featureId;
-                const dynamicFontSize = lbl.isMajor
-                  ? Math.max(11, Math.min(16, lbl.fontSize * (0.9 + 0.10 * Math.min(scale, 3.5))))
-                  : Math.max(9, Math.min(13, lbl.fontSize * (0.85 + 0.10 * Math.min(scale, 3.5))));
-                const haloWidth = scale >= 2.0 ? 3.5 : 2.5;
-
-                return (
-                  <g key={lbl.id} transform={`translate(${lbl.x}, ${lbl.y})`}>
-                    {/* Primary Title with High-Contrast Halo */}
-                    <text
-                      x="0"
-                      y={lbl.sub && scale >= 1.6 ? "-4" : "0"}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      style={{
-                        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-                        fontWeight: isHighlighted ? 900 : (lbl.isMajor ? 800 : 700),
-                        fontSize: `${dynamicFontSize.toFixed(1)}px`,
-                        letterSpacing: '0.04em',
-                        fill: isHighlighted ? '#2563eb' : lbl.color,
-                        paintOrder: 'stroke fill',
-                        stroke: 'rgba(255, 255, 255, 0.98)',
-                        strokeWidth: `${haloWidth}px`,
-                        strokeLinejoin: 'round',
-                        strokeLinecap: 'round'
-                      }}
-                    >
-                      {lbl.name}
-                    </text>
-
-                    {/* Secondary Subtitle / Department (revealed on zoom) */}
-                    {lbl.sub && scale >= 1.6 && (
-                      <text
-                        x="0"
-                        y={`${(dynamicFontSize * 0.72 + 2).toFixed(1)}`}
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        style={{
-                          fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-                          fontWeight: 800,
-                          fontSize: `${(dynamicFontSize * 0.65).toFixed(1)}px`,
-                          letterSpacing: '0.05em',
-                          fill: '#475569',
-                          paintOrder: 'stroke fill',
-                          stroke: 'rgba(255, 255, 255, 0.95)',
-                          strokeWidth: '2.5px',
-                          strokeLinejoin: 'round'
-                        }}
-                      >
-                        {lbl.sub}
-                      </text>
-                    )}
-                  </g>
-                );
-              })}
-            </g>
-
           </svg>
 
           {/* ============================================================= */}
@@ -1536,6 +1501,21 @@ export default function MasterCampusMap({
 
             // HIDE route pin by default: only appear when selected or when explicitly viewing Pathway category
             if (isPathway && !isSelected && activeCategory?.toLowerCase() !== 'pathway') {
+              return null;
+            }
+
+            // Pin visibility:
+            // 1. Always show pin if feature is SELECTED
+            // 2. Always show pins if user has an active SEARCH
+            // 3. Always show pins if a specific CATEGORY is filtered (e.g., Cafes, Sports, Parking)
+            // 4. In default overview, keep academic buildings clean so map typography is completely unobstructed;
+            //    only show key landmarks (Main Gate, Gate 2, Central Fountain, Hatti Kaapi cafe)
+            const hasActiveSearch = Boolean(localSearch || searchQuery);
+            const isSpecificCategoryFilter = activeCategory && activeCategory !== 'all';
+            const isKeyAmenity = feat.category === 'Cafe' || feat.category === 'Gate' || feat.featureId === 'feat_fountain';
+
+            const shouldShowPin = isSelected || hasActiveSearch || isSpecificCategoryFilter || isKeyAmenity;
+            if (!shouldShowPin) {
               return null;
             }
 
