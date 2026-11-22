@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/building.dart';
 import '../models/floor.dart';
+import '../screens/staff_room_screen.dart';
 import '../services/api_service.dart';
 import '../services/indoor_service.dart';
 
@@ -283,6 +284,86 @@ class _BuildingBottomSheetState extends State<BuildingBottomSheet> {
                           ),
                           const SizedBox(height: 10),
 
+                          // E Block Ground Floor Interactive Staff Room Quick Launch Banner
+                          if (isEBlock && isGroundFloor) ...[
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF064E3B), Color(0xFF0F766E)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: const Color(0xFF34D399), width: 1.2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black26,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Icon(Icons.people_alt, color: Color(0xFF6EE7B7), size: 24),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: const [
+                                        Text(
+                                          'E Block Staff Room 01 Cabins',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                        SizedBox(height: 2),
+                                        Text(
+                                          '10 Faculty Cabins • Live Availability • Dean Office',
+                                          style: TextStyle(color: Color(0xFFA7F3D0), fontSize: 10),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF10B981),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => StaffRoomScreen(
+                                            staffRoomId: 'sr_e_block_01',
+                                            buildingName: widget.building.name,
+                                            onSwitchFloor: (flr) {
+                                              setState(() => _selectedFloorLevel = flr);
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: const Text('OPEN MAP', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+
                           // Top Bay of Rooms
                           if (topBayRooms.isNotEmpty)
                             _buildRoomsGrid(topBayRooms, isDBlock),
@@ -372,70 +453,109 @@ class _BuildingBottomSheetState extends State<BuildingBottomSheet> {
                 color: Color(0xFF131722),
                 border: Border(top: BorderSide(color: Color(0xFF334155))),
               ),
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              'Selected: ${_selectedRoom!.roomNumber}',
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                              decoration: BoxDecoration(
-                                color: _getRoomColor(_selectedRoom!).withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: _getRoomColor(_selectedRoom!).withValues(alpha: 0.4)),
-                              ),
-                              child: Text(
-                                _selectedRoom!.typeLabel,
-                                style: TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  color: _getRoomColor(_selectedRoom!),
+                            Row(
+                              children: [
+                                Text(
+                                  'Selected: ${_selectedRoom!.roomNumber}',
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.white,
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: _getRoomColor(_selectedRoom!).withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(color: _getRoomColor(_selectedRoom!).withValues(alpha: 0.4)),
+                                  ),
+                                  child: Text(
+                                    _selectedRoom!.typeLabel,
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: _getRoomColor(_selectedRoom!),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _selectedRoom!.name,
+                              style: const TextStyle(fontSize: 12, color: Colors.white70),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _selectedRoom!.name,
-                          style: const TextStyle(fontSize: 12, color: Colors.white70),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                      ),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _getRoomColor(_selectedRoom!),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         ),
-                      ],
-                    ),
+                        icon: const Icon(Icons.navigation, size: 16),
+                        label: const Text('NAVIGATE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          if (widget.onNavigateToRoom != null) {
+                            widget.onNavigateToRoom!(_selectedRoom!);
+                          } else if (widget.onStartNavigation != null) {
+                            widget.onStartNavigation!();
+                          }
+                        },
+                      ),
+                    ],
                   ),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _getRoomColor(_selectedRoom!),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  if (_selectedRoom!.isStaffRoom || _selectedRoom!.isOffice || isEBlock && isGroundFloor) ...[
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          elevation: 2,
+                        ),
+                        icon: const Icon(Icons.meeting_room, size: 16),
+                        label: const Text(
+                          'OPEN INTERACTIVE CABIN MAP & LIVE FACULTY AVAILABILITY',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.3),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => StaffRoomScreen(
+                                staffRoomId: 'sr_e_block_01',
+                                buildingName: widget.building.name,
+                                onSwitchFloor: (flr) {
+                                  setState(() => _selectedFloorLevel = flr);
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                    icon: const Icon(Icons.navigation, size: 16),
-                    label: const Text('NAVIGATE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                    onPressed: () {
-                      Navigator.pop(context);
-                      if (widget.onNavigateToRoom != null) {
-                        widget.onNavigateToRoom!(_selectedRoom!);
-                      } else if (widget.onStartNavigation != null) {
-                        widget.onStartNavigation!();
-                      }
-                    },
-                  ),
+                  ],
                 ],
               ),
             ),

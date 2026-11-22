@@ -23,7 +23,10 @@ import {
   DoorOpen,
   ArrowRight
 } from 'lucide-react';
-import { fetchIndoorFloors } from '../../services/api';
+import {
+  fetchIndoorFloors
+} from '../../services/api';
+import StaffRoomCabinMapModal from '../indoor/StaffRoomCabinMapModal';
 import {
   getBuildingFloorsFallback,
   CAMPUS_BLOCKS_INFO,
@@ -55,6 +58,7 @@ export default function BuildingPopupModal({
   const [selectedFloorNumber, setSelectedFloorNumber] = useState(0);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [isLoadingFloors, setIsLoadingFloors] = useState(false);
+  const [showStaffRoomModal, setShowStaffRoomModal] = useState(false);
 
   const targetKey = resolveBuildingKey(building?.buildingId || building?.code || building?.shortCode || building?.name || building?.featureId || 'bld_d_block');
   const bId = targetKey;
@@ -134,6 +138,10 @@ export default function BuildingPopupModal({
 
   const handleSelectRoom = (room) => {
     setSelectedRoom(room);
+    const isSR = room.category === 'Staff Room' || room.type === 'Staff Room' || room.roomNumber?.toLowerCase().includes('staff') || room.roomNumber?.includes('SR') || room.category === 'Office' || room.roomNumber?.toLowerCase().includes('dean');
+    if (isSR) {
+      setShowStaffRoomModal(true);
+    }
   };
 
   return (
@@ -385,6 +393,19 @@ export default function BuildingPopupModal({
                   </div>
                 </div>
 
+                {/* Staff Room Interactive Layout Button */}
+                {(selectedRoom.category === 'Staff Room' || selectedRoom.type === 'Staff Room' || selectedRoom.roomNumber?.toLowerCase().includes('staff') || selectedRoom.roomNumber?.includes('SR') || selectedRoom.category === 'Office' || selectedRoom.roomNumber?.toLowerCase().includes('dean')) && (
+                  <button
+                    type="button"
+                    onClick={() => setShowStaffRoomModal(true)}
+                    className="w-full mt-2 py-2.5 px-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-black text-xs rounded-xl shadow-lg shadow-amber-900/40 flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.98]"
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>OPEN INTERACTIVE CABIN MAP & LIVE FACULTY AVAILABILITY</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
                 {/* Direct Room Navigation Button (Requirement 7) */}
                 <button
                   type="button"
@@ -511,6 +532,26 @@ export default function BuildingPopupModal({
           )}
         </div>
       </div>
+
+      {/* Interactive Staff Room Cabin Map & Live Faculty Availability Modal */}
+      {showStaffRoomModal && (
+        <StaffRoomCabinMapModal
+          isOpen={showStaffRoomModal}
+          onClose={() => setShowStaffRoomModal(false)}
+          onSelectFloor={(flr) => {
+            setShowStaffRoomModal(false);
+            handleSelectFloor(flr);
+          }}
+          onNavigateToLocation={(locName) => {
+            setShowStaffRoomModal(false);
+            onClose();
+            if (onStartOutdoorNavigation) {
+              onStartOutdoorNavigation({ name: locName, shortCode: locName });
+            }
+          }}
+          initialRoomId="sr_e_block_01"
+        />
+      )}
     </div>
   );
 }

@@ -100,6 +100,14 @@ import {
   updateMapMarker,
   deleteMapMarker
 } from '../controllers/mapMarkerController.js';
+import {
+  getStaffRooms,
+  getStaffRoomById,
+  getFacultyList,
+  getFacultyById,
+  updateFacultyStatus,
+  updateFaculty
+} from '../controllers/staffRoomController.js';
 import { requireAuth, requireRole } from '../middleware/authMiddleware.js';
 import { getDbStatus } from '../config/db.js';
 import syncService from '../services/syncService.js';
@@ -357,5 +365,15 @@ router.get('/map-markers/:id', getMapMarkerById);
 router.post('/map-markers', requireAuth, requireRole(['super_admin', 'campus_admin']), createMapMarker);
 router.put('/map-markers/:id', requireAuth, requireRole(['super_admin', 'campus_admin']), updateMapMarker);
 router.delete('/map-markers/:id', requireAuth, requireRole(['super_admin', 'campus_admin']), deleteMapMarker);
+
+// ==========================================
+// STAFF ROOM & FACULTY LIVE AVAILABILITY
+// ==========================================
+router.get('/staff-rooms', getStaffRooms);
+router.get('/staff-rooms/:id', getStaffRoomById);
+router.get('/faculty', getFacultyList);
+router.get('/faculty/:id', getFacultyById);
+router.post('/faculty/:id/status', updateFacultyStatus);
+router.put('/faculty/:id', updateFaculty);
 
 export default router;

@@ -8,6 +8,7 @@ import '../models/navigation_route.dart';
 import '../models/cafe.dart';
 import '../models/campus_event.dart';
 import '../models/campus_issue.dart';
+import '../models/staff_room.dart';
 import 'indoor_service.dart';
 
 class ApiService {
@@ -526,6 +527,46 @@ class ApiService {
         'landmarksCount': 28,
         'databaseConnected': true,
       };
+    }
+  }
+
+  /// Fetch Staff Room details with live faculty cabins
+  Future<StaffRoom> fetchStaffRoom(String id) async {
+    try {
+      final response = await http
+          .get(Uri.parse('$baseUrl/staff-rooms/$id'))
+          .timeout(const Duration(seconds: 4));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['staffRoom'] != null) {
+          return StaffRoom.fromJson(data['staffRoom']);
+        }
+      }
+    } catch (_) {}
+
+    return StaffRoom.getVerifiedFallback();
+  }
+
+  /// Update live faculty status (Available ↔ Unavailable)
+  Future<bool> updateFacultyStatus(String facultyId, String status) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/faculty/$facultyId/status'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({
+              'status': status,
+              'currentActivity': status == 'Available' ? 'In Cabin' : 'Taking Lecture',
+              'currentLocation': status == 'Available' ? 'Staff Room 01' : 'E Block – EF03',
+              'nextAvailability': status == 'Available' ? 'Available Now' : 'Check Schedule',
+            }),
+          )
+          .timeout(const Duration(seconds: 4));
+
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
     }
   }
 }

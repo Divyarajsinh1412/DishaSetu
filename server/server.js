@@ -13,6 +13,7 @@ import routingServiceInstance from './services/routingService.js';
 import { initIndoorLocationStore } from './controllers/indoorLocationController.js';
 import { seedKmlRoute } from './services/kmlSeedService.js';
 import { seedCampusFloors } from './scripts/seedCampusFloors.js';
+import { seedStaffRoomData } from './controllers/staffRoomController.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -188,6 +189,7 @@ export const startServer = (port = DEFAULT_PORT) => {
       await initIndoorLocationStore();
       await seedKmlRoute();
       await seedCampusFloors();
+      await seedStaffRoomData();
       if (mongoose.connection && mongoose.connection.readyState === 1) {
         try {
           const nodes = await NavigationNode.find({ isActive: true }).exec();

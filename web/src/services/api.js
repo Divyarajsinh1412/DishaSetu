@@ -1395,6 +1395,43 @@ export const deleteIndoorLocationApi = async (id, token) => {
   return data;
 };
 
+/**
+ * Staff Room & Faculty Availability API Integrations
+ */
+export const fetchStaffRoomById = async (id = 'sr_e_block_01') => {
+  try {
+    const res = await appFetch(`/api/staff-rooms/${encodeURIComponent(id)}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.staffRoom) return data.staffRoom;
+    }
+  } catch (err) {
+    console.warn('[API] Staff room fetch failed, using fallback layout:', err.message);
+  }
+  return null;
+};
+
+export const fetchFacultyListApi = async () => {
+  try {
+    const res = await appFetch('/api/faculty');
+    if (res.ok) {
+      const data = await res.json();
+      return data.faculty || [];
+    }
+  } catch (err) {
+    console.warn('[API] Faculty list fetch error:', err.message);
+  }
+  return [];
+};
+
+export const updateFacultyStatusApi = async (facultyId, payload) => {
+  const res = await appFetch(`/api/faculty/${encodeURIComponent(facultyId)}/status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  return await res.json();
+};
 
 /**
  * Health check endpoint integration
