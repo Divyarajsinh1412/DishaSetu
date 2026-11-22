@@ -643,8 +643,22 @@ export const MASTER_CAMPUS_FEATURES = [
   },
 
   // ==============================================================
-  // 4. GATES, ENTRANCES & SECURITY (MARKERS & SPANS)
+  // 4. GATES, ENTRANCES, SECURITY & PEDESTRIAN PATHWAYS
   // ==============================================================
+  {
+    featureId: 'feat_walking_corridor_main_to_d',
+    featureName: 'Main Gate → D Block Walking Corridor',
+    code: 'PU-PATH-MAIN-D',
+    category: 'Pathway',
+    type: 'polygon',
+    normalizedX: 0.4710,
+    normalizedY: 0.5010,
+    description: 'Official university surveyed walking corridor connecting Main Gate to D Block, passing Main Lawn, Bus Boarding, and Central Fountain (Orientation 2025 Surveyed Route • 100 GPS Nodes • 0.765 km).',
+    departments: ['Main Gate Portal', 'Central Promenade', 'Bus Boarding', 'Central Fountain Roundabout', 'D Block Academic Core'],
+    latitude: 13.17036,
+    longitude: 77.53517,
+    status: 'Verified'
+  },
   {
     featureId: 'feat_main_gate',
     featureName: 'Main Gate',
