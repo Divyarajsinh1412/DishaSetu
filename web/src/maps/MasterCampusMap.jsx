@@ -321,9 +321,6 @@ export default function MasterCampusMap({
   const [hoveredFeature, setHoveredFeature] = useState(null);
   const [localSelectedFeature, setLocalSelectedFeature] = useState(null);
 
-  // Official Surveyed Walking Corridor (Main Gate → D Block) toggle on Campus Master Map
-  const [showWalkingArea, setShowWalkingArea] = useState(true);
-
   // Dynamic Cafe Ratings & Reviews from MongoDB
   const [liveCafes, setLiveCafes] = useState(() => (Array.isArray(cafes) && cafes.length > 0 ? cafes : []));
   useEffect(() => {
@@ -1060,21 +1057,37 @@ export default function MasterCampusMap({
         <button
           type="button"
           onClick={() => {
-            const walkFeat = allCampusFeatures.find(f => f.featureId === 'feat_walking_corridor_main_to_d');
-            if (walkFeat) {
-              handleSelectFeature(walkFeat);
+            if (activeRoute) {
+              if (onClearRoute) onClearRoute();
             } else {
-              focusCoordinate(0.528, 0.404, 1.8);
+              if (onStartNavigation) {
+                onStartNavigation({
+                  startLocationId: 'node_main_gate',
+                  startNodeId: 'node_main_gate',
+                  startLocation: { name: 'Main Gate', lat: 13.17115, lng: 77.53785, locationId: 'loc_main_gate' },
+                  endLocationId: 'node_d_block_ent',
+                  endNodeId: 'node_d_block_ent',
+                  endLocation: { name: 'D Block', lat: 13.17068, lng: 77.53565, buildingId: 'bld_d_block' },
+                  distanceMeters: 765,
+                  estimatedMinutes: 8,
+                  mode: 'walking'
+                });
+              } else if (onOpenRoutePlanning) {
+                onOpenRoutePlanning('node_main_gate', 'bld_d_block');
+              } else {
+                const walkFeat = allCampusFeatures.find(f => f.featureId === 'feat_walking_corridor_main_to_d');
+                if (walkFeat) handleSelectFeature(walkFeat);
+              }
             }
           }}
           className={`px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 shrink-0 border ${
-            activeSelected?.featureId === 'feat_walking_corridor_main_to_d'
+            activeRoute
               ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border-orange-500/40 shadow-sm'
               : 'hover:bg-slate-100 dark:hover:bg-slate-700/60 border-transparent text-slate-700 dark:text-slate-300'
           }`}
-          title="Focus Main Gate → D Block Surveyed Walking Pathway Corridor"
+          title={activeRoute ? "End Route Navigation" : "Navigate Main Gate → D Block Pathway"}
         >
-          <Footprints className={`w-3.5 h-3.5 ${activeSelected?.featureId === 'feat_walking_corridor_main_to_d' ? 'text-orange-500' : 'text-slate-500'}`} />
+          <Footprints className={`w-3.5 h-3.5 ${activeRoute ? 'text-orange-500' : 'text-slate-500'}`} />
           <span className="hidden sm:inline">Walking Area</span>
           <span className="sm:hidden">Walk</span>
         </button>
@@ -1150,11 +1163,16 @@ export default function MasterCampusMap({
 
               // Render Polygons for Buildings, Green Zones, and Pathways
               if (feat.polygonCoordinates && feat.polygonCoordinates.length > 2) {
+                const isPathway = feat.category === 'Pathway' || feat.category === 'Route';
+
+                // HIDE route by default on normal map: only appear when user wants to navigate (activeRoute is active, or user specifically selected/searched this pathway, or pathway filter is active)
+                if (isPathway && !activeRoute && !isSelected && activeCategory?.toLowerCase() !== 'pathway') {
+                  return null;
+                }
+
                 const pointsStr = feat.polygonCoordinates
                   .map(([px, py]) => `${(px * 1000).toFixed(1)},${(py * 1422).toFixed(1)}`)
                   .join(' ');
-
-                const isPathway = feat.category === 'Pathway' || feat.category === 'Route';
 
                 return (
                   <polygon
@@ -1426,6 +1444,13 @@ export default function MasterCampusMap({
           {/* ============================================================= */}
           {filteredFeatures.map((feat) => {
             const isSelected = activeSelected?.featureId === feat.featureId;
+            const isPathway = feat.category === 'Pathway' || feat.category === 'Route';
+
+            // HIDE route pin by default: only appear when selected or when explicitly viewing Pathway category
+            if (isPathway && !isSelected && activeCategory?.toLowerCase() !== 'pathway') {
+              return null;
+            }
+
             const Icon = getCategoryIcon(feat.category);
             const style = getCategoryStyle(feat.category);
             const isHattiKappi = feat.code === 'PU-CAFE-D-BLOCK' || feat.featureId === 'feat_food_d_block' || /hatti kappi/i.test(feat.featureName);
