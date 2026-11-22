@@ -48,6 +48,8 @@ class NavigationRoute {
     required this.waypoints,
   });
 
+  int get totalDistanceMeters => distanceMeters;
+
   factory NavigationRoute.fromJson(Map<String, dynamic> json) {
     final rawGeom = json['geometry'] as List? ?? [];
     final geomList = rawGeom.map((item) {

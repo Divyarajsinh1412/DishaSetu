@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart' as ll;
 import '../services/api_service.dart';
 import '../models/campus_location.dart';
 import '../models/navigation_route.dart';
 import '../models/building.dart';
 import '../models/floor.dart';
+import '../data/campus_geometries.dart';
 import '../widgets/building_bottom_sheet.dart';
+import '../widgets/navigation_guidance_bar.dart';
+import '../widgets/route_planning_sheet.dart';
 
 const double kMapAspectRatio = 583.0 / 829.0;
 
@@ -17,12 +22,14 @@ class CampusMapScreen extends StatefulWidget {
 
 class _CampusMapScreenState extends State<CampusMapScreen> {
   final TransformationController _transformController = TransformationController();
+  final MapController _mapController = MapController();
   final ApiService _apiService = ApiService();
 
   List<CampusLocation> _markers = [];
   CampusLocation? _selectedMarker;
   NavigationRoute? _activeRoute;
   bool _isLoading = true;
+  bool _useGpsMap = false;
   String _activeCategory = 'all';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
@@ -100,164 +107,116 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
 
   void _showRoutePlanningDialog([CampusLocation? initialDest]) {
     if (_markers.isEmpty) return;
-
-    CampusLocation startLoc = _markers.firstWhere(
-      (m) => m.shortCode == 'PU-GATE-01' || m.name.contains('Main Gate'),
-      orElse: () => _markers.first,
-    );
-    CampusLocation destLoc = initialDest ?? _markers.firstWhere(
-      (m) => m.shortCode == 'PU-D-BLOCK' || m.name.contains('D Block'),
-      orElse: () => _markers.length > 1 ? _markers[1] : _markers.first,
-    );
-
-    showModalBottomSheet(
+    RoutePlanningSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF0B132B),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      locations: _markers,
+      initialDestination: initialDest,
+      onRouteSelected: (start, dest, accessible) async {
+        setState(() => _isLoading = true);
+        final route = await _apiService.calculateRoute(
+          start: start.shortCode ?? start.id,
+          destination: dest.shortCode ?? dest.id,
+          accessibleOnly: accessible,
+        );
+        setState(() {
+          _activeRoute = route;
+          _selectedMarker = dest;
+          _isLoading = false;
+        });
+      },
+    );
+  }
+
+  Widget _buildGpsMap() {
+    return FlutterMap(
+      mapController: _mapController,
+      options: MapOptions(
+        initialCenter: CampusGeometries.referenceCenter,
+        initialZoom: CampusGeometries.initialZoom,
+        minZoom: 15.0,
+        maxZoom: 19.5,
       ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Container(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF0284C7).withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Icon(Icons.directions, color: Color(0xFF38BDF8), size: 22),
-                          ),
-                          const SizedBox(width: 10),
-                          const Text(
-                            'Campus Directions',
-                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
-                        ],
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white70),
-                        onPressed: () => Navigator.pop(ctx),
+      children: [
+        TileLayer(
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'com.presidency.dishasetu',
+        ),
+        // Surveyed KML Polygons
+        PolygonLayer(
+          polygons: CampusGeometries.kmlPolygons.map((poly) {
+            return Polygon(
+              points: poly.points,
+              color: Color(poly.colorHex),
+              borderColor: Color(poly.strokeColorHex),
+              borderStrokeWidth: 2.0,
+              isFilled: true,
+            );
+          }).toList(),
+        ),
+        // Walking paths
+        PolylineLayer(
+          polylines: [
+            ...CampusGeometries.allPaths.map((path) {
+              return Polyline(
+                points: path.points,
+                strokeWidth: 4.0,
+                color: Color(path.colorHex),
+              );
+            }),
+            if (_activeRoute != null && _activeRoute!.geometry.isNotEmpty)
+              Polyline(
+                points: _activeRoute!.geometry
+                    .map((pt) => ll.LatLng(pt[0], pt[1]))
+                    .toList(),
+                strokeWidth: 5.0,
+                color: const Color(0xFF10B981),
+              ),
+          ],
+        ),
+        // Marker Pins
+        MarkerLayer(
+          markers: _filteredMarkers.map((marker) {
+            final isSelected = _selectedMarker?.id == marker.id;
+            final color = _getCategoryColor(marker.category);
+            final icon = _getCategoryIcon(marker.category);
+
+            return Marker(
+              point: ll.LatLng(marker.latitude, marker.longitude),
+              width: isSelected ? 38 : 30,
+              height: isSelected ? 38 : 30,
+              child: GestureDetector(
+                onTap: () {
+                  setState(() => _selectedMarker = marker);
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white,
+                      width: isSelected ? 3 : 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isSelected
+                            ? color.withOpacity(0.8)
+                            : Colors.black45,
+                        blurRadius: isSelected ? 12 : 4,
+                        spreadRadius: isSelected ? 3 : 0,
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-
-                  // Start Location Dropdown
-                  const Text('FROM (START PLACE)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF334155)),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<CampusLocation>(
-                        value: startLoc,
-                        isExpanded: true,
-                        dropdownColor: const Color(0xFF1E293B),
-                        items: _markers.map((m) {
-                          return DropdownMenuItem(
-                            value: m,
-                            child: Text(m.name, style: const TextStyle(color: Colors.white, fontSize: 13), overflow: TextOverflow.ellipsis),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) setModalState(() => startLoc = val);
-                        },
-                      ),
-                    ),
+                  child: Icon(
+                    icon,
+                    size: isSelected ? 18 : 14,
+                    color: Colors.white,
                   ),
-
-                  // Swap Button
-                  Center(
-                    child: IconButton(
-                      icon: const Icon(Icons.swap_vert, color: Color(0xFF38BDF8)),
-                      tooltip: 'Swap Start and Destination',
-                      onPressed: () {
-                        setModalState(() {
-                          final temp = startLoc;
-                          startLoc = destLoc;
-                          destLoc = temp;
-                        });
-                      },
-                    ),
-                  ),
-
-                  // Destination Dropdown
-                  const Text('TO (DESTINATION PLACE)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFF43F5E))),
-                  const SizedBox(height: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF334155)),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<CampusLocation>(
-                        value: destLoc,
-                        isExpanded: true,
-                        dropdownColor: const Color(0xFF1E293B),
-                        items: _markers.map((m) {
-                          return DropdownMenuItem(
-                            value: m,
-                            child: Text(m.name, style: const TextStyle(color: Colors.white, fontSize: 13), overflow: TextOverflow.ellipsis),
-                          );
-                        }).toList(),
-                        onChanged: (val) {
-                          if (val != null) setModalState(() => destLoc = val);
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Start Navigation Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0284C7),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      icon: const Icon(Icons.navigation, color: Colors.white, size: 18),
-                      label: const Text('START NAVIGATION', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      onPressed: () async {
-                        Navigator.pop(ctx);
-                        setState(() => _isLoading = true);
-                        final route = await _apiService.calculateRoute(
-                          start: startLoc.shortCode ?? startLoc.id,
-                          destination: destLoc.shortCode ?? destLoc.id,
-                        );
-                        setState(() {
-                          _activeRoute = route;
-                          _selectedMarker = destLoc;
-                          _isLoading = false;
-                        });
-                      },
-                    ),
-                  ),
-                ],
+                ),
               ),
             );
-          },
-        );
-      },
+          }).toList(),
+        ),
+      ],
     );
   }
 
@@ -385,7 +344,9 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                     ),
                   ),
                   Text(
-                    'Presidency Campus Master Map (${_markers.length} Locations)',
+                    _useGpsMap
+                        ? 'Live GPS Map (OSM & KML Boundaries)'
+                        : 'Presidency Campus Master Map (${_markers.length} Locations)',
                     style: TextStyle(
                       fontSize: 11,
                       color: Colors.white.withOpacity(0.7),
@@ -397,6 +358,14 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: Icon(
+              _useGpsMap ? Icons.map_outlined : Icons.satellite_alt,
+              color: const Color(0xFF38BDF8),
+            ),
+            tooltip: _useGpsMap ? 'Switch to Master Map' : 'Switch to Live GPS Map',
+            onPressed: () => setState(() => _useGpsMap = !_useGpsMap),
+          ),
           IconButton(
             icon: const Icon(Icons.directions, color: Color(0xFF38BDF8)),
             tooltip: 'Directions',
@@ -496,7 +465,10 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
           Expanded(
             child: Stack(
               children: [
-                InteractiveViewer(
+                if (_useGpsMap)
+                  Positioned.fill(child: _buildGpsMap())
+                else
+                  InteractiveViewer(
                   transformationController: _transformController,
                   minScale: 0.8,
                   maxScale: 4.5,
@@ -625,6 +597,31 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                     ],
                   ),
                 ),
+
+                // Loading Progress Bar
+                if (_isLoading)
+                  const Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: LinearProgressIndicator(
+                      color: Color(0xFF38BDF8),
+                      backgroundColor: Colors.transparent,
+                      minHeight: 2,
+                    ),
+                  ),
+
+                // Top Turn-by-Turn Navigation Guidance Bar
+                if (_activeRoute != null)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: NavigationGuidanceBar(
+                      route: _activeRoute!,
+                      onClose: () => setState(() => _activeRoute = null),
+                    ),
+                  ),
 
                 // Selected Location Bottom Card
                 if (_selectedMarker != null)

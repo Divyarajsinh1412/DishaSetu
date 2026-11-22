@@ -45,6 +45,8 @@ class Room {
   }
 
   String get roomCode => roomNumber;
+  String get code => roomNumber;
+  String get id => roomId;
 
   factory Room.fromJson(Map<String, dynamic> json) {
     return Room(
@@ -78,6 +80,9 @@ class Floor {
     required this.floorName,
     required this.rooms,
   });
+
+  String get name => floorName;
+  String get id => floorId;
 
   factory Floor.fromJson(Map<String, dynamic> json) {
     final rawRooms = json['rooms'] as List? ?? [];

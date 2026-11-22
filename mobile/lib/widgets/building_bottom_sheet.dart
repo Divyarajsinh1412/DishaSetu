@@ -7,16 +7,19 @@ import '../services/indoor_service.dart';
 class BuildingBottomSheet extends StatefulWidget {
   final Building building;
   final Function(Room room)? onNavigateToRoom;
+  final VoidCallback? onStartNavigation;
 
   const BuildingBottomSheet({
     super.key,
     required this.building,
     this.onNavigateToRoom,
+    this.onStartNavigation,
   });
 
   static Future<void> show(BuildContext context, {
     required Building building,
     Function(Room room)? onNavigateToRoom,
+    VoidCallback? onStartNavigation,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -25,6 +28,7 @@ class BuildingBottomSheet extends StatefulWidget {
       builder: (ctx) => BuildingBottomSheet(
         building: building,
         onNavigateToRoom: onNavigateToRoom,
+        onStartNavigation: onStartNavigation,
       ),
     );
   }
@@ -427,6 +431,8 @@ class _BuildingBottomSheetState extends State<BuildingBottomSheet> {
                       Navigator.pop(context);
                       if (widget.onNavigateToRoom != null) {
                         widget.onNavigateToRoom!(_selectedRoom!);
+                      } else if (widget.onStartNavigation != null) {
+                        widget.onStartNavigation!();
                       }
                     },
                   ),

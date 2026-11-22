@@ -26,6 +26,8 @@ class Building {
   });
 
   bool get isDBlock => blockLetter.toUpperCase() == 'D' || buildingId.contains('d_block');
+  String get id => buildingId;
+  String get code => shortCode;
 
   factory Building.fromCampusLocation(dynamic loc) {
     final String name = loc.name ?? '';
