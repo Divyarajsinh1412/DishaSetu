@@ -66,6 +66,7 @@ const CAMPUS_PLACES = [
   // 4. Central Landmarks & Green Zones
   { id: 'feat_fountain', code: 'PU-LM-FOUNTAIN', name: 'Central Fountain Roundabout', category: 'Garden', group: 'Landmarks & Greenery', icon: Compass },
   { id: 'feat_main_lawn', code: 'PU-LM-LAWN', name: 'Main Lawn (Central Green)', category: 'Garden', group: 'Landmarks & Greenery', icon: Trees },
+  { id: 'feat_walking_corridor_main_to_d', code: 'PU-PATH-MAIN-D', name: 'Main Gate → D Block Pathway', category: 'Pathway', group: 'Landmarks & Greenery', icon: Footprints },
   { id: 'feat_dsa_lawn', code: 'PU-LM-DSA-LAWN', name: 'DSA Lawn', category: 'Garden', group: 'Landmarks & Greenery', icon: Trees },
 
   // 5. University Facilities & Health
@@ -213,6 +214,7 @@ export default function RoutePlanningModal({
         if (placeId === 'feat_library') return 'node_library_ent';
         if (placeId === 'feat_medical') return 'node_medical_ent';
         if (placeId === 'feat_fountain') return 'node_fountain';
+        if (placeId === 'feat_walking_corridor_main_to_d' || placeId === 'PU-PATH-MAIN-D') return 'node_main_gate';
         if (placeId === 'feat_football') return 'node_football_court';
         if (placeId === 'feat_volleyball') return 'node_volleyball_court';
         if (placeId === 'bld_hostel_mess') return 'node_hostel_mess';

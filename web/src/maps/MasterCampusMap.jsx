@@ -36,7 +36,7 @@ import {
   Sliders
 } from 'lucide-react';
 import { getTranslation } from '../services/localization';
-import { MASTER_CAMPUS_FEATURES } from '../data/masterMapFeatures.js';
+import { MASTER_CAMPUS_FEATURES, WALKING_ROUTE_MAIN_TO_D_CENTERLINE } from '../data/masterMapFeatures.js';
 import { fetchCafes } from '../services/api';
 import { MAIN_GATE_TO_D_BLOCK_KML } from '../demo/mainGateToDBlockData.js';
 
@@ -446,10 +446,17 @@ export default function MasterCampusMap({
       (activeRoute.endLocation?.name && /d block/i.test(activeRoute.endLocation.name));
 
     if (isMainGateStart && isDBlockEnd) {
-      return MAIN_GATE_TO_D_BLOCK_KML.svgPoints.slice(0, 50).map(p => ({
-        x: p[0] / 1000,
-        y: p[1] / 1422
-      }));
+      return WALKING_ROUTE_MAIN_TO_D_CENTERLINE;
+    }
+    const isDBlockStart = activeRoute.startLocationId === 'node_d_block_ent' ||
+      activeRoute.startLocationId === 'bld_d_block' ||
+      activeRoute.startNodeId === 'node_d_block_ent' ||
+      (activeRoute.startLocation?.name && /d block/i.test(activeRoute.startLocation.name));
+    const isMainGateEnd = activeRoute.endLocationId === 'node_main_gate' ||
+      activeRoute.endNodeId === 'node_main_gate' ||
+      (activeRoute.endLocation?.name && /main gate/i.test(activeRoute.endLocation.name));
+    if (isDBlockStart && isMainGateEnd) {
+      return [...WALKING_ROUTE_MAIN_TO_D_CENTERLINE].reverse();
     }
 
     const resolveNormalizedPoint = (nodeId, coords = null) => {
@@ -663,20 +670,11 @@ export default function MasterCampusMap({
   // Handle Walking Corridor Click
   const handleSelectWalkingArea = useCallback((e) => {
     if (e && e.stopPropagation) e.stopPropagation();
-    handleSelectFeature({
-      featureId: 'feat_walking_corridor_main_to_d',
-      featureName: 'Main Gate → D Block Walking Corridor',
-      code: 'PU-PATH-MAIN-D',
-      category: 'Pathway',
-      type: 'polygon',
-      normalizedX: 0.4710,
-      normalizedY: 0.5010,
-      description: 'Official university surveyed pedestrian walking corridor connecting Presidency University Main Gate to D Block. Verified 100 GPS nodes, 764.8m walking distance.',
-      status: 'Verified',
-      departments: ['Main Gate Portal', 'Central Promenade', 'Bus Boarding', 'Central Fountain Roundabout', 'D Block Academic Core'],
-      metrics: MAIN_GATE_TO_D_BLOCK_KML.metrics
-    });
-  }, [handleSelectFeature]);
+    const walkFeat = allCampusFeatures.find(f => f.featureId === 'feat_walking_corridor_main_to_d');
+    if (walkFeat) {
+      handleSelectFeature(walkFeat);
+    }
+  }, [allCampusFeatures, handleSelectFeature]);
 
   // Handle Autocomplete Suggestion Click
   const handleSuggestionClick = (suggestion) => {
@@ -1062,19 +1060,21 @@ export default function MasterCampusMap({
         <button
           type="button"
           onClick={() => {
-            setShowWalkingArea(prev => !prev);
-            if (!showWalkingArea) {
-              focusCoordinate(0.420, 0.500, 1.8);
+            const walkFeat = allCampusFeatures.find(f => f.featureId === 'feat_walking_corridor_main_to_d');
+            if (walkFeat) {
+              handleSelectFeature(walkFeat);
+            } else {
+              focusCoordinate(0.528, 0.404, 1.8);
             }
           }}
           className={`px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1.5 shrink-0 border ${
-            showWalkingArea
+            activeSelected?.featureId === 'feat_walking_corridor_main_to_d'
               ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border-orange-500/40 shadow-sm'
               : 'hover:bg-slate-100 dark:hover:bg-slate-700/60 border-transparent text-slate-700 dark:text-slate-300'
           }`}
-          title="Toggle Main Gate → D Block Surveyed Walking Pathway Corridor"
+          title="Focus Main Gate → D Block Surveyed Walking Pathway Corridor"
         >
-          <Footprints className={`w-3.5 h-3.5 ${showWalkingArea ? 'text-orange-500' : 'text-slate-500'}`} />
+          <Footprints className={`w-3.5 h-3.5 ${activeSelected?.featureId === 'feat_walking_corridor_main_to_d' ? 'text-orange-500' : 'text-slate-500'}`} />
           <span className="hidden sm:inline">Walking Area</span>
           <span className="sm:hidden">Walk</span>
         </button>
@@ -1148,19 +1148,45 @@ export default function MasterCampusMap({
               const isHovered = hoveredFeature?.featureId === feat.featureId;
               const style = getCategoryStyle(feat.category);
 
-              // Render Polygons for Buildings and Zones
+              // Render Polygons for Buildings, Green Zones, and Pathways
               if (feat.polygonCoordinates && feat.polygonCoordinates.length > 2) {
                 const pointsStr = feat.polygonCoordinates
                   .map(([px, py]) => `${(px * 1000).toFixed(1)},${(py * 1422).toFixed(1)}`)
                   .join(' ');
 
+                const isPathway = feat.category === 'Pathway' || feat.category === 'Route';
+
                 return (
                   <polygon
                     key={feat.featureId}
                     points={pointsStr}
-                    fill={isSelected ? 'rgba(16, 185, 129, 0.42)' : isHovered ? 'rgba(56, 189, 248, 0.32)' : style.fill}
-                    stroke={isSelected ? '#10b981' : isHovered ? '#38bdf8' : style.stroke}
-                    strokeWidth={isSelected ? '4' : isHovered ? '3.5' : '1.8'}
+                    fill={
+                      isSelected
+                        ? isPathway
+                          ? 'rgba(249, 115, 22, 0.85)'
+                          : 'rgba(16, 185, 129, 0.42)'
+                        : isHovered
+                        ? isPathway
+                          ? 'rgba(251, 146, 60, 0.75)'
+                          : 'rgba(56, 189, 248, 0.32)'
+                        : isPathway
+                        ? 'rgba(249, 115, 22, 0.70)'
+                        : style.fill
+                    }
+                    stroke={
+                      isSelected
+                        ? isPathway
+                          ? '#ea580c'
+                          : '#10b981'
+                        : isHovered
+                        ? isPathway
+                          ? '#f97316'
+                          : '#38bdf8'
+                        : isPathway
+                        ? '#c2410c'
+                        : style.stroke
+                    }
+                    strokeWidth={isSelected ? '3.5' : isHovered ? '3.0' : isPathway ? '2.5' : '1.8'}
                     strokeDasharray={isSelected ? 'none' : isHovered ? '6 3' : 'none'}
                     className="interactive-polygon cursor-pointer transition-all duration-150"
                     style={{
@@ -1307,103 +1333,6 @@ export default function MasterCampusMap({
               </g>
             )}
 
-            {/* ============================================================= */}
-            {/* 3B. OFFICIAL SURVEYED WALKING CORRIDOR ON MASTER CAMPUS MAP   */}
-            {/* ============================================================= */}
-            {!kmlOverlays && showWalkingArea && (
-              <g className="master-campus-walking-area-layer">
-                <polygon
-                  points={MAIN_GATE_TO_D_BLOCK_KML.svgPointsString}
-                  fill="rgba(249, 115, 22, 0.70)"
-                  stroke="#c2410c"
-                  strokeWidth="2.5"
-                  className="cursor-pointer transition-all hover:fill-[rgba(249,115,22,0.85)] hover:stroke-[#9a3412]"
-                  onClick={handleSelectWalkingArea}
-                >
-                  <title>Main Gate → D Block Walking Corridor (Orientation Surveyed Pathway • 100 GPS Nodes, 0.765 km)</title>
-                </polygon>
-
-                {/* Orientation Reference: ENTRY / EXIT at Main Gate */}
-                <g transform="translate(568, 318)" className="pointer-events-none select-none">
-                  <rect
-                    x="-24"
-                    y="-14"
-                    width="48"
-                    height="28"
-                    rx="4"
-                    fill="#ea580c"
-                    stroke="#9a3412"
-                    strokeWidth="1.2"
-                    className="drop-shadow-md"
-                  />
-                  <text
-                    x="0"
-                    y="-2"
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fill="#ffffff"
-                    fontSize="7.5"
-                    fontWeight="900"
-                    letterSpacing="0.4"
-                  >
-                    ENTRY
-                  </text>
-                  <text
-                    x="0"
-                    y="7"
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fill="#ffffff"
-                    fontSize="7.5"
-                    fontWeight="900"
-                    letterSpacing="0.4"
-                  >
-                    /EXIT
-                  </text>
-                  <path d="M 0 16 L 3.5 22 L -3.5 22 Z" fill="#dc2626" />
-                </g>
-
-                {/* Destination Badge: D Block Entrance */}
-                <g transform="translate(248, 896)" className="pointer-events-none select-none">
-                  <rect
-                    x="-55"
-                    y="-14"
-                    width="110"
-                    height="28"
-                    rx="5"
-                    fill="rgba(15, 23, 42, 0.92)"
-                    stroke="#ea580c"
-                    strokeWidth="1.2"
-                    className="drop-shadow-md"
-                  />
-                  <text
-                    x="0"
-                    y="-2"
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fill="#fdba74"
-                    fontSize="8.5"
-                    fontWeight="900"
-                    letterSpacing="0.3"
-                  >
-                    D BLOCK ENTRANCE
-                  </text>
-                  <text
-                    x="0"
-                    y="8"
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fill="#cbd5e1"
-                    fontSize="7"
-                    fontWeight="800"
-                    letterSpacing="0.2"
-                  >
-                    WAY TO A-K BLOCKS
-                  </text>
-                  <path d="M 0 16 L 3.5 22 L -3.5 22 Z" fill="#ea580c" />
-                </g>
-              </g>
-            )}
           </svg>
 
           {/* ============================================================= */}

@@ -18,6 +18,7 @@ import {
   Crosshair,
   Box,
   Utensils,
+  Footprints,
   HelpCircle,
   Languages,
   DoorOpen,
@@ -209,6 +210,12 @@ export default function Header({
       label: 'Gardens & Lawns',
       icon: Trees,
       color: 'text-teal-600 bg-teal-50 dark:bg-teal-950/60'
+    },
+    {
+      id: 'Pathway',
+      label: 'Walkways & Routes',
+      icon: Footprints,
+      color: 'text-orange-600 bg-orange-50 dark:bg-orange-950/60'
     }
   ];
 

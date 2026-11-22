@@ -647,13 +647,63 @@ export const MASTER_CAMPUS_FEATURES = [
   // ==============================================================
   {
     featureId: 'feat_walking_corridor_main_to_d',
-    featureName: 'Main Gate → D Block Walking Corridor',
+    featureName: 'Main Gate → D Block Pathway',
     code: 'PU-PATH-MAIN-D',
     category: 'Pathway',
     type: 'polygon',
-    normalizedX: 0.4710,
-    normalizedY: 0.5010,
-    description: 'Official university surveyed walking corridor connecting Main Gate to D Block, passing Main Lawn, Bus Boarding, and Central Fountain (Orientation 2025 Surveyed Route • 100 GPS Nodes • 0.765 km).',
+    normalizedX: 0.5280,
+    normalizedY: 0.4040,
+    polygonCoordinates: [
+      [0.5680, 0.2410],
+      [0.5701, 0.2524],
+      [0.5730, 0.2642],
+      [0.5740, 0.2775],
+      [0.5702, 0.2944],
+      [0.5603, 0.3187],
+      [0.5473, 0.3468],
+      [0.5343, 0.3750],
+      [0.5223, 0.4031],
+      [0.5102, 0.4314],
+      [0.5002, 0.4596],
+      [0.4911, 0.4879],
+      [0.4851, 0.5127],
+      [0.4801, 0.5336],
+      [0.4747, 0.5479],
+      [0.4579, 0.5630],
+      [0.4264, 0.5789],
+      [0.3960, 0.5960],
+      [0.3740, 0.6115],
+      [0.3550, 0.6222],
+      [0.3281, 0.6303],
+      [0.2969, 0.6358],
+      [0.2675, 0.6385],
+      [0.2450, 0.6385],
+      [0.2450, 0.6470],
+      [0.2685, 0.6470],
+      [0.2991, 0.6441],
+      [0.3319, 0.6383],
+      [0.3610, 0.6295],
+      [0.3820, 0.6178],
+      [0.4040, 0.6023],
+      [0.4336, 0.5856],
+      [0.4661, 0.5692],
+      [0.4853, 0.5519],
+      [0.4919, 0.5353],
+      [0.4969, 0.5141],
+      [0.5029, 0.4896],
+      [0.5118, 0.4616],
+      [0.5218, 0.4336],
+      [0.5337, 0.4056],
+      [0.5457, 0.3775],
+      [0.5587, 0.3494],
+      [0.5717, 0.3212],
+      [0.5818, 0.2963],
+      [0.5860, 0.2781],
+      [0.5850, 0.2633],
+      [0.5819, 0.2511],
+      [0.5800, 0.2400]
+    ],
+    description: 'Official university surveyed walking route connecting Main Gate to D Block entrance via Central Promenade, Bus Boarding, and Central Fountain roundabout.',
     departments: ['Main Gate Portal', 'Central Promenade', 'Bus Boarding', 'Central Fountain Roundabout', 'D Block Academic Core'],
     latitude: 13.17036,
     longitude: 77.53517,
@@ -945,6 +995,33 @@ export const MASTER_CAMPUS_FEATURES = [
     longitude: 77.53585,
     status: 'Verified'
   }
+];
+
+export const WALKING_ROUTE_MAIN_TO_D_CENTERLINE = [
+  { x: 0.5740, y: 0.2405 }, // Main Gate (ENTRY / EXIT)
+  { x: 0.5760, y: 0.2518 },
+  { x: 0.5790, y: 0.2637 },
+  { x: 0.5800, y: 0.2778 },
+  { x: 0.5760, y: 0.2954 },
+  { x: 0.5660, y: 0.3200 }, // Along west of Main Lawn
+  { x: 0.5530, y: 0.3481 },
+  { x: 0.5400, y: 0.3762 },
+  { x: 0.5280, y: 0.4044 },
+  { x: 0.5160, y: 0.4325 },
+  { x: 0.5060, y: 0.4606 },
+  { x: 0.4970, y: 0.4887 },
+  { x: 0.4910, y: 0.5134 }, // Bus Boarding bay
+  { x: 0.4860, y: 0.5345 },
+  { x: 0.4800, y: 0.5499 },
+  { x: 0.4620, y: 0.5661 }, // Outer road curve around Central Fountain
+  { x: 0.4300, y: 0.5823 },
+  { x: 0.4000, y: 0.5992 },
+  { x: 0.3780, y: 0.6146 },
+  { x: 0.3580, y: 0.6259 },
+  { x: 0.3300, y: 0.6343 }, // East-West avenue to D Block
+  { x: 0.2980, y: 0.6399 },
+  { x: 0.2680, y: 0.6428 },
+  { x: 0.2450, y: 0.6428 }  // D Block Entrance ("WAY TO A-K BLOCKS")
 ];
 
 export default MASTER_CAMPUS_FEATURES;
