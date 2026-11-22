@@ -766,17 +766,19 @@ export default function MasterCampusMap({
     if (suggestion.type === 'feature') {
       handleSelectFeature(suggestion.item);
     } else if (suggestion.type === 'room') {
-      const dBlock = allCampusFeatures.find(f => f.featureId === 'bld_d_block');
-      if (dBlock) {
-        handleSelectFeature(dBlock);
+      const bId = suggestion.item?.buildingId || 'bld_d_block';
+      const targetBld = allCampusFeatures.find(f => f.featureId === bId || f.buildingId === bId || (suggestion.item.block && f.featureName.toLowerCase().includes(suggestion.item.block.toLowerCase()))) || allCampusFeatures.find(f => f.featureId === 'bld_d_block');
+      if (targetBld) {
+        handleSelectFeature(targetBld);
         if (onOpenIndoorMap) {
           onOpenIndoorMap({
-            _id: 'bld_d_block',
-            buildingId: 'bld_d_block',
-            name: 'D Block',
-            shortCode: 'PU-D-BLOCK',
-            totalFloors: 6,
+            _id: targetBld.buildingId || targetBld.featureId,
+            buildingId: targetBld.buildingId || targetBld.featureId,
+            name: targetBld.featureName,
+            shortCode: targetBld.code,
+            totalFloors: targetBld.totalFloors || 3,
             hasIndoorMap: true,
+            selectedFloor: suggestion.item.floor !== undefined ? suggestion.item.floor : 0,
             focusRoom: suggestion.item.roomNumber
           });
         }

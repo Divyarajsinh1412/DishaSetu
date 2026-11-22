@@ -51,7 +51,8 @@ import {
   getBuildingFloorsFallback,
   getRoomCodePrefix,
   getFloorName,
-  calculateRoomBounds
+  calculateRoomBounds,
+  resolveBuildingKey
 } from '../../data/campusFloorsDataset';
 
 /**
@@ -78,21 +79,15 @@ export default function IndoorNavigationModal({
 }) {
   // Building Selection
   const [selectedBuildingId, setSelectedBuildingId] = useState(() => {
-    const b = initialBuilding?.buildingId || initialBuilding?.code || initialBuilding?.shortCode || initialBuilding?._id;
-    if (b) {
-      const q = String(b).toLowerCase();
-      if (q.includes('d-block') || q === 'd') return 'bld_d_block';
-      if (q.includes('e-block') || q === 'e') return 'bld_e_block';
-      if (q.includes('f-block') || q === 'f') return 'bld_f_block';
-      if (q.includes('l-block') || q === 'l') return 'bld_l_block';
-      if (q.includes('n-block') || q === 'n') return 'bld_n_block';
-      if (q.includes('m-block') || q.includes('som') || q === 'm') return 'bld_som_block';
-      return b;
-    }
-    return 'bld_d_block';
+    const b = initialBuilding?.buildingId || initialBuilding?.code || initialBuilding?.shortCode || initialBuilding?._id || initialBuilding?.name;
+    return resolveBuildingKey(b || 'bld_d_block');
   });
 
-  const [floors, setFloors] = useState(() => getBuildingFloorsFallback('bld_d_block'));
+  const [floors, setFloors] = useState(() => {
+    const b = initialBuilding?.buildingId || initialBuilding?.code || initialBuilding?.shortCode || initialBuilding?._id || initialBuilding?.name;
+    const key = resolveBuildingKey(b || 'bld_d_block');
+    return getBuildingFloorsFallback(key);
+  });
   const [currentFloorNumber, setCurrentFloorNumber] = useState(0);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -149,16 +144,7 @@ export default function IndoorNavigationModal({
   useEffect(() => {
     if (initialBuilding) {
       const b = initialBuilding.buildingId || initialBuilding.code || initialBuilding.shortCode || initialBuilding._id || initialBuilding.name;
-      const q = String(b).toLowerCase();
-      let targetId = 'bld_d_block';
-      if (q.includes('d-block') || q === 'pu-d-block' || q === 'd block' || q === 'd') targetId = 'bld_d_block';
-      else if (q.includes('e-block') || q === 'pu-e-block' || q === 'e block' || q === 'e') targetId = 'bld_e_block';
-      else if (q.includes('f-block') || q === 'pu-f-block' || q === 'f block' || q === 'f') targetId = 'bld_f_block';
-      else if (q.includes('l-block') || q === 'pu-l-block' || q === 'l block' || q === 'l') targetId = 'bld_l_block';
-      else if (q.includes('n-block') || q === 'pu-n-block' || q === 'n block' || q === 'n') targetId = 'bld_n_block';
-      else if (q.includes('m-block') || q.includes('som') || q === 'pu-m-block' || q === 'm block' || q === 'm') targetId = 'bld_som_block';
-      else targetId = initialBuilding.buildingId || 'bld_d_block';
-
+      const targetId = resolveBuildingKey(b || 'bld_d_block');
       setSelectedBuildingId(targetId);
 
       if (initialBuilding.selectedFloor !== undefined) {
@@ -169,7 +155,8 @@ export default function IndoorNavigationModal({
 
   // Active Building Meta
   const currentBuilding = useMemo(() => {
-    const meta = CAMPUS_BLOCKS_INFO[selectedBuildingId];
+    const targetKey = resolveBuildingKey(selectedBuildingId);
+    const meta = CAMPUS_BLOCKS_INFO[targetKey];
     if (meta) return meta;
 
     const found = buildings.find(b =>
@@ -189,14 +176,22 @@ export default function IndoorNavigationModal({
   useEffect(() => {
     if (!isOpen && !isEmbedded) return;
 
-    const fallback = getBuildingFloorsFallback(selectedBuildingId);
+    const targetKey = resolveBuildingKey(selectedBuildingId);
+    const fallback = getBuildingFloorsFallback(targetKey);
     setFloors(fallback);
 
-    fetchIndoorFloors(selectedBuildingId)
+    fetchIndoorFloors(targetKey)
       .then(data => {
         if (data && data.length > 0) {
-          setFloors(data);
-          const active = data.find(f => f.floorNumber === currentFloorNumber) || data[0];
+          const meta = CAMPUS_BLOCKS_INFO[targetKey];
+          const filtered = data.filter(f =>
+            f.buildingId === meta?.buildingId ||
+            f.buildingShortCode === meta?.shortCode ||
+            f.floorId?.startsWith(`flr_${meta?.blockLetter?.toLowerCase()}`)
+          );
+          const validData = filtered.length > 0 ? filtered : data;
+          setFloors(validData);
+          const active = validData.find(f => f.floorNumber === currentFloorNumber) || validData[0];
           setCurrentFloorNumber(active.floorNumber);
 
           if (initialBuilding?.focusRoom) {
@@ -223,8 +218,16 @@ export default function IndoorNavigationModal({
 
   // Active Floor Object
   const activeFloor = useMemo(() => {
-    return floors.find(f => f.floorNumber === currentFloorNumber) || floors[0] || getBuildingFloorsFallback(selectedBuildingId)[0];
-  }, [floors, currentFloorNumber, selectedBuildingId]);
+    const targetKey = resolveBuildingKey(selectedBuildingId);
+    const meta = CAMPUS_BLOCKS_INFO[targetKey] || currentBuilding;
+    const matchingFloors = floors.filter(f =>
+      f.buildingId === meta?.buildingId ||
+      f.buildingShortCode === meta?.shortCode ||
+      f.floorId?.startsWith(`flr_${meta?.blockLetter?.toLowerCase()}`)
+    );
+    const pool = matchingFloors.length > 0 ? matchingFloors : getBuildingFloorsFallback(targetKey);
+    return pool.find(f => f.floorNumber === currentFloorNumber) || pool[0];
+  }, [floors, currentFloorNumber, selectedBuildingId, currentBuilding]);
 
   // Dynamic Room Splitting: Adapts to ANY number of rooms along corridor
   const topRowRooms = useMemo(() => {
@@ -760,7 +763,15 @@ export default function IndoorNavigationModal({
                 type="text"
                 value={searchQuery}
                 onChange={e => handleSearch(e.target.value)}
-                placeholder={`Search room in ${currentBuilding.name} (e.g. ${isDBlock ? 'DGL01, DFL02' : 'EG01, EF02'}...)`}
+                placeholder={`Search room in ${currentBuilding.name} (e.g. ${
+                  currentBuilding.blockLetter === 'D' ? 'DGL01, DFL02' :
+                  currentBuilding.blockLetter === 'E' ? 'EG01, EF02' :
+                  currentBuilding.blockLetter === 'F' ? 'FG01, FF02' :
+                  currentBuilding.blockLetter === 'L' ? 'LG01, LF02' :
+                  currentBuilding.blockLetter === 'N' ? 'NG01, NF02' :
+                  currentBuilding.blockLetter === 'M' ? 'MG01, MF02' :
+                  `${currentBuilding.blockLetter || 'E'}G01, ${currentBuilding.blockLetter || 'E'}F02`
+                }...)`}
                 className="w-full pl-10 pr-4 py-2.5 bg-[#181c25] border border-slate-700/80 rounded-2xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all shadow-inner"
               />
             </div>

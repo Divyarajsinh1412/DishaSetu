@@ -26,7 +26,8 @@ import {
 import { fetchIndoorFloors } from '../../services/api';
 import {
   getBuildingFloorsFallback,
-  CAMPUS_BLOCKS_INFO
+  CAMPUS_BLOCKS_INFO,
+  resolveBuildingKey
 } from '../../data/campusFloorsDataset';
 
 /**
@@ -55,13 +56,14 @@ export default function BuildingPopupModal({
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [isLoadingFloors, setIsLoadingFloors] = useState(false);
 
-  const bId = building?.buildingId || building?.code || building?.shortCode || building?.name || building?.featureId || 'bld_d_block';
+  const targetKey = resolveBuildingKey(building?.buildingId || building?.code || building?.shortCode || building?.name || building?.featureId || 'bld_d_block');
+  const bId = targetKey;
 
   // Load floor and room structures for this building
   useEffect(() => {
     if (!isOpen || !building) return;
 
-    const fallbackFloors = getBuildingFloorsFallback(bId);
+    const fallbackFloors = getBuildingFloorsFallback(targetKey);
     setFloors(fallbackFloors);
     setSelectedFloorNumber(0);
     if (fallbackFloors.length > 0 && fallbackFloors[0].rooms?.length > 0) {
@@ -71,11 +73,18 @@ export default function BuildingPopupModal({
     }
 
     setIsLoadingFloors(true);
-    fetchIndoorFloors(bId)
+    fetchIndoorFloors(targetKey)
       .then((data) => {
         if (data && data.length > 0) {
-          setFloors(data);
-          const gFloor = data.find(f => f.floorNumber === 0) || data[0];
+          const meta = CAMPUS_BLOCKS_INFO[targetKey];
+          const filtered = data.filter(f =>
+            f.buildingId === meta?.buildingId ||
+            f.buildingShortCode === meta?.shortCode ||
+            f.floorId?.startsWith(`flr_${meta?.blockLetter?.toLowerCase()}`)
+          );
+          const validData = filtered.length > 0 ? filtered : data;
+          setFloors(validData);
+          const gFloor = validData.find(f => f.floorNumber === 0) || validData[0];
           setSelectedFloorNumber(gFloor.floorNumber);
           if (gFloor.rooms?.length > 0) {
             setSelectedRoom(gFloor.rooms[0]);
@@ -88,7 +97,7 @@ export default function BuildingPopupModal({
       .finally(() => {
         setIsLoadingFloors(false);
       });
-  }, [isOpen, building, bId]);
+  }, [isOpen, building, targetKey]);
 
   if (!isOpen || !building) return null;
 
@@ -97,9 +106,10 @@ export default function BuildingPopupModal({
   const roomsOnFloor = currentFloor?.rooms || [];
 
   // Determine Block Info
-  const isDBlock = /d[-_ ]?block/i.test(building.name || '') ||
+  const blockMeta = CAMPUS_BLOCKS_INFO[targetKey];
+  const isDBlock = blockMeta ? blockMeta.blockLetter === 'D' : (/d[-_ ]?block/i.test(building.name || '') ||
                    building.shortCode === 'PU-D-BLOCK' ||
-                   building.buildingId === 'bld_d_block';
+                   building.buildingId === 'bld_d_block');
 
   const buildingCode = building.shortCode || building.code || 'PU-BLD';
   const category = building.category || 'Academic Block';
