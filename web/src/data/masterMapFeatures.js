@@ -61,9 +61,27 @@ export const MASTER_CAMPUS_FEATURES = [
     hasIndoorMap: false,
     description: 'School of Computer Science & Engineering (CSE) academic block with programming studios, smart classrooms, and AI research labs.',
     departments: ['Computer Science & Engineering', 'Artificial Intelligence', 'Data Science Studio', 'Software Engineering Lab'],
-    latitude: 13.17032,
-    longitude: 77.53565,
-    status: 'Survey Pending'
+    latitude: 13.168992,
+    longitude: 77.533518,
+    gpsBounds: [
+      [13.168741, 77.533143],
+      [13.169242, 77.533893]
+    ],
+    gpsCoordinates: [
+      [13.169242, 77.533204],
+      [13.169091, 77.533143],
+      [13.169035, 77.533225],
+      [13.168922, 77.533204],
+      [13.168826, 77.533451],
+      [13.168741, 77.533740],
+      [13.168811, 77.533781],
+      [13.168782, 77.533854],
+      [13.168858, 77.533893],
+      [13.168883, 77.533797],
+      [13.168971, 77.533829],
+      [13.169242, 77.533204]
+    ],
+    status: 'Verified'
   },
   {
     featureId: 'bld_f_block',
@@ -84,9 +102,21 @@ export const MASTER_CAMPUS_FEATURES = [
     hasIndoorMap: false,
     description: 'School of Information Science & Technology (IST) hosting high-performance computing clusters and network laboratories.',
     departments: ['Information Science', 'Cybersecurity Center', 'Cloud Computing Lab', 'Network Systems'],
-    latitude: 13.16995,
-    longitude: 77.53565,
-    status: 'Survey Pending'
+    latitude: 13.168627,
+    longitude: 77.533329,
+    gpsBounds: [
+      [13.168373, 77.532983],
+      [13.168881, 77.533676]
+    ],
+    gpsCoordinates: [
+      [13.168881, 77.533110],
+      [13.168602, 77.532983],
+      [13.168478, 77.533287],
+      [13.168373, 77.533601],
+      [13.168618, 77.533676],
+      [13.168881, 77.533110]
+    ],
+    status: 'Verified'
   },
   {
     featureId: 'bld_l_block',
@@ -107,9 +137,20 @@ export const MASTER_CAMPUS_FEATURES = [
     hasIndoorMap: false,
     description: 'School of Electronics & Communication Engineering (ECE) with VLSI design suites, robotics arena, and embedded systems labs.',
     departments: ['Electronics & Communication', 'VLSI Design Lab', 'Embedded Systems', 'IoT Research Studio'],
-    latitude: 13.16958,
-    longitude: 77.53565,
-    status: 'Survey Pending'
+    latitude: 13.168327,
+    longitude: 77.533096,
+    gpsBounds: [
+      [13.168091, 77.532796],
+      [13.168562, 77.533395]
+    ],
+    gpsCoordinates: [
+      [13.168562, 77.532913],
+      [13.168283, 77.532796],
+      [13.168091, 77.533278],
+      [13.168361, 77.533395],
+      [13.168562, 77.532913]
+    ],
+    status: 'Verified'
   },
   {
     featureId: 'bld_admission_register',

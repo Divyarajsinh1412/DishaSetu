@@ -33,6 +33,24 @@ import {
   D_BLOCK_CENTER
 } from './dBlockData.js';
 
+import {
+  E_BLOCK_KML,
+  E_BLOCK_BOUNDS,
+  E_BLOCK_CENTER
+} from './eBlockData.js';
+
+import {
+  F_BLOCK_KML,
+  F_BLOCK_BOUNDS,
+  F_BLOCK_CENTER
+} from './fBlockData.js';
+
+import {
+  L_BLOCK_KML,
+  L_BLOCK_BOUNDS,
+  L_BLOCK_CENTER
+} from './lBlockData.js';
+
 // Calibrated Perspective Homography Matrix for Master Campus Map (viewBox 0 0 1000 1422)
 // Accurately maps surveyed GPS coordinates to the illustrated campus master map
 const lat0 = 13.1700;
@@ -156,12 +174,89 @@ export const D_BLOCK_GEOMETRY = {
   rawPoints: D_BLOCK_KML.rawPoints,
   bounds: D_BLOCK_BOUNDS,
   gpsCenter: D_BLOCK_CENTER,
-  // Master map SVG coordinates corresponding to D Block on the illustrated master map
   svgCenter: [202.5, 917.2],
   metrics: D_BLOCK_KML.metrics,
   style: {
-    fillColor: 'rgba(234, 179, 8, 0.55)', // Academic block gold fill
-    strokeColor: '#ca8a04',               // Darker gold border
+    fillColor: 'rgba(234, 179, 8, 0.55)',
+    strokeColor: '#ca8a04',
+    strokeWidth: 2.5,
+    strokeOpacity: 0.95
+  },
+  activeInDemo: true
+};
+
+// 5. E BLOCK (Surveyed Computer Science Academic Block)
+export const E_BLOCK_GEOMETRY = {
+  id: 'bld_e_block',
+  name: 'E Block',
+  label: 'E BLOCK',
+  category: 'Academic',
+  type: 'polygon',
+  sourceFile: 'E_blocks.kml',
+  pointCount: 12,
+  uniqueVertexCount: 11,
+  isClosedRing: true,
+  coordinates: E_BLOCK_KML.coordinates,
+  rawPoints: E_BLOCK_KML.rawPoints,
+  bounds: E_BLOCK_BOUNDS,
+  gpsCenter: E_BLOCK_CENTER,
+  svgCenter: [202.5, 991.8],
+  metrics: E_BLOCK_KML.metrics,
+  style: {
+    fillColor: 'rgba(234, 179, 8, 0.55)',
+    strokeColor: '#ca8a04',
+    strokeWidth: 2.5,
+    strokeOpacity: 0.95
+  },
+  activeInDemo: true
+};
+
+// 6. F BLOCK (Surveyed Information Science Academic Block)
+export const F_BLOCK_GEOMETRY = {
+  id: 'bld_f_block',
+  name: 'F Block',
+  label: 'F BLOCK',
+  category: 'Academic',
+  type: 'polygon',
+  sourceFile: 'F_blocks.kml',
+  pointCount: 6,
+  uniqueVertexCount: 5,
+  isClosedRing: true,
+  coordinates: F_BLOCK_KML.coordinates,
+  rawPoints: F_BLOCK_KML.rawPoints,
+  bounds: F_BLOCK_BOUNDS,
+  gpsCenter: F_BLOCK_CENTER,
+  svgCenter: [202.5, 1067.9],
+  metrics: F_BLOCK_KML.metrics,
+  style: {
+    fillColor: 'rgba(234, 179, 8, 0.55)',
+    strokeColor: '#ca8a04',
+    strokeWidth: 2.5,
+    strokeOpacity: 0.95
+  },
+  activeInDemo: true
+};
+
+// 7. L BLOCK (Surveyed Electronics & Communication Academic Block)
+export const L_BLOCK_GEOMETRY = {
+  id: 'bld_l_block',
+  name: 'L Block',
+  label: 'L BLOCK',
+  category: 'Academic',
+  type: 'polygon',
+  sourceFile: 'L_blocks.kml',
+  pointCount: 5,
+  uniqueVertexCount: 4,
+  isClosedRing: true,
+  coordinates: L_BLOCK_KML.coordinates,
+  rawPoints: L_BLOCK_KML.rawPoints,
+  bounds: L_BLOCK_BOUNDS,
+  gpsCenter: L_BLOCK_CENTER,
+  svgCenter: [200.0, 1142.6],
+  metrics: L_BLOCK_KML.metrics,
+  style: {
+    fillColor: 'rgba(234, 179, 8, 0.55)',
+    strokeColor: '#ca8a04',
     strokeWidth: 2.5,
     strokeOpacity: 0.95
   },
@@ -173,7 +268,10 @@ export const VERIFIED_CAMPUS_GEOMETRIES = [
   MAIN_LAWN_GEOMETRY,
   MAIN_GATE_TO_D_BLOCK_GEOMETRY,
   ADMISSION_BLOCK_GEOMETRY,
-  D_BLOCK_GEOMETRY
+  D_BLOCK_GEOMETRY,
+  E_BLOCK_GEOMETRY,
+  F_BLOCK_GEOMETRY,
+  L_BLOCK_GEOMETRY
 ];
 
 export function getActiveDemoGeometries() {
