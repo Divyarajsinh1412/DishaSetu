@@ -572,6 +572,20 @@ export default function MasterCampusMap({
     setRotation(0);
   }, [clampPosition]);
 
+  // Programmatic Viewport Fit for KML Demo targets
+  useEffect(() => {
+    if (!kmlOverlays?.fitTarget) return;
+    if (kmlOverlays.fitTarget === 'main_lawn') {
+      focusCoordinate(0.585, 0.420, 2.2);
+    } else if (kmlOverlays.fitTarget === 'main_gate_to_d_block') {
+      focusCoordinate(0.420, 0.500, 1.8);
+    } else if (kmlOverlays.fitTarget === 'all') {
+      focusCoordinate(0.480, 0.460, 1.55);
+    } else if (kmlOverlays.fitTarget === 'reset') {
+      fitViewport('wide');
+    }
+  }, [kmlOverlays?.fitTarget, kmlOverlays?.fitKey, focusCoordinate, fitViewport]);
+
   // Quick preset navigation helpers
   const handleResetNorth = useCallback(() => {
     fitViewport('wide');
@@ -1169,6 +1183,52 @@ export default function MasterCampusMap({
                     >
                       MAIN LAWN
                     </text>
+                  </g>
+                )}
+
+                {/* 3. Main Gate → D Block (Orange fill 70%, darker orange border 2.5px) */}
+                {kmlOverlays.showMainGateToDBlock && kmlOverlays.mainGateToDBlockPoints && (
+                  <g className="kml-main-gate-to-d-block-layer">
+                    <polygon
+                      points={kmlOverlays.mainGateToDBlockPoints}
+                      fill="rgba(249, 115, 22, 0.70)"
+                      stroke="#c2410c"
+                      strokeWidth="2.5"
+                      className="cursor-pointer transition-all hover:fill-[rgba(249,115,22,0.85)] hover:stroke-[#9a3412]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (kmlOverlays.onSelectPolygon) kmlOverlays.onSelectPolygon('main_gate_to_d_block');
+                      }}
+                    >
+                      <title>Main Gate → D Block (100 Surveyed GPS Nodes, 0.765 km)</title>
+                    </polygon>
+                    {/* Centered Pill Label: Main Gate → D Block */}
+                    <g transform={`translate(${kmlOverlays.mainGateToDBlockCenter ? kmlOverlays.mainGateToDBlockCenter[0] : 471}, ${kmlOverlays.mainGateToDBlockCenter ? kmlOverlays.mainGateToDBlockCenter[1] : 712}) rotate(-68)`}>
+                      <rect
+                        x="-75"
+                        y="-12"
+                        width="150"
+                        height="24"
+                        rx="6"
+                        fill="rgba(194, 65, 12, 0.95)"
+                        stroke="#ea580c"
+                        strokeWidth="1.2"
+                        className="drop-shadow-md"
+                      />
+                      <text
+                        x="0"
+                        y="1"
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fill="#ffffff"
+                        fontSize="11"
+                        fontWeight="800"
+                        letterSpacing="0.5"
+                        className="select-none pointer-events-none"
+                      >
+                        Main Gate → D Block
+                      </text>
+                    </g>
                   </g>
                 )}
               </g>

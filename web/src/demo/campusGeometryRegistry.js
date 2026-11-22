@@ -15,6 +15,12 @@ import {
   MAIN_LAWN_CENTER
 } from './mainLawnDemoData';
 
+import {
+  MAIN_GATE_TO_D_BLOCK_KML,
+  MAIN_GATE_TO_D_BLOCK_BOUNDS,
+  MAIN_GATE_TO_D_BLOCK_CENTER
+} from './mainGateToDBlockData';
+
 // Calibrated Perspective Homography Matrix for Master Campus Map (viewBox 0 0 1000 1422)
 // Accurately maps surveyed GPS coordinates to the illustrated campus master map
 const lat0 = 13.1700;
@@ -34,7 +40,7 @@ export function projectGpsToMasterMapSvg(lat, lng) {
   return [parseFloat(x.toFixed(1)), parseFloat(y.toFixed(1))];
 }
 
-// 1. MAIN LAWN (Currently the ONLY active geometry in demo)
+// 1. MAIN LAWN (Preserved 100% untouched)
 export const MAIN_LAWN_GEOMETRY = {
   id: 'main_lawn',
   name: 'Main Lawn',
@@ -65,10 +71,39 @@ export const MAIN_LAWN_GEOMETRY = {
   activeInDemo: true
 };
 
+// 2. MAIN GATE → D BLOCK (Surveyed Walking Corridor Ribbon Polygon)
+export const MAIN_GATE_TO_D_BLOCK_GEOMETRY = {
+  id: 'main_gate_to_d_block',
+  name: 'Main Gate → D Block',
+  label: 'Main Gate → D Block',
+  category: 'Route',
+  type: 'polygon',
+  sourceFile: 'main gate to D block p-1.kml',
+  pointCount: 100,
+  uniqueVertexCount: 99,
+  isClosedRing: true,
+  coordinates: MAIN_GATE_TO_D_BLOCK_KML.coordinates,
+  rawPoints: MAIN_GATE_TO_D_BLOCK_KML.rawPoints,
+  bounds: MAIN_GATE_TO_D_BLOCK_BOUNDS,
+  gpsCenter: MAIN_GATE_TO_D_BLOCK_CENTER,
+  svgPoints: MAIN_GATE_TO_D_BLOCK_KML.svgPoints,
+  svgPointsString: MAIN_GATE_TO_D_BLOCK_KML.svgPointsString,
+  svgCenter: MAIN_GATE_TO_D_BLOCK_KML.svgCenter,
+  metrics: MAIN_GATE_TO_D_BLOCK_KML.metrics,
+  style: {
+    fillColor: 'rgba(249, 115, 22, 0.70)', // Orange matching the reference PDF screenshot (approx 70% opacity)
+    strokeColor: '#c2410c',                // Darker orange border
+    strokeWidth: 2.5,                      // 2-3px border width
+    strokeOpacity: 0.95
+  },
+  activeInDemo: true
+};
+
 // Extensible Registry Array for future KML additions
-// Future KML items will be appended here incrementally
+// Both Main Lawn and Main Gate → D Block are registered as active geometries
 export const VERIFIED_CAMPUS_GEOMETRIES = [
-  MAIN_LAWN_GEOMETRY
+  MAIN_LAWN_GEOMETRY,
+  MAIN_GATE_TO_D_BLOCK_GEOMETRY
 ];
 
 export function getActiveDemoGeometries() {
