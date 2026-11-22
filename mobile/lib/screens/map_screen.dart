@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../models/campus_location.dart';
 import '../models/navigation_route.dart';
+import '../models/building.dart';
+import '../models/floor.dart';
+import '../widgets/building_bottom_sheet.dart';
 
 const double kMapAspectRatio = 583.0 / 829.0;
 
@@ -259,232 +262,23 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   }
 
   void _showIndoorMapDialog(CampusLocation loc) {
-    final nameLower = loc.name.toLowerCase();
-    final codeLower = (loc.shortCode ?? '').toLowerCase();
-
-    String blockLetter = 'D';
-    bool isKnownBlock = true;
-
-    if (nameLower.contains('d block') || codeLower.contains('d-block')) {
-      blockLetter = 'D';
-    } else if (nameLower.contains('e block') || codeLower.contains('e-block')) {
-      blockLetter = 'E';
-    } else if (nameLower.contains('f block') || codeLower.contains('f-block')) {
-      blockLetter = 'F';
-    } else if (nameLower.contains('l block') || codeLower.contains('l-block')) {
-      blockLetter = 'L';
-    } else if (nameLower.contains('n block') || codeLower.contains('n-block')) {
-      blockLetter = 'N';
-    } else if (nameLower.contains('m block') || nameLower.contains('som') || codeLower.contains('m-block') || codeLower.contains('som')) {
-      blockLetter = 'M';
-    } else {
-      isKnownBlock = false;
-    }
-
-    final isLab = blockLetter == 'D';
-    final typeLabel = isLab ? 'LABS' : 'CLASSROOMS';
-
-    // Room Prefix Generator
-    String getPrefix(int floor) {
-      if (blockLetter == 'D') {
-        if (floor == 0) return 'DGL';
-        if (floor == 1) return 'DFL';
-        if (floor == 2) return 'DSL';
-        return 'D${floor}L';
-      }
-      final fChar = floor == 0 ? 'G' : floor == 1 ? 'F' : floor == 2 ? 'S' : '$floor';
-      return '$blockLetter$fChar';
-    }
-
-    int selectedFloor = 0;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF0B132B),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            final prefix = getPrefix(selectedFloor);
-            final rooms = List.generate(6, (i) => '$prefix${(i + 1).toString().padLeft(2, '0')}');
-
-            return Container(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${loc.name} – Indoor Floor Plan',
-                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            isKnownBlock
-                                ? '3 Verified Floors · All Rooms are $typeLabel'
-                                : 'Pending Field Survey',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: isKnownBlock
-                                  ? (isLab ? const Color(0xFF38BDF8) : const Color(0xFF10B981))
-                                  : const Color(0xFFF59E0B),
-                            ),
-                          ),
-                        ],
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white70),
-                        onPressed: () => Navigator.pop(ctx),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // Schematic layout disclaimer
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF78350F).withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.4)),
-                    ),
-                    child: const Row(
-                      children: [
-                        Icon(Icons.info_outline, size: 14, color: Color(0xFFFBBF24)),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Schematic Floor Layout • Unverified Architectural Reference',
-                            style: TextStyle(fontSize: 10, color: Color(0xFFFDE68A)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  if (isKnownBlock) ...[
-                    const Text('SELECT FLOOR', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white60)),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        {'name': 'Ground Floor', 'level': 0},
-                        {'name': 'First Floor', 'level': 1},
-                        {'name': 'Second Floor', 'level': 2},
-                      ].map((f) {
-                        final lvl = f['level'] as int;
-                        final isSel = selectedFloor == lvl;
-                        return ChoiceChip(
-                          label: Text(
-                            f['name'] as String,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: isSel ? Colors.white : Colors.white70,
-                            ),
-                          ),
-                          selected: isSel,
-                          selectedColor: isLab ? const Color(0xFF0284C7) : const Color(0xFF10B981),
-                          backgroundColor: const Color(0xFF1E293B),
-                          onSelected: (val) {
-                            if (val) setModalState(() => selectedFloor = lvl);
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      'ROOMS ON THIS FLOOR (${isLab ? "ALL LABS" : "ALL CLASSROOMS"})',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white60),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF334155)),
-                      ),
-                      child: Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        alignment: WrapAlignment.center,
-                        children: rooms
-                            .map((rm) => _buildRoomChip(rm, isLab ? 'LAB' : 'CLASSROOM', isLab))
-                            .toList(),
-                      ),
-                    ),
-                  ] else ...[
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.4)),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.info_outline, color: Color(0xFFF59E0B)),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Indoor map for this building is coming soon. This building is currently pending field GPS & indoor layout survey.',
-                              style: TextStyle(color: Colors.white70, fontSize: 12),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            );
-          },
+    BuildingBottomSheet.show(
+      context,
+      building: Building.fromCampusLocation(loc),
+      onNavigateToRoom: (Room room) {
+        _startNavigationTo(loc);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF0284C7),
+            content: Text(
+              'Navigating to ${room.name} (${room.roomCode}) · [${room.typeLabel}]',
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            duration: const Duration(seconds: 4),
+          ),
         );
       },
     );
-  }
-
-  Widget _buildRoomChip(String roomCode, String type, bool isLab) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: isLab ? const Color(0xFF0369A1).withOpacity(0.2) : const Color(0xFF065F46).withOpacity(0.2),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isLab ? const Color(0xFF38BDF8).withOpacity(0.4) : const Color(0xFF34D399).withOpacity(0.4),
-        ),
-      ),
-      child: Column(
-        children: [
-          Text(
-            roomCode,
-            style: TextStyle(
-              color: isLab ? const Color(0xFF38BDF8) : const Color(0xFF34D399),
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            type,
-            style: const TextStyle(color: Colors.white60, fontSize: 9, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
   }
 
   void _showIndoorNavDialog(CampusLocation loc) {
@@ -877,7 +671,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFF334155)),
         boxShadow: const [
-          BoxShadow(color: Colors.black80, blurRadius: 20, offset: Offset(0, 6)),
+          BoxShadow(color: Colors.black54, blurRadius: 20, offset: Offset(0, 6)),
         ],
       ),
       child: Column(
