@@ -80,13 +80,39 @@ const CAMPUS_PLACES = [
   { id: 'feat_basketball', code: 'PU-SPORT-BB', name: 'Basketball Court', category: 'Sports', group: 'Sports Arena', icon: Trophy },
   { id: 'feat_cricket', code: 'PU-SPORT-CRIC', name: 'Cricket Practice Nets', category: 'Sports', group: 'Sports Arena', icon: Trophy },
 
-  // 7. D Block Specific Labs & Rooms
-  { id: 'room_dg01', code: 'DG01', name: 'DG01 - Fluid Mechanics & Hydraulics Lab', category: 'Room', group: 'D Block Rooms', icon: DoorOpen },
-  { id: 'room_dg02', code: 'DG02', name: 'DG02 - Material Testing Lab', category: 'Room', group: 'D Block Rooms', icon: DoorOpen },
-  { id: 'room_dg03', code: 'DG03', name: 'DG03 - CAD & Simulation Studio', category: 'Room', group: 'D Block Rooms', icon: DoorOpen },
-  { id: 'room_dg04', code: 'DG04', name: 'DG04 - Robotics & Mechatronics Lab', category: 'Room', group: 'D Block Rooms', icon: DoorOpen },
-  { id: 'room_dg05', code: 'DG05', name: 'DG05 - IC Engines & Thermal Lab', category: 'Room', group: 'D Block Rooms', icon: DoorOpen },
-  { id: 'room_dg06', code: 'DG06', name: 'DG06 - Metrology & Quality Lab', category: 'Room', group: 'D Block Rooms', icon: DoorOpen }
+  // 7. Verified Multi-Block Classrooms & Labs
+  // D Block (All Labs: DGL01.., DFL01.., DSL01..)
+  { id: 'room_dgl01', code: 'DGL01', name: 'DGL01 - Engineering Mechanics Lab (D Block Ground)', category: 'Room', group: 'D Block Labs', icon: DoorOpen },
+  { id: 'room_dgl02', code: 'DGL02', name: 'DGL02 - Robotics & Automation Studio (D Block Ground)', category: 'Room', group: 'D Block Labs', icon: DoorOpen },
+  { id: 'room_dfl01', code: 'DFL01', name: 'DFL01 - Thermodynamics Lab (D Block 1st Floor)', category: 'Room', group: 'D Block Labs', icon: DoorOpen },
+  { id: 'room_dsl01', code: 'DSL01', name: 'DSL01 - Structural Analysis Lab (D Block 2nd Floor)', category: 'Room', group: 'D Block Labs', icon: DoorOpen },
+
+  // E Block (All Classrooms: EG01.., EF01.., ES01..)
+  { id: 'room_eg01', code: 'EG01', name: 'EG01 - Computer Science Classroom (E Block Ground)', category: 'Room', group: 'E Block Classrooms', icon: DoorOpen },
+  { id: 'room_eg02', code: 'EG02', name: 'EG02 - Data Structures Classroom (E Block Ground)', category: 'Room', group: 'E Block Classrooms', icon: DoorOpen },
+  { id: 'room_ef01', code: 'EF01', name: 'EF01 - Artificial Intelligence Classroom (E Block 1st Floor)', category: 'Room', group: 'E Block Classrooms', icon: DoorOpen },
+  { id: 'room_es01', code: 'ES01', name: 'ES01 - Computer Vision Classroom (E Block 2nd Floor)', category: 'Room', group: 'E Block Classrooms', icon: DoorOpen },
+
+  // F Block (All Classrooms: FG01.., FF01.., FS01..)
+  { id: 'room_fg01', code: 'FG01', name: 'FG01 - Information Systems Classroom (F Block Ground)', category: 'Room', group: 'F Block Classrooms', icon: DoorOpen },
+  { id: 'room_fg02', code: 'FG02', name: 'FG02 - OOP Classroom (F Block Ground)', category: 'Room', group: 'F Block Classrooms', icon: DoorOpen },
+  { id: 'room_ff01', code: 'FF01', name: 'FF01 - Information Security Classroom (F Block 1st Floor)', category: 'Room', group: 'F Block Classrooms', icon: DoorOpen },
+  { id: 'room_fs01', code: 'FS01', name: 'FS01 - Blockchain Tech Classroom (F Block 2nd Floor)', category: 'Room', group: 'F Block Classrooms', icon: DoorOpen },
+
+  // L Block (All Classrooms: LG01.., LF01.., LS01..)
+  { id: 'room_lg01', code: 'LG01', name: 'LG01 - Foundation Engineering Classroom (L Block Ground)', category: 'Room', group: 'L Block Classrooms', icon: DoorOpen },
+  { id: 'room_lf01', code: 'LF01', name: 'LF01 - Differential Equations Classroom (L Block 1st Floor)', category: 'Room', group: 'L Block Classrooms', icon: DoorOpen },
+  { id: 'room_ls01', code: 'LS01', name: 'LS01 - Complex Analysis Classroom (L Block 2nd Floor)', category: 'Room', group: 'L Block Classrooms', icon: DoorOpen },
+
+  // N Block (All Classrooms: NG01.., NF01.., NS01..)
+  { id: 'room_ng01', code: 'NG01', name: 'NG01 - Jurisprudence Classroom (N Block Ground)', category: 'Room', group: 'N Block Classrooms', icon: DoorOpen },
+  { id: 'room_nf01', code: 'NF01', name: 'NF01 - Criminal Law Classroom (N Block 1st Floor)', category: 'Room', group: 'N Block Classrooms', icon: DoorOpen },
+  { id: 'room_ns01', code: 'NS01', name: 'NS01 - Cyber Law Classroom (N Block 2nd Floor)', category: 'Room', group: 'N Block Classrooms', icon: DoorOpen },
+
+  // M Block (All Classrooms: MG01.., MF01.., MS01..)
+  { id: 'room_mg01', code: 'MG01', name: 'MG01 - Management Principles Classroom (M Block Ground)', category: 'Room', group: 'M Block Classrooms', icon: DoorOpen },
+  { id: 'room_mf01', code: 'MF01', name: 'MF01 - Corporate Finance Classroom (M Block 1st Floor)', category: 'Room', group: 'M Block Classrooms', icon: DoorOpen },
+  { id: 'room_ms01', code: 'MS01', name: 'MS01 - Investment Banking Classroom (M Block 2nd Floor)', category: 'Room', group: 'M Block Classrooms', icon: DoorOpen }
 ];
 
 export default function RoutePlanningModal({

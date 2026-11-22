@@ -428,27 +428,42 @@ export const CAMPUS_ALL_FLOORS = [
   ...generateAllFloorsForBuilding('bld_som_block')
 ];
 
-export function getBuildingFloorsFallback(buildingIdOrCode) {
-  if (!buildingIdOrCode) return generateAllFloorsForBuilding('bld_d_block');
+export function resolveBuildingKey(buildingIdOrCode) {
+  if (!buildingIdOrCode) return 'bld_d_block';
+  const str = String(buildingIdOrCode).toLowerCase().trim();
 
-  const str = String(buildingIdOrCode).toLowerCase();
-  if (str.includes('d-block') || str.includes('bld_d') || str === 'pu-d-block' || str === 'd') {
-    return generateAllFloorsForBuilding('bld_d_block');
+  // Exact key match
+  if (CAMPUS_BLOCKS_INFO[str]) return str;
+
+  // Search through all 6 blocks
+  for (const [key, meta] of Object.entries(CAMPUS_BLOCKS_INFO)) {
+    const letter = meta.blockLetter.toLowerCase();
+    if (
+      str === key.toLowerCase() ||
+      str === meta.buildingId.toLowerCase() ||
+      str === meta.shortCode.toLowerCase() ||
+      str === meta.name.toLowerCase() ||
+      str === letter ||
+      str.includes(`${letter}-block`) ||
+      str.includes(`${letter}_block`) ||
+      str.includes(`${letter} block`) ||
+      str.includes(`bld_${letter}`) ||
+      (letter === 'm' && (str.includes('som') || str.includes('mba'))) ||
+      (letter === 'd' && str.includes('engineering')) ||
+      (letter === 'e' && str.includes('computer science')) ||
+      (letter === 'f' && str.includes('information')) ||
+      (letter === 'l' && str.includes('science')) ||
+      (letter === 'n' && str.includes('law')) ||
+      (letter === 'm' && str.includes('management'))
+    ) {
+      return key;
+    }
   }
-  if (str.includes('e-block') || str.includes('bld_e') || str === 'pu-e-block' || str === 'e') {
-    return generateAllFloorsForBuilding('bld_e_block');
-  }
-  if (str.includes('f-block') || str.includes('bld_f') || str === 'pu-f-block' || str === 'f') {
-    return generateAllFloorsForBuilding('bld_f_block');
-  }
-  if (str.includes('l-block') || str.includes('bld_l') || str === 'pu-l-block' || str === 'l') {
-    return generateAllFloorsForBuilding('bld_l_block');
-  }
-  if (str.includes('n-block') || str.includes('bld_n') || str === 'pu-n-block' || str === 'n') {
-    return generateAllFloorsForBuilding('bld_n_block');
-  }
-  if (str.includes('m-block') || str.includes('bld_m') || str.includes('som') || str === 'pu-m-block' || str === 'm') {
-    return generateAllFloorsForBuilding('bld_som_block');
-  }
-  return generateAllFloorsForBuilding('bld_d_block');
+
+  return 'bld_d_block';
+}
+
+export function getBuildingFloorsFallback(buildingIdOrCode) {
+  const targetKey = resolveBuildingKey(buildingIdOrCode);
+  return generateAllFloorsForBuilding(targetKey);
 }

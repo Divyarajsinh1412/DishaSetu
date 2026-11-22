@@ -23,16 +23,16 @@ import {
 } from 'lucide-react';
 import { COMPLETE_CAMPUS_CATALOG } from '../../services/campusCatalog';
 import { MASTER_CAMPUS_FEATURES } from '../../data/masterMapFeatures';
-import { D_BLOCK_FALLBACK_FLOORS } from '../../data/dBlockFloorsFallback';
+import { CAMPUS_ALL_FLOORS } from '../../data/campusFloorsDataset';
 import { clientRoutingEngine } from '../../services/routingEngine';
 
 const QUICK_PROMPTS = [
   { label: '🚶 Main Gate to D Block', query: 'How do I reach D Block from Main Gate?' },
+  { label: '🚪 Class EG01 (E Block)', query: 'Where is classroom EG01?' },
+  { label: '🔬 Lab DGL01 (D Block)', query: 'Where is lab DGL01?' },
+  { label: '🚪 Class FG01 (F Block)', query: 'Where is classroom FG01?' },
   { label: '📖 Central Library', query: 'Where is the library?' },
-  { label: '☕ Nearest Cafeteria', query: 'Find the nearest cafeteria' },
-  { label: '🚪 Room DG01 Lab', query: 'Where is room DG01?' },
-  { label: '🏥 Medical Centre', query: 'Where is the medical room?' },
-  { label: '🅿️ Student Parking', query: 'Show two wheeler parking' }
+  { label: '☕ Nearest Cafeteria', query: 'Find the nearest cafeteria' }
 ];
 
 export default function CampusAIAssistantModal({
@@ -147,25 +147,41 @@ export default function CampusAIAssistantModal({
       }
     }
 
-    // 2. Classroom or Room Query (e.g. "DG01", "room", "lab")
-    const roomMatch = q.match(/dg\s*0?([1-6])/i) || q.match(/room\s*dg\s*0?([1-6])/i);
-    if (roomMatch || q.includes('dg0') || q.includes('classroom')) {
-      const roomNum = roomMatch ? `DG0${roomMatch[1]}` : 'DG01';
-      const groundFloor = D_BLOCK_FALLBACK_FLOORS[0];
-      const matchedRoom = groundFloor.rooms.find(r => r.roomNumber.toLowerCase() === roomNum.toLowerCase()) || groundFloor.rooms[0];
+    // 2. Classroom or Lab Room Query (e.g. EG01, FG01, DGL01, LF01, NS01, MG01, etc.)
+    let matchedRoom = null;
+    let matchedFloor = null;
 
+    // Search all verified floors and rooms across D, E, F, L, N, M blocks
+    for (const flr of CAMPUS_ALL_FLOORS) {
+      if (flr.rooms) {
+        const found = flr.rooms.find(r => {
+          const rNum = r.roomNumber.toLowerCase();
+          const rName = r.name.toLowerCase();
+          return q.includes(rNum) || (q.length > 2 && rNum.includes(q)) || rName.includes(q);
+        });
+        if (found) {
+          matchedRoom = found;
+          matchedFloor = flr;
+          break;
+        }
+      }
+    }
+
+    if (matchedRoom && matchedFloor) {
+      const isLab = matchedRoom.category === 'Laboratory' || matchedFloor.buildingShortCode === 'PU-D-BLOCK';
       return {
         id: String(Date.now()),
         sender: 'assistant',
-        text: `Found room ${matchedRoom.roomNumber} (${matchedRoom.name}) located on the Ground Floor of D Block.`,
+        text: `Found ${isLab ? 'Laboratory' : 'Classroom'} ${matchedRoom.roomNumber} (${matchedRoom.name}) located on the ${matchedFloor.floorName} of ${matchedFloor.buildingName}.`,
         timestamp: timeNow,
         roomData: {
-          buildingName: 'D Block (Engineering)',
-          floorName: 'Ground Floor',
+          buildingName: matchedFloor.buildingName,
+          floorName: matchedFloor.floorName,
+          floorNumber: matchedFloor.floorNumber,
           roomNumber: matchedRoom.roomNumber,
           roomName: matchedRoom.name,
-          category: matchedRoom.category,
-          status: matchedRoom.status
+          category: isLab ? 'Laboratory' : 'Classroom',
+          status: matchedRoom.status || 'Operational'
         }
       };
     }

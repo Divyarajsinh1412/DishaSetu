@@ -55,7 +55,7 @@ export default function BuildingPopupModal({
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [isLoadingFloors, setIsLoadingFloors] = useState(false);
 
-  const bId = building?.buildingId || building?.code || building?.shortCode || building?.featureId || 'bld_d_block';
+  const bId = building?.buildingId || building?.code || building?.shortCode || building?.name || building?.featureId || 'bld_d_block';
 
   // Load floor and room structures for this building
   useEffect(() => {
@@ -97,7 +97,7 @@ export default function BuildingPopupModal({
   const roomsOnFloor = currentFloor?.rooms || [];
 
   // Determine Block Info
-  const isDBlock = /d[-_]?block/i.test(building.name || '') ||
+  const isDBlock = /d[-_ ]?block/i.test(building.name || '') ||
                    building.shortCode === 'PU-D-BLOCK' ||
                    building.buildingId === 'bld_d_block';
 

@@ -309,9 +309,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final prefix = getPrefix(selectedFloor);
-            final r1 = '${prefix}01';
-            final r2 = '${prefix}02';
-            final r3 = '${prefix}03';
+            final rooms = List.generate(6, (i) => '$prefix${(i + 1).toString().padLeft(2, '0')}');
 
             return Container(
               padding: const EdgeInsets.all(20),
@@ -411,19 +409,20 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                     ),
                     const SizedBox(height: 8),
                     Container(
+                      width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: const Color(0xFF1E293B),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: const Color(0xFF334155)),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildRoomChip(r1, isLab ? 'LAB' : 'CLASSROOM', isLab),
-                          _buildRoomChip(r2, isLab ? 'LAB' : 'CLASSROOM', isLab),
-                          _buildRoomChip(r3, isLab ? 'LAB' : 'CLASSROOM', isLab),
-                        ],
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        alignment: WrapAlignment.center,
+                        children: rooms
+                            .map((rm) => _buildRoomChip(rm, isLab ? 'LAB' : 'CLASSROOM', isLab))
+                            .toList(),
                       ),
                     ),
                   ] else ...[

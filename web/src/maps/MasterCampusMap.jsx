@@ -190,14 +190,51 @@ const getCategoryStyle = (category) => {
   }
 };
 
-// D Block 6-room list for search room matching
-const D_BLOCK_ROOM_SUGGESTIONS = [
-  { roomNumber: 'DG01', name: 'Fluid Mechanics & Hydraulics Laboratory', floor: 0, buildingId: 'bld_d_block' },
-  { roomNumber: 'DG02', name: 'Material Testing & Strength of Materials Lab', floor: 0, buildingId: 'bld_d_block' },
-  { roomNumber: 'DG03', name: 'Computer-Aided Design & Simulation Studio', floor: 0, buildingId: 'bld_d_block' },
-  { roomNumber: 'DG04', name: 'Mechatronics & Embedded Robotics Workshop', floor: 0, buildingId: 'bld_d_block' },
-  { roomNumber: 'DG05', name: 'Internal Combustion Engines & Thermal Lab', floor: 0, buildingId: 'bld_d_block' },
-  { roomNumber: 'DG06', name: 'Metrology, Instrumentation & Quality Lab', floor: 0, buildingId: 'bld_d_block' }
+// Verified multi-block room suggestions across D, E, F, L, N, and M blocks
+const CAMPUS_ROOM_SUGGESTIONS = [
+  // D Block (All Labs: DGL01.., DFL01.., DSL01..)
+  { roomNumber: 'DGL01', name: 'Engineering Mechanics Lab', block: 'D Block', floor: 0, floorName: 'Ground Floor', type: 'Laboratory', buildingId: 'bld_d_block' },
+  { roomNumber: 'DGL02', name: 'Robotics & Automation Studio', block: 'D Block', floor: 0, floorName: 'Ground Floor', type: 'Laboratory', buildingId: 'bld_d_block' },
+  { roomNumber: 'DGL03', name: 'Materials Testing Lab', block: 'D Block', floor: 0, floorName: 'Ground Floor', type: 'Laboratory', buildingId: 'bld_d_block' },
+  { roomNumber: 'DGL04', name: 'Fluid Mechanics & Hydraulics Lab', block: 'D Block', floor: 0, floorName: 'Ground Floor', type: 'Laboratory', buildingId: 'bld_d_block' },
+  { roomNumber: 'DFL01', name: 'Thermodynamics & Heat Transfer Lab', block: 'D Block', floor: 1, floorName: 'First Floor', type: 'Laboratory', buildingId: 'bld_d_block' },
+  { roomNumber: 'DFL02', name: 'Mechatronics Systems Lab', block: 'D Block', floor: 1, floorName: 'First Floor', type: 'Laboratory', buildingId: 'bld_d_block' },
+  { roomNumber: 'DSL01', name: 'Structural Analysis Lab', block: 'D Block', floor: 2, floorName: 'Second Floor', type: 'Laboratory', buildingId: 'bld_d_block' },
+
+  // E Block (All Classrooms: EG01.., EF01.., ES01..)
+  { roomNumber: 'EG01', name: 'Computer Science Lecture Classroom 01', block: 'E Block', floor: 0, floorName: 'Ground Floor', type: 'Classroom', buildingId: 'bld_e_block' },
+  { roomNumber: 'EG02', name: 'Data Structures & Algorithms Classroom 02', block: 'E Block', floor: 0, floorName: 'Ground Floor', type: 'Classroom', buildingId: 'bld_e_block' },
+  { roomNumber: 'EG03', name: 'Operating Systems Classroom 03', block: 'E Block', floor: 0, floorName: 'Ground Floor', type: 'Classroom', buildingId: 'bld_e_block' },
+  { roomNumber: 'EG04', name: 'Software Engineering Classroom 04', block: 'E Block', floor: 0, floorName: 'Ground Floor', type: 'Classroom', buildingId: 'bld_e_block' },
+  { roomNumber: 'EF01', name: 'Artificial Intelligence Classroom 101', block: 'E Block', floor: 1, floorName: 'First Floor', type: 'Classroom', buildingId: 'bld_e_block' },
+  { roomNumber: 'EF02', name: 'Machine Learning Classroom 102', block: 'E Block', floor: 1, floorName: 'First Floor', type: 'Classroom', buildingId: 'bld_e_block' },
+  { roomNumber: 'ES01', name: 'Computer Vision Classroom 201', block: 'E Block', floor: 2, floorName: 'Second Floor', type: 'Classroom', buildingId: 'bld_e_block' },
+  { roomNumber: 'ES02', name: 'Distributed Systems Classroom 202', block: 'E Block', floor: 2, floorName: 'Second Floor', type: 'Classroom', buildingId: 'bld_e_block' },
+
+  // F Block (All Classrooms: FG01.., FF01.., FS01..)
+  { roomNumber: 'FG01', name: 'Information Systems Classroom 01', block: 'F Block', floor: 0, floorName: 'Ground Floor', type: 'Classroom', buildingId: 'bld_f_block' },
+  { roomNumber: 'FG02', name: 'Object Oriented Programming Classroom 02', block: 'F Block', floor: 0, floorName: 'Ground Floor', type: 'Classroom', buildingId: 'bld_f_block' },
+  { roomNumber: 'FG03', name: 'Discrete Mathematics Classroom 03', block: 'F Block', floor: 0, floorName: 'Ground Floor', type: 'Classroom', buildingId: 'bld_f_block' },
+  { roomNumber: 'FF01', name: 'Information Security Classroom 101', block: 'F Block', floor: 1, floorName: 'First Floor', type: 'Classroom', buildingId: 'bld_f_block' },
+  { roomNumber: 'FS01', name: 'Blockchain Technology Classroom 201', block: 'F Block', floor: 2, floorName: 'Second Floor', type: 'Classroom', buildingId: 'bld_f_block' },
+
+  // L Block (All Classrooms: LG01.., LF01.., LS01..)
+  { roomNumber: 'LG01', name: 'Foundation Engineering Classroom 01', block: 'L Block', floor: 0, floorName: 'Ground Floor', type: 'Classroom', buildingId: 'bld_l_block' },
+  { roomNumber: 'LG02', name: 'Applied Physics Lecture Classroom 02', block: 'L Block', floor: 0, floorName: 'Ground Floor', type: 'Classroom', buildingId: 'bld_l_block' },
+  { roomNumber: 'LF01', name: 'Differential Equations Classroom 101', block: 'L Block', floor: 1, floorName: 'First Floor', type: 'Classroom', buildingId: 'bld_l_block' },
+  { roomNumber: 'LS01', name: 'Complex Analysis Classroom 201', block: 'L Block', floor: 2, floorName: 'Second Floor', type: 'Classroom', buildingId: 'bld_l_block' },
+
+  // N Block (All Classrooms: NG01.., NF01.., NS01..)
+  { roomNumber: 'NG01', name: 'Jurisprudence & Legal Theory Classroom 01', block: 'N Block', floor: 0, floorName: 'Ground Floor', type: 'Classroom', buildingId: 'bld_n_block' },
+  { roomNumber: 'NG02', name: 'Constitutional Law Classroom 02', block: 'N Block', floor: 0, floorName: 'Ground Floor', type: 'Classroom', buildingId: 'bld_n_block' },
+  { roomNumber: 'NF01', name: 'Criminal Law Classroom 101', block: 'N Block', floor: 1, floorName: 'First Floor', type: 'Classroom', buildingId: 'bld_n_block' },
+  { roomNumber: 'NS01', name: 'Cyber Law & IT Act Classroom 201', block: 'N Block', floor: 2, floorName: 'Second Floor', type: 'Classroom', buildingId: 'bld_n_block' },
+
+  // M Block (All Classrooms: MG01.., MF01.., MS01..)
+  { roomNumber: 'MG01', name: 'Principles of Management Classroom 01', block: 'M Block', floor: 0, floorName: 'Ground Floor', type: 'Classroom', buildingId: 'bld_som_block' },
+  { roomNumber: 'MG02', name: 'Financial Accounting Classroom 02', block: 'M Block', floor: 0, floorName: 'Ground Floor', type: 'Classroom', buildingId: 'bld_som_block' },
+  { roomNumber: 'MF01', name: 'Corporate Finance Classroom 101', block: 'M Block', floor: 1, floorName: 'First Floor', type: 'Classroom', buildingId: 'bld_som_block' },
+  { roomNumber: 'MS01', name: 'Investment Banking Classroom 201', block: 'M Block', floor: 2, floorName: 'Second Floor', type: 'Classroom', buildingId: 'bld_som_block' }
 ];
 
 // Master Campus Map Node Normalized Coordinate System for Turn-by-Turn Wayfinding
@@ -420,14 +457,18 @@ export default function MasterCampusMap({
         item: f
       }));
 
-    const matchedRooms = D_BLOCK_ROOM_SUGGESTIONS
-      .filter(r => r.roomNumber.toLowerCase().includes(q) || r.name.toLowerCase().includes(q))
-      .slice(0, 3)
+    const matchedRooms = CAMPUS_ROOM_SUGGESTIONS
+      .filter(r =>
+        r.roomNumber.toLowerCase().includes(q) ||
+        r.name.toLowerCase().includes(q) ||
+        r.block.toLowerCase().includes(q)
+      )
+      .slice(0, 5)
       .map(r => ({
         type: 'room',
         id: r.roomNumber,
-        title: `${r.roomNumber} - ${r.name}`,
-        subtitle: `D Block · Ground Floor Lab`,
+        title: `${r.roomNumber} – ${r.name}`,
+        subtitle: `${r.block} · ${r.floorName} ${r.type}`,
         item: r
       }));
 

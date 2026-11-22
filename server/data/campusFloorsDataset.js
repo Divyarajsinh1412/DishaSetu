@@ -442,6 +442,46 @@ export function generateAllFloorsForBuilding(buildingKey) {
   return floors;
 }
 
+export function resolveBuildingKey(buildingIdOrCode) {
+  if (!buildingIdOrCode) return 'bld_d_block';
+  const str = String(buildingIdOrCode).toLowerCase().trim();
+
+  // Exact key match
+  if (CAMPUS_BLOCKS_INFO[str]) return str;
+
+  // Search through all 6 blocks
+  for (const [key, meta] of Object.entries(CAMPUS_BLOCKS_INFO)) {
+    const letter = meta.blockLetter.toLowerCase();
+    if (
+      str === key.toLowerCase() ||
+      str === meta.buildingId.toLowerCase() ||
+      str === meta.shortCode.toLowerCase() ||
+      str === meta.name.toLowerCase() ||
+      str === letter ||
+      str.includes(`${letter}-block`) ||
+      str.includes(`${letter}_block`) ||
+      str.includes(`${letter} block`) ||
+      str.includes(`bld_${letter}`) ||
+      (letter === 'm' && (str.includes('som') || str.includes('mba'))) ||
+      (letter === 'd' && str.includes('engineering')) ||
+      (letter === 'e' && str.includes('computer science')) ||
+      (letter === 'f' && str.includes('information')) ||
+      (letter === 'l' && str.includes('science')) ||
+      (letter === 'n' && str.includes('law')) ||
+      (letter === 'm' && str.includes('management'))
+    ) {
+      return key;
+    }
+  }
+
+  return 'bld_d_block';
+}
+
+export function getBuildingFloorsFallback(buildingIdOrCode) {
+  const targetKey = resolveBuildingKey(buildingIdOrCode);
+  return generateAllFloorsForBuilding(targetKey);
+}
+
 /**
  * Complete set of all floors across all 6 blocks
  */

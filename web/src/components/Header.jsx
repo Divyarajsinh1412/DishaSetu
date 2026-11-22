@@ -44,6 +44,7 @@ import {
 import { getTranslation } from '../services/localization';
 import { COMPLETE_CAMPUS_CATALOG } from '../services/campusCatalog';
 import { MASTER_CAMPUS_FEATURES } from '../data/masterMapFeatures';
+import { CAMPUS_ALL_FLOORS } from '../data/campusFloorsDataset';
 
 export default function Header({
   searchQuery,
@@ -285,6 +286,43 @@ export default function Header({
         }
       }
     });
+
+    // 3. Search Verified Rooms across all 6 blocks (D, E, F, L, N, M)
+    for (const flr of CAMPUS_ALL_FLOORS) {
+      if (flr.rooms) {
+        for (const rm of flr.rooms) {
+          const rNum = rm.roomNumber ? rm.roomNumber.toLowerCase() : '';
+          const rName = rm.name ? rm.name.toLowerCase() : '';
+          if (rNum.includes(q) || rName.includes(q)) {
+            const key = `room_${rm.roomId}`;
+            if (!seenIds.has(key)) {
+              seenIds.add(key);
+              const isLab = rm.category === 'Laboratory' || flr.buildingShortCode === 'PU-D-BLOCK';
+              hits.push({
+                id: key,
+                name: `${rm.roomNumber} – ${rm.name.replace(/^.*?–\s*/, '')}`,
+                code: rm.roomNumber,
+                category: isLab ? 'Lab' : 'Classroom',
+                description: `${flr.buildingName} · ${flr.floorName}`,
+                isRoom: true,
+                buildingId: flr.buildingId,
+                buildingShortCode: flr.buildingShortCode,
+                buildingName: flr.buildingName,
+                floorNumber: flr.floorNumber,
+                raw: {
+                  ...rm,
+                  buildingId: flr.buildingId,
+                  buildingName: flr.buildingName,
+                  shortCode: flr.buildingShortCode,
+                  name: flr.buildingName,
+                  focusRoom: rm.roomNumber
+                }
+              });
+            }
+          }
+        }
+      }
+    }
 
     return hits.slice(0, 8);
   }, [searchQuery]);
