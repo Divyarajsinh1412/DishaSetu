@@ -414,9 +414,9 @@ export default function Header({
     {
       id: 'kml-demo',
       mode: 'kml-demo',
-      title: 'KML Map Demo',
-      subtitle: 'Verified Boundary & Garden Polygons',
-      icon: FileCode,
+      title: 'Demo Map Canvas',
+      subtitle: 'Clean White Coordinate Map Builder',
+      icon: Crosshair,
       color: 'text-cyan-600 bg-cyan-50 dark:bg-cyan-950/40'
     }
   ];
@@ -920,8 +920,8 @@ export default function Header({
                   }}
                   className="w-full px-3 py-2 rounded-xl text-left text-xs font-semibold text-cyan-600 dark:text-cyan-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2.5 transition-colors font-bold"
                 >
-                  <FileCode className="w-4 h-4 text-cyan-500" />
-                  <span>KML Map Demo (GPS Verification)</span>
+                  <Crosshair className="w-4 h-4 text-cyan-500" />
+                  <span>Demo Map (Clean White Canvas Builder)</span>
                 </button>
 
                 <button

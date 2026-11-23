@@ -358,6 +358,23 @@ export const fetchCampusFeatures = async () => {
   return FALLBACK_CAMPUS_DATA.features;
 };
 
+export const createCampusFeatureApi = async (featureData) => {
+  try {
+    const res = await appFetch('/api/features', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(featureData)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.data || data;
+    }
+  } catch (e) {
+    console.warn('API createFeature error:', e.message);
+  }
+  return featureData;
+};
+
 export const fetchCampusLocations = async (category = '', search = '') => {
   try {
     const params = new URLSearchParams();

@@ -47,6 +47,14 @@ body {
   background: #202124 !important;
 }
 
+/* Demo Map Blank Coordinate Canvas - Guaranteed 100% Pure White */
+.demo-map-pure-white-canvas,
+.demo-map-pure-white-canvas.leaflet-container,
+.dark .demo-map-pure-white-canvas.leaflet-container {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+
 /* Leaflet Zoom and attribution */
 .leaflet-bar {
   border: none !important;
