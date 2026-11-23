@@ -80,7 +80,14 @@ import {
   captureGpsSurvey,
   verifySurveyRecord,
   publishSurveyRecord,
-  exportSurveyChecklist
+  exportSurveyChecklist,
+  createOrUpdateClassroomSurvey,
+  getSurveyedClassrooms,
+  deleteSurveyedClassroom,
+  createOrUpdateSurveyedPath,
+  getSurveyedPaths,
+  deleteSurveyedPath,
+  getAllSurveyData
 } from '../controllers/surveyController.js';
 import {
   getCafes,
@@ -302,6 +309,17 @@ router.post('/survey/capture', captureGpsSurvey);
 router.post('/survey/verify/:id', requireAuth, verifySurveyRecord);
 router.post('/survey/publish/:id', requireAuth, publishSurveyRecord);
 router.get('/survey/export', exportSurveyChecklist);
+
+// Field Survey: Classrooms and Walking Paths
+router.get('/survey/classrooms', getSurveyedClassrooms);
+router.post('/survey/classrooms', createOrUpdateClassroomSurvey);
+router.delete('/survey/classrooms/:id', deleteSurveyedClassroom);
+
+router.get('/survey/walking-paths', getSurveyedPaths);
+router.post('/survey/walking-paths', createOrUpdateSurveyedPath);
+router.delete('/survey/walking-paths/:id', deleteSurveyedPath);
+
+router.get('/survey/all', getAllSurveyData);
 
 // Emergency Directory & SOS
 router.get('/emergency/directory', (req, res) => {

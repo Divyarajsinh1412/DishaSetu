@@ -1509,3 +1509,106 @@ export const fetchHealthStatus = async () => {
   }
   return { status: 'offline', database: { connected: false } };
 };
+
+/**
+ * ========================================================
+ * FIELD GPS SURVEY API CLIENT FUNCTIONS
+ * ========================================================
+ */
+
+export const saveSurveyedClassroomApi = async (classroomData) => {
+  try {
+    const res = await appFetch('/api/survey/classrooms', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(classroomData)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.data || data;
+    }
+  } catch (err) {
+    console.warn('[API] saveSurveyedClassroom error:', err.message);
+  }
+  return classroomData;
+};
+
+export const fetchSurveyedClassroomsApi = async () => {
+  try {
+    const res = await appFetch('/api/survey/classrooms');
+    if (res.ok) {
+      const data = await res.json();
+      return data.data || [];
+    }
+  } catch (err) {
+    console.warn('[API] fetchSurveyedClassrooms error:', err.message);
+  }
+  return [];
+};
+
+export const deleteSurveyedClassroomApi = async (id) => {
+  try {
+    const res = await appFetch(`/api/survey/classrooms/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('[API] deleteSurveyedClassroom error:', err.message);
+    return { success: false, message: err.message };
+  }
+};
+
+export const saveSurveyedWalkingPathApi = async (pathData) => {
+  try {
+    const res = await appFetch('/api/survey/walking-paths', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pathData)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data.data || data;
+    }
+  } catch (err) {
+    console.warn('[API] saveSurveyedWalkingPath error:', err.message);
+  }
+  return pathData;
+};
+
+export const fetchSurveyedWalkingPathsApi = async () => {
+  try {
+    const res = await appFetch('/api/survey/walking-paths');
+    if (res.ok) {
+      const data = await res.json();
+      return data.data || [];
+    }
+  } catch (err) {
+    console.warn('[API] fetchSurveyedWalkingPaths error:', err.message);
+  }
+  return [];
+};
+
+export const deleteSurveyedWalkingPathApi = async (id) => {
+  try {
+    const res = await appFetch(`/api/survey/walking-paths/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('[API] deleteSurveyedWalkingPath error:', err.message);
+    return { success: false, message: err.message };
+  }
+};
+
+export const fetchAllSurveyDataApi = async () => {
+  try {
+    const res = await appFetch('/api/survey/all');
+    if (res.ok) {
+      const data = await res.json();
+      return data.data || { classrooms: [], walkingPaths: [] };
+    }
+  } catch (err) {
+    console.warn('[API] fetchAllSurveyData error:', err.message);
+  }
+  return { classrooms: [], walkingPaths: [] };
+};

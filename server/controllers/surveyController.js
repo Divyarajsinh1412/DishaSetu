@@ -1,13 +1,17 @@
 import Location from '../models/Location.js';
 import Building from '../models/Building.js';
 import SurveyRecord from '../models/SurveyRecord.js';
+import ClassroomLocation from '../models/ClassroomLocation.js';
+import SurveyedWalkingPath from '../models/SurveyedWalkingPath.js';
 import { COMPLETE_CAMPUS_CATALOG } from '../data/campusCatalog.js';
 import { getDbStatus } from '../config/db.js';
 import syncService from '../services/syncService.js';
 
-// In-memory fallback stores for survey checklist
+// In-memory fallback stores for survey checklist, classrooms, and walking paths
 let memoryCatalog = [...COMPLETE_CAMPUS_CATALOG];
 let memorySurveyRecords = [];
+let memoryClassrooms = [];
+let memoryWalkingPaths = [];
 
 /**
  * Get comprehensive survey checklist with progress analytics
@@ -289,6 +293,253 @@ export const exportSurveyChecklist = async (req, res) => {
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="Presidency_Campus_Survey_Checklist.csv"');
     res.send(csvContent);
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * ========================================================
+ * FIELD GPS SURVEY: CLASSROOMS & ROOM LOCATIONS
+ * ========================================================
+ */
+
+export const createOrUpdateClassroomSurvey = async (req, res) => {
+  try {
+    const payload = req.body;
+    const locationId = payload.locationId || `cls_${Date.now()}`;
+    const roomRecord = {
+      ...payload,
+      locationId,
+      surveyDate: payload.surveyDate ? new Date(payload.surveyDate) : new Date()
+    };
+
+    let saved = null;
+    const db = getDbStatus();
+    if (db.connected) {
+      try {
+        saved = await ClassroomLocation.findOneAndUpdate(
+          { locationId },
+          { $set: roomRecord },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+      } catch (dbErr) {
+        console.warn('[SurveyController] DB save failed, storing in memory:', dbErr.message);
+      }
+    }
+
+    if (!saved) {
+      const idx = memoryClassrooms.findIndex(c => c.locationId === locationId);
+      if (idx >= 0) {
+        memoryClassrooms[idx] = { ...memoryClassrooms[idx], ...roomRecord };
+        saved = memoryClassrooms[idx];
+      } else {
+        saved = { _id: `mem_${locationId}`, ...roomRecord, createdAt: new Date() };
+        memoryClassrooms.push(saved);
+      }
+    } else {
+      // Sync in-memory cache
+      const idx = memoryClassrooms.findIndex(c => c.locationId === locationId);
+      if (idx >= 0) memoryClassrooms[idx] = saved;
+      else memoryClassrooms.push(saved);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Classroom GPS survey record saved successfully',
+      data: saved
+    });
+  } catch (err) {
+    console.error('[SurveyController] Save classroom error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const getSurveyedClassrooms = async (req, res) => {
+  try {
+    const db = getDbStatus();
+    let classrooms = [];
+    if (db.connected) {
+      try {
+        classrooms = await ClassroomLocation.find().sort({ updatedAt: -1 }).lean();
+      } catch (dbErr) {
+        console.warn('[SurveyController] DB fetch failed, using memory fallback:', dbErr.message);
+        classrooms = [...memoryClassrooms];
+      }
+    } else {
+      classrooms = [...memoryClassrooms];
+    }
+
+    res.json({
+      success: true,
+      count: classrooms.length,
+      data: classrooms
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const deleteSurveyedClassroom = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = getDbStatus();
+    if (db.connected) {
+      try {
+        await ClassroomLocation.deleteOne({
+          $or: [{ locationId: id }, { _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }]
+        });
+      } catch (dbErr) {
+        console.warn('[SurveyController] DB delete error:', dbErr.message);
+      }
+    }
+    memoryClassrooms = memoryClassrooms.filter(c => c.locationId !== id && c._id !== id);
+    res.json({
+      success: true,
+      message: 'Surveyed classroom deleted successfully'
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * ========================================================
+ * FIELD GPS SURVEY: CONTINUOUS WALKING PATHS
+ * ========================================================
+ */
+
+export const createOrUpdateSurveyedPath = async (req, res) => {
+  try {
+    const payload = req.body;
+    const pathId = payload.pathId || `walk_${Date.now()}`;
+    const pathRecord = {
+      ...payload,
+      pathId,
+      surveyDate: payload.surveyDate ? new Date(payload.surveyDate) : new Date()
+    };
+
+    let saved = null;
+    const db = getDbStatus();
+    if (db.connected) {
+      try {
+        saved = await SurveyedWalkingPath.findOneAndUpdate(
+          { pathId },
+          { $set: pathRecord },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+      } catch (dbErr) {
+        console.warn('[SurveyController] DB path save failed, using memory:', dbErr.message);
+      }
+    }
+
+    if (!saved) {
+      const idx = memoryWalkingPaths.findIndex(p => p.pathId === pathId);
+      if (idx >= 0) {
+        memoryWalkingPaths[idx] = { ...memoryWalkingPaths[idx], ...pathRecord };
+        saved = memoryWalkingPaths[idx];
+      } else {
+        saved = { _id: `mem_${pathId}`, ...pathRecord, createdAt: new Date() };
+        memoryWalkingPaths.push(saved);
+      }
+    } else {
+      const idx = memoryWalkingPaths.findIndex(p => p.pathId === pathId);
+      if (idx >= 0) memoryWalkingPaths[idx] = saved;
+      else memoryWalkingPaths.push(saved);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Surveyed walking path saved successfully',
+      data: saved
+    });
+  } catch (err) {
+    console.error('[SurveyController] Save path error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const getSurveyedPaths = async (req, res) => {
+  try {
+    const db = getDbStatus();
+    let paths = [];
+    if (db.connected) {
+      try {
+        paths = await SurveyedWalkingPath.find().sort({ updatedAt: -1 }).lean();
+      } catch (dbErr) {
+        console.warn('[SurveyController] DB fetch failed, using memory fallback:', dbErr.message);
+        paths = [...memoryWalkingPaths];
+      }
+    } else {
+      paths = [...memoryWalkingPaths];
+    }
+
+    res.json({
+      success: true,
+      count: paths.length,
+      data: paths
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const deleteSurveyedPath = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = getDbStatus();
+    if (db.connected) {
+      try {
+        await SurveyedWalkingPath.deleteOne({
+          $or: [{ pathId: id }, { _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }]
+        });
+      } catch (dbErr) {
+        console.warn('[SurveyController] DB path delete error:', dbErr.message);
+      }
+    }
+    memoryWalkingPaths = memoryWalkingPaths.filter(p => p.pathId !== id && p._id !== id);
+    res.json({
+      success: true,
+      message: 'Surveyed walking path deleted successfully'
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * Get all surveyed items (classrooms + walking paths)
+ */
+export const getAllSurveyData = async (req, res) => {
+  try {
+    const db = getDbStatus();
+    let classrooms = [];
+    let walkingPaths = [];
+
+    if (db.connected) {
+      try {
+        [classrooms, walkingPaths] = await Promise.all([
+          ClassroomLocation.find().sort({ updatedAt: -1 }).lean(),
+          SurveyedWalkingPath.find().sort({ updatedAt: -1 }).lean()
+        ]);
+      } catch (e) {
+        classrooms = [...memoryClassrooms];
+        walkingPaths = [...memoryWalkingPaths];
+      }
+    } else {
+      classrooms = [...memoryClassrooms];
+      walkingPaths = [...memoryWalkingPaths];
+    }
+
+    res.json({
+      success: true,
+      data: {
+        classrooms,
+        walkingPaths,
+        totalClassrooms: classrooms.length,
+        totalWalkingPaths: walkingPaths.length
+      }
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
