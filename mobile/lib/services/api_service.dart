@@ -113,11 +113,99 @@ class ApiService {
       }
     } catch (_) {}
 
-    // Verified default route: Main Gate to D Block
+    // Campus fallback routing engine when offline or server unreachable
+    final sLower = start.toLowerCase();
+    final dLower = destination.toLowerCase();
+
+    // 1. D Block to E Block Walkway
+    if ((sLower.contains('d_block') || sLower.contains('d block')) &&
+        (dLower.contains('e_block') || dLower.contains('e block'))) {
+      return NavigationRoute(
+        routeId: 'route_d_to_e',
+        startName: 'D Block (Engineering Labs)',
+        endName: 'E Block (CSE Department)',
+        distanceMeters: 36,
+        estimatedWalkingMinutes: 1,
+        accessible: true,
+        geometry: [
+          [13.171560, 77.535800],
+          [13.170800, 77.535000],
+          [13.169241, 77.533204],
+        ],
+        waypoints: [
+          RouteWaypoint(
+            stepIndex: 1,
+            instruction: 'Depart from D Block ground floor entrance along covered corridor.',
+            distanceMeters: 18,
+            bearing: 180,
+            turnType: 'depart',
+            landmark: 'D Block Quadrangle',
+          ),
+          RouteWaypoint(
+            stepIndex: 2,
+            instruction: 'Continue south past Hatti Kaapi towards E Block CSE entrance.',
+            distanceMeters: 18,
+            bearing: 180,
+            turnType: 'arrive',
+            landmark: 'E Block Entrance Portico',
+          ),
+        ],
+      );
+    }
+
+    // 2. E Block to F Block Walkway (Verified KML)
+    if ((sLower.contains('e_block') || sLower.contains('e block')) &&
+        (dLower.contains('f_block') || dLower.contains('f block'))) {
+      return NavigationRoute(
+        routeId: 'route_e_to_f',
+        startName: 'E Block (CSE Department)',
+        endName: 'F Block (ISE Department)',
+        distanceMeters: 47,
+        estimatedWalkingMinutes: 1,
+        accessible: true,
+        geometry: [
+          [13.16922581043442, 77.53374838252056],
+          [13.16918960237059, 77.53373237009161],
+          [13.16915161956307, 77.53371744159026],
+          [13.16911474449877, 77.53369770168051],
+          [13.16908524173381, 77.53368679207321],
+          [13.16905426359634, 77.53367146613144],
+          [13.16902284816958, 77.53365996732241],
+          [13.16898658829452, 77.53364633665677],
+          [13.16894668893453, 77.53363211029597],
+          [13.16891988296132, 77.53362078253889],
+          [13.16889094539063, 77.53360697185322],
+          [13.16887181098381, 77.53359832121349],
+          [13.16884508719851, 77.53358601157329],
+          [13.16883382361067, 77.53358288724588],
+        ],
+        waypoints: [
+          RouteWaypoint(
+            stepIndex: 1,
+            instruction: 'Exit E Block main entrance and head south along the surveyed walkway.',
+            distanceMeters: 24,
+            bearing: 195,
+            turnType: 'depart',
+            landmark: 'E Block South Exit',
+          ),
+          RouteWaypoint(
+            stepIndex: 2,
+            instruction: 'Follow the inter-block walkway directly into F Block ISE entrance.',
+            distanceMeters: 23,
+            bearing: 195,
+            turnType: 'arrive',
+            landmark: 'F Block Entrance Portico',
+          ),
+        ],
+      );
+    }
+
+    // 3. Default route from Main Gate to requested building / destination
+    final String destTitle = destination.replaceAll('bld_', '').replaceAll('_', ' ').toUpperCase();
     return NavigationRoute(
-      routeId: 'route_main_gate_to_d_block',
+      routeId: 'route_main_gate_to_dest',
       startName: 'Presidency University – Main Gate',
-      endName: 'D Block (Engineering Labs)',
+      endName: destTitle.isNotEmpty ? destTitle : 'D Block (Engineering Labs)',
       distanceMeters: 423,
       estimatedWalkingMinutes: 4,
       accessible: true,
@@ -151,7 +239,7 @@ class ApiService {
         ),
         RouteWaypoint(
           stepIndex: 3,
-          instruction: 'Pass the Central Fountain Roundabout and turn right towards D Block.',
+          instruction: 'Pass the Central Fountain Roundabout and head toward $destTitle.',
           distanceMeters: 110,
           bearing: 250,
           turnType: 'turn-right',
@@ -159,11 +247,11 @@ class ApiService {
         ),
         RouteWaypoint(
           stepIndex: 4,
-          instruction: 'Arrive at D Block main ground floor entrance portico.',
+          instruction: 'Arrive at $destTitle entrance portico.',
           distanceMeters: 108,
           bearing: 200,
           turnType: 'arrive',
-          landmark: 'D Block Entrance Portico',
+          landmark: '$destTitle Entrance Portico',
         ),
       ],
     );

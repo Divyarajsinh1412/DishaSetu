@@ -68,10 +68,79 @@ export class RoutingService {
       return this.nodeMap.get(target);
     }
 
-    // 2. Associated Location ID match
+    // 2. Associated Location ID & Building ID match
     if (typeof target === 'string') {
-      const byLoc = this.nodes.find(n => n.associatedLocationId === target);
+      const normalizedTarget = target.trim();
+      const locId = normalizedTarget.startsWith('bld_')
+          ? normalizedTarget.replace('bld_', 'loc_')
+          : (normalizedTarget.startsWith('feat_') ? normalizedTarget.replace('feat_', 'loc_') : normalizedTarget);
+      const byLoc = this.nodes.find(n => n.associatedLocationId === locId || n.associatedLocationId === normalizedTarget);
       if (byLoc) return byLoc;
+
+      // Check node entrance pattern e.g. bld_d_block -> node_d_block_ent
+      const entNodeId = normalizedTarget.startsWith('bld_')
+          ? normalizedTarget.replace('bld_', 'node_') + '_ent'
+          : `node_${normalizedTarget}_ent`;
+      if (this.nodeMap.has(entNodeId)) return this.nodeMap.get(entNodeId);
+
+      // Check common building block & campus keywords
+      const lower = normalizedTarget.toLowerCase();
+      if (lower.includes('d_block') || lower.includes('d-block') || lower === 'd block' || lower === 'pu-d-block') {
+        const n = this.nodeMap.get('node_d_block_ent');
+        if (n) return n;
+      }
+      if (lower.includes('e_block') || lower.includes('e-block') || lower === 'e block' || lower === 'pu-e-block') {
+        const n = this.nodeMap.get('node_e_block_ent');
+        if (n) return n;
+      }
+      if (lower.includes('f_block') || lower.includes('f-block') || lower === 'f block' || lower === 'pu-f-block') {
+        const n = this.nodeMap.get('node_f_block_ent');
+        if (n) return n;
+      }
+      if (lower.includes('l_block') || lower.includes('l-block') || lower === 'l block' || lower === 'pu-l-block') {
+        const n = this.nodeMap.get('node_l_block_ent');
+        if (n) return n;
+      }
+      if (lower.includes('n_block') || lower.includes('n-block') || lower === 'n block' || lower === 'pu-n-block') {
+        const n = this.nodeMap.get('node_n_block_ent');
+        if (n) return n;
+      }
+      if (lower.includes('som') || lower.includes('m_block') || lower.includes('m-block') || lower === 'm block' || lower === 'pu-m-block') {
+        const n = this.nodeMap.get('node_j_block_ent');
+        if (n) return n;
+      }
+      if (lower.includes('gate') || lower.includes('main_gate') || lower.includes('pu-gate-01')) {
+        const n = this.nodeMap.get('node_main_gate');
+        if (n) return n;
+      }
+      if (lower.includes('cafe') || lower.includes('hatti') || lower.includes('pu-cafe')) {
+        const n = this.nodeMap.get('node_cafeteria_ent') || this.nodeMap.get('node_d_block_ent');
+        if (n) return n;
+      }
+      if (lower.includes('food_court') || lower.includes('food court')) {
+        const n = this.nodeMap.get('node_food_court_ent');
+        if (n) return n;
+      }
+      if (lower.includes('auditorium')) {
+        const n = this.nodeMap.get('node_auditorium_ent');
+        if (n) return n;
+      }
+      if (lower.includes('library')) {
+        const n = this.nodeMap.get('node_library_ent');
+        if (n) return n;
+      }
+      if (lower.includes('health') || lower.includes('medical')) {
+        const n = this.nodeMap.get('node_medical_ent');
+        if (n) return n;
+      }
+      if (lower.includes('fountain')) {
+        const n = this.nodeMap.get('node_fountain_plaza');
+        if (n) return n;
+      }
+      if (lower.includes('lawn')) {
+        const n = this.nodeMap.get('node_avenue_mid') || this.nodeMap.get('node_fountain_plaza');
+        if (n) return n;
+      }
     }
 
     // 3. Building Short Code match from Campus Catalog

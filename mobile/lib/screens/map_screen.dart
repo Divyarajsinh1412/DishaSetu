@@ -101,9 +101,60 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     );
     setState(() {
       _activeRoute = route;
-      _selectedMarker = null;
+      _selectedMarker = destination;
       _isLoading = false;
     });
+  }
+
+  Future<void> _startRoomNavigation(CampusLocation destination, Room room) async {
+    setState(() => _isLoading = true);
+    final route = await _apiService.calculateRoute(
+      start: 'node_main_gate',
+      destination: destination.shortCode ?? destination.id,
+    );
+    setState(() {
+      _activeRoute = route;
+      _selectedMarker = destination;
+      _isLoading = false;
+    });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF065F46),
+          content: Text(
+            'Navigating to ${room.roomId} (${room.roomType}) · Floor ${room.floorNumber} · ${destination.name}',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  void _onBuildingSelected(CampusLocation loc) {
+    setState(() {
+      _selectedMarker = loc;
+    });
+
+    // If it's an Academic building or block, immediately open the comprehensive floor & room browser
+    if (loc.category == 'Academic' ||
+        loc.name.toLowerCase().contains('block') ||
+        loc.shortCode?.contains('BLOCK') == true) {
+      BuildingBottomSheet.show(
+        context,
+        building: Building.fromCampusLocation(loc),
+        onNavigateToRoom: (room) {
+          Navigator.pop(context);
+          _startRoomNavigation(loc, room);
+        },
+        onStartNavigation: () {
+          Navigator.pop(context);
+          _startNavigationTo(loc);
+        },
+      );
+    } else if (loc.category == 'Cafe' || loc.shortCode == 'PU-CAFE-D-BLOCK') {
+      _showCafeMenuDialog(loc);
+    }
   }
 
   void _showRoutePlanningDialog([CampusLocation? initialDest]) {
@@ -121,7 +172,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
         );
         setState(() {
           _activeRoute = route;
-          _selectedMarker = null;
+          _selectedMarker = dest;
           _isLoading = false;
         });
       },
@@ -136,6 +187,43 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
         initialZoom: CampusGeometries.initialZoom,
         minZoom: 15.0,
         maxZoom: 19.5,
+        onTap: (tapPosition, point) {
+          // Check if tapped inside any surveyed polygon
+          for (final poly in CampusGeometries.allPolygons) {
+            if (poly.contains(point)) {
+              final loc = _markers.firstWhere(
+                (m) =>
+                    m.id == poly.id ||
+                    m.name.toLowerCase().contains(poly.name.toLowerCase()),
+                orElse: () => CampusLocation(
+                  id: poly.id,
+                  name: poly.name,
+                  label: poly.label,
+                  category: poly.category,
+                  latitude: poly.center.latitude,
+                  longitude: poly.center.longitude,
+                ),
+              );
+              _onBuildingSelected(loc);
+              return;
+            }
+          }
+
+          // Tolerance check near any marker pin
+          CampusLocation? closest;
+          double minD = 0.0004;
+          for (final m in _markers) {
+            final d = (m.latitude - point.latitude).abs() +
+                (m.longitude - point.longitude).abs();
+            if (d < minD) {
+              minD = d;
+              closest = m;
+            }
+          }
+          if (closest != null) {
+            _onBuildingSelected(closest);
+          }
+        },
       ),
       children: [
         TileLayer(
@@ -187,7 +275,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
               height: isSelected ? 38 : 30,
               child: GestureDetector(
                 onTap: () {
-                  setState(() => _selectedMarker = marker);
+                  _onBuildingSelected(marker);
                 },
                 child: Container(
                   decoration: BoxDecoration(
@@ -493,27 +581,46 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                           return Stack(
                             clipBehavior: Clip.none,
                             children: [
-                              // 1. Original Presidency University Campus Master Map Image
+                              // 1. Original Presidency University Campus Master Map Image with Full Building Tap Detection
                               Positioned.fill(
-                                child: Image.asset(
-                                  'assets/maps/presidency-campus-master-map.png',
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Image.asset(
-                                      'assets/maps/presidency-campus-master-map.jpg',
-                                      fit: BoxFit.contain,
-                                    );
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTapUp: (details) {
+                                    final normX = details.localPosition.dx / mapWidth;
+                                    final normY = details.localPosition.dy / mapHeight;
+                                    final building = CampusGeometries.findBuildingAt(normX, normY);
+                                    if (building != null) {
+                                      final loc = _markers.firstWhere(
+                                        (m) =>
+                                            m.id == building.id ||
+                                            (building.blockLetter.isNotEmpty &&
+                                                m.name.toLowerCase().contains(
+                                                    '${building.blockLetter.toLowerCase()} block')),
+                                        orElse: () => building.toLocation(),
+                                      );
+                                      _onBuildingSelected(loc);
+                                    }
                                   },
+                                  child: Image.asset(
+                                    'assets/maps/presidency-campus-master-map.png',
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Image.asset(
+                                        'assets/maps/presidency-campus-master-map.jpg',
+                                        fit: BoxFit.contain,
+                                      );
+                                    },
+                                  ),
                                 ),
                               ),
 
                               // 2. Active Route Polyline Overlay
-                              if (_activeRoute != null && _selectedMarker != null)
+                              if (_activeRoute != null)
                                 CustomPaint(
                                   size: Size(mapWidth, mapHeight),
                                   painter: RouteOverlayPainter(
-                                    destX: _selectedMarker!.imageX * mapWidth,
-                                    destY: _selectedMarker!.imageY * mapHeight,
+                                    route: _activeRoute!,
+                                    selectedMarker: _selectedMarker,
                                   ),
                                 ),
 
@@ -530,7 +637,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                                   top: posY - 14,
                                   child: GestureDetector(
                                     onTap: () {
-                                      setState(() => _selectedMarker = marker);
+                                      _onBuildingSelected(marker);
                                     },
                                     child: AnimatedContainer(
                                       duration: const Duration(milliseconds: 200),
@@ -905,42 +1012,109 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
 
 /// Custom Painter for Navigation Route Overlays on Master Map
 class RouteOverlayPainter extends CustomPainter {
-  final double destX;
-  final double destY;
+  final NavigationRoute route;
+  final CampusLocation? selectedMarker;
 
-  RouteOverlayPainter({required this.destX, required this.destY});
+  RouteOverlayPainter({required this.route, this.selectedMarker});
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Start at Main Gate (normalized ~0.5695, 0.2449)
-    final startX = size.width * 0.5695;
-    final startY = size.height * 0.2449;
+    final points = <Offset>[];
 
-    final paint = Paint()
+    // 1. If GPS coordinates exist in route geometry, project to normalized Master Map canvas
+    if (route.geometry.isNotEmpty) {
+      for (final pt in route.geometry) {
+        final norm = CampusGeometries.projectGpsToNormalized(pt[0], pt[1]);
+        points.add(Offset(norm.dx * size.width, norm.dy * size.height));
+      }
+    }
+
+    // 2. If geometry is sparse, fallback to high-resolution centerlines
+    if (points.length < 2) {
+      final startLower = route.startName.toLowerCase();
+      final endLower = route.endName.toLowerCase();
+
+      if (startLower.contains('e block') && endLower.contains('f block')) {
+        for (final p in CampusGeometries.eToFCenterline) {
+          points.add(Offset(p.dx * size.width, p.dy * size.height));
+        }
+      } else if (startLower.contains('d block') && endLower.contains('e block')) {
+        for (final p in CampusGeometries.dToECenterline) {
+          points.add(Offset(p.dx * size.width, p.dy * size.height));
+        }
+      } else {
+        // Main Gate toward destination avenue
+        for (final p in CampusGeometries.mainToDCenterline) {
+          points.add(Offset(p.dx * size.width, p.dy * size.height));
+        }
+        if (selectedMarker != null) {
+          points.add(Offset(selectedMarker!.imageX * size.width, selectedMarker!.imageY * size.height));
+        }
+      }
+    }
+
+    if (points.length < 2) return;
+
+    // Draw Route Path with Outer Glow & Solid Core
+    final glowPaint = Paint()
+      ..color = const Color(0xFF10B981).withOpacity(0.35)
+      ..strokeWidth = 9.0
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..style = PaintingStyle.stroke;
+
+    final linePaint = Paint()
       ..color = const Color(0xFF10B981)
-      ..strokeWidth = 4.0
+      ..strokeWidth = 4.5
       ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
       ..style = PaintingStyle.stroke;
 
-    final shadowPaint = Paint()
-      ..color = const Color(0xFF10B981).withOpacity(0.4)
-      ..strokeWidth = 8.0
-      ..strokeCap = StrokeCap.round
+    final path = Path()..moveTo(points.first.dx, points.first.dy);
+    for (int i = 1; i < points.length; i++) {
+      path.lineTo(points[i].dx, points[i].dy);
+    }
+
+    canvas.drawPath(path, glowPaint);
+    canvas.drawPath(path, linePaint);
+
+    // Draw Start Origin Pin "A"
+    final startPt = points.first;
+    final startPinBg = Paint()..color = const Color(0xFF059669);
+    final borderWhite = Paint()
+      ..color = Colors.white
+      ..strokeWidth = 2.0
       ..style = PaintingStyle.stroke;
+    canvas.drawCircle(startPt, 11, startPinBg);
+    canvas.drawCircle(startPt, 11, borderWhite);
 
-    final path = Path()
-      ..moveTo(startX, startY)
-      // Avenue midpoint near Fountain
-      ..lineTo(size.width * 0.4940, size.height * 0.5127)
-      ..lineTo(size.width * 0.4666, size.height * 0.5995)
-      ..lineTo(destX, destY);
+    final textPainterA = TextPainter(
+      text: const TextSpan(
+        text: 'A',
+        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    textPainterA.paint(canvas, Offset(startPt.dx - 4.5, startPt.dy - 7));
 
-    canvas.drawPath(path, shadowPaint);
-    canvas.drawPath(path, paint);
+    // Draw End Destination Pin "B"
+    final endPt = points.last;
+    final endPinBg = Paint()..color = const Color(0xFFE11D48);
+    canvas.drawCircle(endPt, 11, endPinBg);
+    canvas.drawCircle(endPt, 11, borderWhite);
+
+    final textPainterB = TextPainter(
+      text: const TextSpan(
+        text: 'B',
+        style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    textPainterB.paint(canvas, Offset(endPt.dx - 4.5, endPt.dy - 7));
   }
 
   @override
   bool shouldRepaint(covariant RouteOverlayPainter oldDelegate) {
-    return oldDelegate.destX != destX || oldDelegate.destY != destY;
+    return oldDelegate.route != route || oldDelegate.selectedMarker != selectedMarker;
   }
 }

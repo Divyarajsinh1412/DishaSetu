@@ -115,13 +115,24 @@ const webDistPath = candidateDistPaths.find(p => fs.existsSync(p));
 
 if (webDistPath) {
   console.log(`[Static] Serving web application from ${webDistPath}`);
-  app.use(express.static(webDistPath));
+  app.use(express.static(webDistPath, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('index.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
+    }
+  }));
 
   // SPA fallback for all frontend client-side routes (non-API)
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path === '/health') {
       return next();
     }
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.join(webDistPath, 'index.html'));
   });
 } else {
