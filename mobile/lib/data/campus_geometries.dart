@@ -358,10 +358,42 @@ class CampusGeometries {
     ],
   );
 
+  static final CampusPathGeometry mainGateToHrBlock = CampusPathGeometry(
+    id: 'path_main_gate_to_hr_block',
+    name: 'Main Gate → HR Block Avenue',
+    lengthMeters: 348.1,
+    colorHex: 0xFF0284C7,
+    points: const [
+      LatLng(13.17169554298031, 77.5360850549506),
+      LatLng(13.17153970016112, 77.53610184567775),
+      LatLng(13.17139561800541, 77.53606456966142),
+      LatLng(13.17124435793201, 77.53599599137695),
+      LatLng(13.17109350020798, 77.53590674280781),
+      LatLng(13.17096389548271, 77.53584411908042),
+      LatLng(13.17084138574899, 77.53577797368055),
+      LatLng(13.17068810682293, 77.53569125548779),
+      LatLng(13.17051238972043, 77.53557882374868),
+      LatLng(13.17033809142548, 77.53549602921471),
+      LatLng(13.17020437354891, 77.53542286545951),
+      LatLng(13.17006794753851, 77.5353582296776),
+      LatLng(13.16995436346022, 77.53528606704418),
+      LatLng(13.16985248647233, 77.53522100362564),
+      LatLng(13.16966510316467, 77.53513847534576),
+      LatLng(13.16950879654838, 77.53507774322956),
+      LatLng(13.16945978765377, 77.53491784902023),
+      LatLng(13.16938776571801, 77.53477427429164),
+      LatLng(13.16928245784001, 77.53475255915706),
+      LatLng(13.16917780710274, 77.53479461390964),
+      LatLng(13.16907895226245, 77.53481685972112),
+      LatLng(13.16902003202503, 77.5348155778984),
+    ],
+  );
+
   static final List<CampusPathGeometry> allPaths = [
     mainGateToDBlock,
     dToEPath,
     eToFPath,
+    mainGateToHrBlock,
   ];
 
   // -------------------------------------------------------------
@@ -476,6 +508,24 @@ class CampusGeometries {
       longitude: 77.536100,
       description:
           'School of Electrical Engineering, Power Systems Lab, and Applied Sciences.',
+    ),
+    BuildingBoundingBox(
+      id: 'bld_hr_block',
+      name: 'HR Block',
+      label: 'HR BLOCK',
+      shortCode: 'PU-HR-BLOCK',
+      category: 'Administrative',
+      blockLetter: 'HR',
+      minX: 0.400,
+      maxX: 0.495,
+      minY: 0.648,
+      maxY: 0.726,
+      centerX: 0.4475,
+      centerY: 0.6870,
+      latitude: 13.16902003202503,
+      longitude: 77.5348155778984,
+      description:
+          'Central Administrative Headquarters, Human Resources Directorate, Executive Boardrooms, and Chancellor Secretariat.',
     ),
     BuildingBoundingBox(
       id: 'bld_j_k_block',
@@ -823,6 +873,29 @@ class CampusGeometries {
     Offset(0.2025, 0.7510), // F Block Entrance
   ];
 
+  static const List<Offset> mainToHrCenterline = [
+    Offset(0.5740, 0.2405), // Main Gate
+    Offset(0.5760, 0.2518),
+    Offset(0.5790, 0.2637),
+    Offset(0.5800, 0.2778),
+    Offset(0.5760, 0.2954),
+    Offset(0.5660, 0.3200), // Along west of Main Lawn
+    Offset(0.5530, 0.3481),
+    Offset(0.5400, 0.3762),
+    Offset(0.5280, 0.4044),
+    Offset(0.5160, 0.4325),
+    Offset(0.5060, 0.4606),
+    Offset(0.4970, 0.4887),
+    Offset(0.4910, 0.5134), // Bus boarding bay
+    Offset(0.4860, 0.5345),
+    Offset(0.4800, 0.5499),
+    Offset(0.4620, 0.5661), // Fountain curve
+    Offset(0.4550, 0.5900),
+    Offset(0.4480, 0.6200),
+    Offset(0.4420, 0.6500),
+    Offset(0.4350, 0.6800), // HR Block / Plaza Entrance
+  ];
+
   /// Convert GPS Coordinates (lat, lng) to normalized Master Map Offset (0..1, 0..1)
   /// using the calibrated affine transformation from Web MasterCampusMap.jsx
   static Offset projectGpsToNormalized(double lat, double lng) {
@@ -883,7 +956,25 @@ class CampusGeometries {
       return eToFCenterline.reversed.toList();
     }
 
-    // 4. Project geometry coordinates
+    // 4. Surveyed Main Gate <-> HR Block / H Block
+    final isHrBlockEnd = endLower.contains('hr block') ||
+        endLower.contains('hr blocks') ||
+        endLower.contains('h block') ||
+        route.routeId.contains('hr_block') ||
+        route.routeId.contains('h_block');
+    if (isMainGateStart && isHrBlockEnd) {
+      return mainToHrCenterline;
+    }
+    final isHrBlockStart = startLower.contains('hr block') ||
+        startLower.contains('hr blocks') ||
+        startLower.contains('h block') ||
+        route.routeId.contains('hr_block') ||
+        route.routeId.contains('h_block');
+    if (isHrBlockStart && endLower.contains('main gate')) {
+      return mainToHrCenterline.reversed.toList();
+    }
+
+    // 5. Project geometry coordinates
     final pts = <Offset>[];
     if (route.geometry.isNotEmpty) {
       for (final coord in route.geometry) {

@@ -104,6 +104,10 @@ export class ClientRoutingEngine {
         const n = this.nodeMap.get('node_main_gate');
         if (n) return n;
       }
+      if (lower.includes('hr_block') || lower.includes('hr-block') || lower.includes('hr block') || lower.includes('hr blocks') || lower === 'hr' || lower === 'pu-hr-block' || lower.includes('h_block') || lower.includes('h-block') || lower === 'h block' || lower === 'pu-h-block') {
+        const n = this.nodeMap.get('node_hr_block_ent') || this.nodeMap.get('node_h_block_ent');
+        if (n) return n;
+      }
       if (lower.includes('cafe') || lower.includes('hatti') || lower.includes('pu-cafe')) {
         const n = this.nodeMap.get('node_cafeteria_ent') || this.nodeMap.get('node_d_block_ent');
         if (n) return n;

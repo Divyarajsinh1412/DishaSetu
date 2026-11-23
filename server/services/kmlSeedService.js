@@ -352,6 +352,106 @@ export async function seedKmlRoute() {
       console.log(`[KMLSeed] Successfully seeded & persisted "${parsedEToF.name}" (${parsedEToF.distanceMeters || 47.0}m) into MongoDB Atlas.`);
     }
 
+    // 7. Seed Main Gate → HR Block Surveyed Pathway
+    const mainToHrKmlPath = path.join(__dirname, '../data/kml/main_gate_to_Hr_blocks.kml');
+    if (fs.existsSync(mainToHrKmlPath)) {
+      const mainToHrContent = fs.readFileSync(mainToHrKmlPath, 'utf8');
+      const parsedMainToHr = parseKml(mainToHrContent, 'main_gate_to_Hr_blocks.kml', {
+        name: 'Main Gate → HR Block',
+        startNode: 'node_main_gate',
+        endNode: 'node_hr_block_ent',
+        routeType: 'Walking'
+      });
+
+      // Ensure HR Block Entrance Node exists with exact coordinates
+      const hrNodeDoc = {
+        nodeId: 'node_hr_block_ent',
+        name: 'HR Block (Human Resources & Administrative Headquarters) Entrance Door',
+        coordinates: {
+          lat: parsedMainToHr.coordinates[parsedMainToHr.coordinates.length - 1][0],
+          lng: parsedMainToHr.coordinates[parsedMainToHr.coordinates.length - 1][1]
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [
+            parsedMainToHr.coordinates[parsedMainToHr.coordinates.length - 1][1],
+            parsedMainToHr.coordinates[parsedMainToHr.coordinates.length - 1][0]
+          ]
+        },
+        nodeType: 'building_entrance',
+        associatedLocationId: 'loc_hr_block',
+        isAccessible: true,
+        isActive: true
+      };
+
+      await NavigationNode.findOneAndUpdate(
+        { nodeId: 'node_hr_block_ent' },
+        { $set: hrNodeDoc },
+        { upsert: true, new: true }
+      ).catch(() => {});
+
+      const mainToHrPathId = 'path_kml_main_gate_to_hr_block';
+      const mainToHrPathPayload = {
+        pathId: mainToHrPathId,
+        name: parsedMainToHr.name,
+        geometry: parsedMainToHr.coordinates,
+        startNode: 'node_main_gate',
+        endNode: 'node_hr_block_ent',
+        distanceMeters: parsedMainToHr.distanceMeters || 348.1,
+        estimatedWalkingMinutes: parsedMainToHr.estimatedWalkingMinutes || 4.4,
+        accessibility: true,
+        hasStairs: false,
+        hasRamp: true,
+        pathType: 'main_avenue',
+        routeType: 'Walking',
+        verificationStatus: 'Verified',
+        status: 'active',
+        active: true,
+        surfaceType: 'Paved Walkway & Tiles',
+        sourceFileName: 'main_gate_to_Hr_blocks.kml',
+        source: 'Google Earth KML',
+        sourceType: 'kml_import',
+        campus: 'Presidency University Bengaluru',
+        pointCount: parsedMainToHr.pointCount,
+        notes: 'Actual surveyed walking path from Presidency University Main Gate to HR Block imported from Google Earth KML.'
+      };
+
+      await WalkingPath.findOneAndUpdate(
+        { pathId: mainToHrPathId },
+        { $set: mainToHrPathPayload },
+        { upsert: true, new: true }
+      );
+
+      const mainToHrRouteId = 'route_main_gate_to_hr_block';
+      const mainToHrRoutePayload = {
+        routeId: mainToHrRouteId,
+        name: 'Main Gate → HR Block',
+        startLocation: 'Main Gate',
+        endLocation: 'HR Block',
+        geometry: parsedMainToHr.coordinates,
+        distanceMeters: parsedMainToHr.distanceMeters || 348.1,
+        estimatedWalkingMinutes: parsedMainToHr.estimatedWalkingMinutes || 4.4,
+        routeType: 'pedestrian',
+        accessible: true,
+        verified: true,
+        sourceFileName: 'main_gate_to_Hr_blocks.kml',
+        source: 'Google Earth KML',
+        campus: 'Presidency University Bengaluru',
+        status: 'published'
+      };
+
+      await Route.findOneAndUpdate(
+        { routeId: mainToHrRouteId },
+        { $set: mainToHrRoutePayload },
+        { upsert: true, new: true }
+      ).catch(() => {});
+
+      if (CampusService && CampusService.syncKmlPathToMemory) {
+        CampusService.syncKmlPathToMemory(mainToHrPathPayload, mainToHrRoutePayload);
+      }
+      console.log(`[KMLSeed] Successfully seeded & persisted "${parsedMainToHr.name}" (${parsedMainToHr.distanceMeters || 348.1}m) into MongoDB Atlas.`);
+    }
+
     return savedPath;
   } catch (error) {
     console.error('[KMLSeed] Error seeding KML route:', error.message);

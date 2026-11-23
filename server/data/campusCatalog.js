@@ -351,13 +351,34 @@ export const COMPLETE_CAMPUS_CATALOG = [
     name: 'HR Block',
     shortCode: 'PU-HR-BLOCK',
     category: 'Administrative',
-    description: 'Human Resources, faculty recruitment, and institutional governance offices.',
-    coordinates: null,
-    entranceCoordinates: null,
-    entrances: [],
-    coordinateSource: 'Not Surveyed',
-    verificationStatus: 'Not Surveyed',
-    approvalStatus: 'Pending',
+    description: 'Human Resources, faculty recruitment, executive offices, and institutional governance.',
+    coordinates: {
+      lat: 13.16902003202503,
+      lng: 77.5348155778984
+    },
+    entranceCoordinates: {
+      lat: 13.16902003202503,
+      lng: 77.5348155778984
+    },
+    entrances: [
+      {
+        entranceId: 'ent_hr_block_main',
+        name: 'HR Block Main Entrance Portal',
+        coordinates: {
+          lat: 13.16902003202503,
+          lng: 77.5348155778984
+        },
+        isAccessible: true,
+        isPrimary: true,
+        hasRamp: true
+      }
+    ],
+    coordinateSource: 'Google Earth KML Surveyed',
+    gpsAccuracy: 0.8,
+    surveyDate: '2026-11-23',
+    surveyedBy: 'Presidency University GIS Survey',
+    verificationStatus: 'Published',
+    approvalStatus: 'Approved',
     active: true
   },
   {

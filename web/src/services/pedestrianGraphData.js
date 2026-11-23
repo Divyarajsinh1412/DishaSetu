@@ -82,6 +82,15 @@ export const NAVIGATION_NODES = [
     isAccessible: true
   },
   {
+    nodeId: 'node_hr_block_ent',
+    name: 'HR Block (Human Resources & Administrative Headquarters) Entrance Door',
+    coordinates: [13.16902003202503, 77.5348155778984],
+    nodeType: 'building_entrance',
+    associatedLocationId: 'loc_hr_block',
+    isAccessible: true
+  },
+
+  {
     nodeId: 'node_auditorium_ent',
     name: 'Auditorium Grand Foyer Entrance Door',
     coordinates: [13.1709200, 77.5357400],
@@ -683,6 +692,55 @@ export const WALKING_PATHS = [
     pointCount: 14,
     notes: 'Actual surveyed walking path from E Block to F Block imported from Google Earth KML.'
   },
+  // 0C. VERIFIED KML SURVEYED ROUTE: Main Gate to HR Block
+  {
+    pathId: 'path_kml_main_gate_to_hr_block',
+    name: 'Main Gate → HR Block',
+    startNode: 'node_main_gate',
+    endNode: 'node_hr_block_ent',
+    geometry: [
+      [13.17169554298031, 77.5360850549506],
+      [13.17153970016112, 77.53610184567775],
+      [13.17139561800541, 77.53606456966142],
+      [13.17124435793201, 77.53599599137695],
+      [13.17109350020798, 77.53590674280781],
+      [13.17096389548271, 77.53584411908042],
+      [13.17084138574899, 77.53577797368055],
+      [13.17068810682293, 77.53569125548779],
+      [13.17051238972043, 77.53557882374868],
+      [13.17033809142548, 77.53549602921471],
+      [13.17020437354891, 77.53542286545951],
+      [13.17006794753851, 77.5353582296776],
+      [13.16995436346022, 77.53528606704418],
+      [13.16985248647233, 77.53522100362564],
+      [13.16966510316467, 77.53513847534576],
+      [13.16950879654838, 77.53507774322956],
+      [13.16945978765377, 77.53491784902023],
+      [13.16938776571801, 77.53477427429164],
+      [13.16928245784001, 77.53475255915706],
+      [13.16917780710274, 77.53479461390964],
+      [13.16907895226245, 77.53481685972112],
+      [13.16902003202503, 77.5348155778984]
+    ],
+    distanceMeters: 348.1,
+    estimatedWalkingMinutes: 4.4,
+    accessibility: true,
+    hasStairs: false,
+    hasRamp: true,
+    pathType: 'main_avenue',
+    routeType: 'Walking',
+    verificationStatus: 'Verified',
+    status: 'active',
+    active: true,
+    surfaceType: 'Paved Walkway & Tiles',
+    sourceFileName: 'main_gate_to_Hr_blocks.kml',
+    source: 'Google Earth KML',
+    sourceType: 'kml_import',
+    campus: 'Presidency University Bengaluru',
+    pointCount: 22,
+    notes: 'Actual surveyed walking path from Presidency University Main Gate to HR Block imported from Google Earth KML.'
+  },
+
   // 1. Main Gate to Avenue Origin Plaza
   {
     pathId: 'path_gate_to_avenue',

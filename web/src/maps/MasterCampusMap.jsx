@@ -39,7 +39,8 @@ import { getTranslation } from '../services/localization';
 import {
   MASTER_CAMPUS_FEATURES,
   WALKING_ROUTE_MAIN_TO_D_CENTERLINE,
-  WALKING_ROUTE_D_TO_E_CENTERLINE
+  WALKING_ROUTE_D_TO_E_CENTERLINE,
+  WALKING_ROUTE_MAIN_TO_HR_CENTERLINE
 } from '../data/masterMapFeatures.js';
 import { fetchCafes } from '../services/api';
 import { MAIN_GATE_TO_D_BLOCK_KML } from '../demo/mainGateToDBlockData.js';
@@ -539,6 +540,37 @@ export default function MasterCampusMap({
 
     if (isEBlockStart && isDBlockEnd) {
       return [...WALKING_ROUTE_D_TO_E_CENTERLINE].reverse();
+    }
+
+    // Special Check: If active route is between Main Gate and HR Block / H Block
+    const isHrBlockEnd = activeRoute.endLocationId === 'node_hr_block_ent' ||
+      activeRoute.endLocationId === 'bld_hr_block' ||
+      activeRoute.endLocationId === 'bld_h_block' ||
+      activeRoute.endLocationId === 'loc_hr_block' ||
+      activeRoute.endLocationId === 'loc_h_block' ||
+      activeRoute.endNodeId === 'node_hr_block_ent' ||
+      activeRoute.endNodeId === 'node_h_block_ent' ||
+      activeRoute.endLocation?.locationId === 'loc_hr_block' ||
+      activeRoute.endLocation?.locationId === 'loc_h_block' ||
+      activeRoute.endLocation?.buildingId === 'bld_hr_block' ||
+      activeRoute.endLocation?.buildingId === 'bld_h_block' ||
+      (activeRoute.endLocation?.name && /(hr\s*block|h\s*block)/i.test(activeRoute.endLocation.name));
+
+    if (isMainGateStart && isHrBlockEnd) {
+      return WALKING_ROUTE_MAIN_TO_HR_CENTERLINE;
+    }
+
+    const isHrBlockStart = activeRoute.startLocationId === 'node_hr_block_ent' ||
+      activeRoute.startLocationId === 'bld_hr_block' ||
+      activeRoute.startLocationId === 'bld_h_block' ||
+      activeRoute.startLocationId === 'loc_hr_block' ||
+      activeRoute.startLocationId === 'loc_h_block' ||
+      activeRoute.startNodeId === 'node_hr_block_ent' ||
+      activeRoute.startNodeId === 'node_h_block_ent' ||
+      (activeRoute.startLocation?.name && /(hr\s*block|h\s*block)/i.test(activeRoute.startLocation.name));
+
+    if (isHrBlockStart && isMainGateEnd) {
+      return [...WALKING_ROUTE_MAIN_TO_HR_CENTERLINE].reverse();
     }
 
     const resolveNormalizedPoint = (nodeId, coords = null) => {

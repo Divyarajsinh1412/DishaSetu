@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:ex="http://earth.google.com/kml/ext">
+<Document id="document">
+	<ex:extension>base64;CooBCoEBCn8KAggBEnkKdwokCiAKAwjQDxoHCNLtZRD_ASEAAAAAAADwPykAAAAAAAAAABgAEg8KCAitgO8HEP8BEKAfGAAaGgoHCP___wcQQBIICK2A7wcQ_wEYoB8gACgAIgkIARIFCP___wcqFwgBEggI____BxD_ARkAAAAAAADwPyAAEgQIARAA</ex:extension>
+	<name>Untitled map project</name>
+	<gx:CascadingStyle kml:id="__managed_style_0608FCC339433FD8EBF6_highlight">
+		<ex:extension>base64;EgIYAQ</ex:extension>
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>4</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+				<displayMode>hide</displayMode>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_0608FCC339433FD8EBF6_normal">
+		<ex:extension>base64;EgIYAQ</ex:extension>
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>2.66667</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+				<displayMode>hide</displayMode>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_0608FCC339433FD8EBF6">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_0608FCC339433FD8EBF6_normal</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_0608FCC339433FD8EBF6_highlight</styleUrl>
+		</Pair>
+	</StyleMap>
+	<Placemark id="0B7B07AFA5433FD8EBA1">
+		<name>main gate to Hr blocks</name>
+		<LookAt>
+			<longitude>77.5352186377756</longitude>
+			<latitude>13.16949954142497</latitude>
+			<altitude>921.2449546710297</altitude>
+			<heading>-16.79958795532982</heading>
+			<tilt>7.732708401455362</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>262.7028610602065</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_0608FCC339433FD8EBF6</styleUrl>
+		<LineString>
+			<coordinates>
+				77.5360850549506,13.17169554298031,0 77.53610184567775,13.17153970016112,0 77.53606456966142,13.17139561800541,0 77.53599599137695,13.17124435793201,0 77.53590674280781,13.17109350020798,0 77.53584411908042,13.17096389548271,0 77.53577797368055,13.17084138574899,0 77.53569125548779,13.17068810682293,0 77.53557882374868,13.17051238972043,0 77.53549602921471,13.17033809142548,0 77.53542286545951,13.17020437354891,0 77.5353582296776,13.17006794753851,0 77.53528606704418,13.16995436346022,0 77.53522100362564,13.16985248647233,0 77.53513847534576,13.16966510316467,0 77.53507774322956,13.16950879654838,0 77.53491784902023,13.16945978765377,0 77.53477427429164,13.16938776571801,0 77.53475255915706,13.16928245784001,0 77.53479461390964,13.16917780710274,0 77.53481685972112,13.16907895226245,0 77.5348155778984,13.16902003202503,0 
+			</coordinates>
+		</LineString>
+	</Placemark>
+</Document>
+</kml>

@@ -1088,6 +1088,43 @@ export const MASTER_CAMPUS_FEATURES = [
     longitude: 77.53366,
     distanceMeters: 47.0,
     status: 'Verified'
+  },
+  {
+    featureId: 'feat_path_main_gate_to_hr_block',
+    featureName: 'Main Gate → HR Block Walkway',
+    code: 'PU-PATH-MAIN-HR',
+    category: 'Pathway',
+    type: 'polyline',
+    normalizedX: 0.4910,
+    normalizedY: 0.5134,
+    pathCoordinates: [
+      [0.5740, 0.2405],
+      [0.5760, 0.2518],
+      [0.5790, 0.2637],
+      [0.5800, 0.2778],
+      [0.5760, 0.2954],
+      [0.5660, 0.3200],
+      [0.5530, 0.3481],
+      [0.5400, 0.3762],
+      [0.5280, 0.4044],
+      [0.5160, 0.4325],
+      [0.5060, 0.4606],
+      [0.4970, 0.4887],
+      [0.4910, 0.5134],
+      [0.4860, 0.5345],
+      [0.4800, 0.5499],
+      [0.4620, 0.5661],
+      [0.4550, 0.5900],
+      [0.4480, 0.6200],
+      [0.4420, 0.6500],
+      [0.4350, 0.6800]
+    ],
+    description: 'Surveyed central avenue and walking corridor connecting Presidency University Main Gate to HR Block / Administrative Plaza.',
+    departments: ['Main Avenue Corridor', 'Main Gate Portal', 'HR Block & Plaza'],
+    latitude: 13.17035,
+    longitude: 77.53545,
+    distanceMeters: 348.1,
+    status: 'Verified'
   }
 ];
 
@@ -1123,6 +1160,29 @@ export const WALKING_ROUTE_D_TO_E_CENTERLINE = [
   { x: 0.2025, y: 0.6620 },
   { x: 0.2025, y: 0.6800 },
   { x: 0.2025, y: 0.6975 }  // E Block Entrance
+];
+
+export const WALKING_ROUTE_MAIN_TO_HR_CENTERLINE = [
+  { x: 0.5740, y: 0.2405 }, // Main Gate
+  { x: 0.5760, y: 0.2518 },
+  { x: 0.5790, y: 0.2637 },
+  { x: 0.5800, y: 0.2778 },
+  { x: 0.5760, y: 0.2954 },
+  { x: 0.5660, y: 0.3200 }, // Along west of Main Lawn
+  { x: 0.5530, y: 0.3481 },
+  { x: 0.5400, y: 0.3762 },
+  { x: 0.5280, y: 0.4044 },
+  { x: 0.5160, y: 0.4325 },
+  { x: 0.5060, y: 0.4606 },
+  { x: 0.4970, y: 0.4887 },
+  { x: 0.4910, y: 0.5134 }, // Bus Boarding bay
+  { x: 0.4860, y: 0.5345 },
+  { x: 0.4800, y: 0.5499 },
+  { x: 0.4620, y: 0.5661 }, // Past fountain
+  { x: 0.4550, y: 0.5900 },
+  { x: 0.4480, y: 0.6200 },
+  { x: 0.4420, y: 0.6500 },
+  { x: 0.4350, y: 0.6800 }  // HR Block / Administrative Plaza Entrance
 ];
 
 export default MASTER_CAMPUS_FEATURES;
