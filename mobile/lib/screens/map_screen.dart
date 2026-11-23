@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as ll;
+import 'package:geolocator/geolocator.dart';
 import '../services/api_service.dart';
 import '../models/campus_location.dart';
 import '../models/navigation_route.dart';
@@ -29,6 +30,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   List<CampusLocation> _markers = [];
   CampusLocation? _selectedMarker;
   NavigationRoute? _activeRoute;
+  Position? _currentGpsPosition;
   bool _isLoading = true;
   bool _useGpsMap = false;
   String _activeCategory = 'all';
@@ -52,6 +54,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   void initState() {
     super.initState();
     _loadMapMarkers();
+    _fetchUserLocation();
   }
 
   @override
@@ -59,6 +62,24 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     _transformController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchUserLocation() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
+        final pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 4),
+        );
+        setState(() {
+          _currentGpsPosition = pos;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadMapMarkers() async {
@@ -95,8 +116,11 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
 
   Future<void> _startNavigationTo(CampusLocation destination) async {
     setState(() => _isLoading = true);
+    final startIdentifier = _currentGpsPosition != null
+        ? '${_currentGpsPosition!.latitude},${_currentGpsPosition!.longitude}'
+        : 'node_main_gate';
     final route = await _apiService.calculateRoute(
-      start: 'node_main_gate',
+      start: startIdentifier,
       destination: destination.shortCode ?? destination.id,
     );
     setState(() {
@@ -108,8 +132,11 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
 
   Future<void> _startRoomNavigation(CampusLocation destination, Room room) async {
     setState(() => _isLoading = true);
+    final startIdentifier = _currentGpsPosition != null
+        ? '${_currentGpsPosition!.latitude},${_currentGpsPosition!.longitude}'
+        : 'node_main_gate';
     final route = await _apiService.calculateRoute(
-      start: 'node_main_gate',
+      start: startIdentifier,
       destination: destination.shortCode ?? destination.id,
     );
     setState(() {
@@ -122,8 +149,8 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
         SnackBar(
           backgroundColor: const Color(0xFF065F46),
           content: Text(
-            'Navigating to ${room.roomId} (${room.roomType}) · Floor ${room.floorNumber} · ${destination.name}',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            'Navigating to ${room.roomNumber} [${room.typeLabel}] · ${room.name} · ${destination.name}',
+            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
           ),
           duration: const Duration(seconds: 4),
         ),
@@ -144,11 +171,9 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
         context,
         building: Building.fromCampusLocation(loc),
         onNavigateToRoom: (room) {
-          Navigator.pop(context);
           _startRoomNavigation(loc, room);
         },
         onStartNavigation: () {
-          Navigator.pop(context);
           _startNavigationTo(loc);
         },
       );
@@ -581,10 +606,83 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                           return Stack(
                             clipBehavior: Clip.none,
                             children: [
-                              // 1. Original Presidency University Campus Master Map Image with Full Building Tap Detection
+                              // 1. Original Presidency University Campus Master Map Image
+                              Positioned.fill(
+                                child: Image.asset(
+                                  'assets/maps/presidency-campus-master-map.png',
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Image.asset(
+                                      'assets/maps/presidency-campus-master-map.jpg',
+                                      fit: BoxFit.contain,
+                                    );
+                                  },
+                                ),
+                              ),
+
+                              // 2. Interactive Building Footprints Layer (Every building is directly clickable & highlightable)
+                              ...CampusGeometries.campusBuildings.map((b) {
+                                final isSelected = _selectedMarker?.id == b.id ||
+                                    (_selectedMarker != null &&
+                                        b.blockLetter.isNotEmpty &&
+                                        _selectedMarker!.name.toLowerCase().contains(
+                                            '${b.blockLetter.toLowerCase()} block'));
+
+                                final left = b.minX * mapWidth;
+                                final top = b.minY * mapHeight;
+                                final width = (b.maxX - b.minX) * mapWidth;
+                                final height = (b.maxY - b.minY) * mapHeight;
+
+                                return Positioned(
+                                  left: left,
+                                  top: top,
+                                  width: width,
+                                  height: height,
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () {
+                                      final loc = _markers.firstWhere(
+                                        (m) =>
+                                            m.id == b.id ||
+                                            (b.blockLetter.isNotEmpty &&
+                                                m.name.toLowerCase().contains(
+                                                    '${b.blockLetter.toLowerCase()} block')),
+                                        orElse: () => b.toLocation(),
+                                      );
+                                      _onBuildingSelected(loc);
+                                    },
+                                    child: AnimatedContainer(
+                                      duration: const Duration(milliseconds: 200),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? const Color(0x380284C7)
+                                            : Colors.transparent,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? const Color(0xFF38BDF8)
+                                              : Colors.transparent,
+                                          width: isSelected ? 2.5 : 0,
+                                        ),
+                                        boxShadow: isSelected
+                                            ? const [
+                                                BoxShadow(
+                                                  color: Color(0x660284C7),
+                                                  blurRadius: 10,
+                                                  spreadRadius: 2,
+                                                ),
+                                              ]
+                                            : null,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }),
+
+                              // 3. Canvas Background Coordinate Tap Fallback
                               Positioned.fill(
                                 child: GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
+                                  behavior: HitTestBehavior.translucent,
                                   onTapUp: (details) {
                                     final normX = details.localPosition.dx / mapWidth;
                                     final normY = details.localPosition.dy / mapHeight;
@@ -601,20 +699,10 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                                       _onBuildingSelected(loc);
                                     }
                                   },
-                                  child: Image.asset(
-                                    'assets/maps/presidency-campus-master-map.png',
-                                    fit: BoxFit.contain,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Image.asset(
-                                        'assets/maps/presidency-campus-master-map.jpg',
-                                        fit: BoxFit.contain,
-                                      );
-                                    },
-                                  ),
                                 ),
                               ),
 
-                              // 2. Active Route Polyline Overlay
+                              // 4. Active Route Polyline Overlay
                               if (_activeRoute != null)
                                 CustomPaint(
                                   size: Size(mapWidth, mapHeight),
@@ -624,7 +712,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                                   ),
                                 ),
 
-                              // 3. Interactive Building & Facility Markers
+                              // 5. Interactive Building & Facility Markers
                               ..._filteredMarkers.map((marker) {
                                 final isSelected = _selectedMarker?.id == marker.id;
                                 final posX = marker.imageX * mapWidth;
@@ -670,7 +758,40 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                                 );
                               }),
 
-                              // 4. Default Entrance/Gate GPS Reference Indicator
+                              // 6. User Live GPS Pin on Master Map
+                              if (_currentGpsPosition != null) ...[
+                                Builder(builder: (context) {
+                                  final norm = CampusGeometries.projectGpsToNormalized(
+                                    _currentGpsPosition!.latitude,
+                                    _currentGpsPosition!.longitude,
+                                  );
+                                  return Positioned(
+                                    left: norm.dx * mapWidth - 10,
+                                    top: norm.dy * mapHeight - 10,
+                                    child: Container(
+                                      width: 20,
+                                      height: 20,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF0284C7),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: Colors.white, width: 2.5),
+                                        boxShadow: const [
+                                          BoxShadow(
+                                            color: Color(0xFF38BDF8),
+                                            blurRadius: 10,
+                                            spreadRadius: 2,
+                                          ),
+                                        ],
+                                      ),
+                                      child: const Center(
+                                        child: Icon(Icons.my_location, size: 10, color: Colors.white),
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ],
+
+                              // 7. Default Entrance/Gate GPS Reference Indicator
                               Positioned(
                                 left: 0.5695 * mapWidth - 8,
                                 top: 0.2449 * mapHeight - 8,
@@ -706,9 +827,37 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                       _buildFloatingMapButton(Icons.remove, _zoomOut, 'Zoom Out'),
                       const SizedBox(height: 8),
                       _buildFloatingMapButton(Icons.crop_free, _resetMapFit, 'Fit Campus'),
+                      const SizedBox(height: 8),
+                      _buildFloatingMapButton(
+                        Icons.my_location,
+                        () async {
+                          await _fetchUserLocation();
+                          if (_currentGpsPosition != null) {
+                            if (_useGpsMap) {
+                              _mapController.move(
+                                ll.LatLng(_currentGpsPosition!.latitude, _currentGpsPosition!.longitude),
+                                18.0,
+                              );
+                            }
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  backgroundColor: const Color(0xFF0284C7),
+                                  content: Text(
+                                    'GPS Location: ±${_currentGpsPosition!.accuracy.toStringAsFixed(1)}m accuracy',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        'My Location',
+                      ),
                       if (_selectedMarker != null) ...[
                         const SizedBox(height: 8),
-                        _buildFloatingMapButton(Icons.my_location, _focusSelectedMarker, 'Focus Selected'),
+                        _buildFloatingMapButton(Icons.center_focus_strong, _focusSelectedMarker, 'Focus Selected'),
                       ],
                     ],
                   ),
@@ -845,12 +994,12 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    icon: const Icon(Icons.map, size: 16),
-                    label: const Text('Open Indoor Map', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    icon: const Icon(Icons.layers, size: 16),
+                    label: const Text('Floors & Rooms', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF059669),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      padding: const EdgeInsets.symmetric(vertical: 11),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () => _showIndoorMapDialog(loc),
@@ -859,14 +1008,27 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton.icon(
-                    icon: const Icon(Icons.navigation, size: 16),
-                    label: const Text('Indoor Nav', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    icon: const Icon(Icons.directions_walk, size: 16),
+                    label: const Text('Navigate Here', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF0284C7),
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      padding: const EdgeInsets.symmetric(vertical: 11),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
+                    onPressed: () => _startNavigationTo(loc),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF334155)),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.architecture, color: Color(0xFF38BDF8), size: 18),
+                    tooltip: '2D Blueprint',
                     onPressed: () => _showIndoorNavDialog(loc),
                   ),
                 ),
@@ -899,7 +1061,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
               Expanded(
                 child: ElevatedButton.icon(
                   icon: const Icon(Icons.directions_walk, size: 18),
-                  label: const Text('Walk to Building (GPS)'),
+                  label: const Text('Start Walking Navigation'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1E293B),
                     foregroundColor: const Color(0xFF38BDF8),
@@ -1019,41 +1181,12 @@ class RouteOverlayPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final points = <Offset>[];
+    final normPoints = CampusGeometries.projectRouteToNormalized(route);
+    if (normPoints.length < 2) return;
 
-    // 1. If GPS coordinates exist in route geometry, project to normalized Master Map canvas
-    if (route.geometry.isNotEmpty) {
-      for (final pt in route.geometry) {
-        final norm = CampusGeometries.projectGpsToNormalized(pt[0], pt[1]);
-        points.add(Offset(norm.dx * size.width, norm.dy * size.height));
-      }
-    }
-
-    // 2. If geometry is sparse, fallback to high-resolution centerlines
-    if (points.length < 2) {
-      final startLower = route.startName.toLowerCase();
-      final endLower = route.endName.toLowerCase();
-
-      if (startLower.contains('e block') && endLower.contains('f block')) {
-        for (final p in CampusGeometries.eToFCenterline) {
-          points.add(Offset(p.dx * size.width, p.dy * size.height));
-        }
-      } else if (startLower.contains('d block') && endLower.contains('e block')) {
-        for (final p in CampusGeometries.dToECenterline) {
-          points.add(Offset(p.dx * size.width, p.dy * size.height));
-        }
-      } else {
-        // Main Gate toward destination avenue
-        for (final p in CampusGeometries.mainToDCenterline) {
-          points.add(Offset(p.dx * size.width, p.dy * size.height));
-        }
-        if (selectedMarker != null) {
-          points.add(Offset(selectedMarker!.imageX * size.width, selectedMarker!.imageY * size.height));
-        }
-      }
-    }
-
-    if (points.length < 2) return;
+    final points = normPoints
+        .map((p) => Offset(p.dx * size.width, p.dy * size.height))
+        .toList();
 
     // Draw Route Path with Outer Glow & Solid Core
     final glowPaint = Paint()

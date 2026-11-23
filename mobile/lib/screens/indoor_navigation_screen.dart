@@ -151,7 +151,7 @@ class _IndoorNavigationScreenState extends State<IndoorNavigationScreen> {
             : rooms.take(3).toList();
 
     final bottomBayRooms = (isEBlock && !isGroundFloor)
-        ? rooms.skip(3).take(3).toList()
+        ? rooms.skip(3).take(3).toList().reversed.toList()
         : isGroundFloor && isEBlock
             ? rooms.skip(2).take(1).toList()
             : rooms.skip(3).take(3).toList();

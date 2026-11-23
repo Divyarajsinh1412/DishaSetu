@@ -413,7 +413,7 @@ export function generateEBlockFloor(floorNumber) {
 
     // Classroom Side: Bottom row (04, 05, 06)
     // As shown in sketch: EF06 is opposite EF01, EF05 opposite EF02, EF04 opposite EF03
-    const bottomRoomIndices = [4, 5, 6];
+    const bottomRoomIndices = [6, 5, 4];
     for (let i = 0; i < 3; i++) {
       const num = bottomRoomIndices[i];
       const numStr = String(num).padStart(2, '0');

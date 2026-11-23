@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/campus_location.dart';
+import '../models/navigation_route.dart';
 
 class CampusPolygonGeometry {
   final String id;
@@ -782,19 +783,98 @@ class CampusGeometries {
   ];
 
   /// Convert GPS Coordinates (lat, lng) to normalized Master Map Offset (0..1, 0..1)
+  /// using the calibrated affine transformation from Web MasterCampusMap.jsx
   static Offset projectGpsToNormalized(double lat, double lng) {
-    // Check against known landmarks for pinpoint precision
+    // Pinpoint landmark matching
     for (final b in campusBuildings) {
       final dLat = (b.latitude - lat).abs();
       final dLng = (b.longitude - lng).abs();
-      if (dLat < 0.0003 && dLng < 0.0003) {
+      if (dLat < 0.00015 && dLng < 0.00015) {
         return Offset(b.centerX, b.centerY);
       }
     }
 
-    // Bilinear projection interpolation fallback
-    final normX = ((lng - 77.5325) / (77.5385 - 77.5325)).clamp(0.05, 0.95);
-    final normY = (1.0 - ((lat - 13.1675) / (13.1735 - 13.1675))).clamp(0.05, 0.95);
-    return Offset(normX, normY);
+    // Official Presidency University Master Campus Map projection bounds
+    const minLat = 13.1688;
+    const maxLat = 13.1720;
+    const minLng = 77.5352;
+    const maxLng = 77.5372;
+    final clampedLat = lat.clamp(minLat, maxLat);
+    final clampedLng = lng.clamp(minLng, maxLng);
+    final normY = 0.22 + (maxLat - clampedLat) / (maxLat - minLat) * (0.93 - 0.22);
+    final normX = 0.18 + (clampedLng - minLng) / (maxLng - minLng) * (0.76 - 0.18);
+    return Offset(normX.clamp(0.05, 0.95), normY.clamp(0.05, 0.95));
+  }
+
+  /// Project entire NavigationRoute into normalized Master Campus Map points
+  /// 100% matched with Web MasterCampusMap.jsx
+  static List<Offset> projectRouteToNormalized(NavigationRoute route) {
+    final startLower = route.startName.toLowerCase();
+    final endLower = route.endName.toLowerCase();
+
+    // 1. Surveyed Main Gate <-> D Block Corridor
+    final isMainGateStart = startLower.contains('main gate') || route.routeId.contains('main_gate');
+    final isDBlockEnd = endLower.contains('d block') || route.routeId.contains('d_block');
+    if (isMainGateStart && isDBlockEnd) {
+      return mainToDCenterline;
+    }
+    if (startLower.contains('d block') && endLower.contains('main gate')) {
+      return mainToDCenterline.reversed.toList();
+    }
+
+    // 2. Surveyed D Block <-> E Block Walkway
+    final isDBlockStart = startLower.contains('d block');
+    final isEBlockEnd = endLower.contains('e block');
+    if (isDBlockStart && isEBlockEnd) {
+      return dToECenterline;
+    }
+    if (startLower.contains('e block') && endLower.contains('d block')) {
+      return dToECenterline.reversed.toList();
+    }
+
+    // 3. Surveyed E Block <-> F Block Walkway
+    final isEBlockStart = startLower.contains('e block');
+    final isFBlockEnd = endLower.contains('f block');
+    if (isEBlockStart && isFBlockEnd) {
+      return eToFCenterline;
+    }
+    if (startLower.contains('f block') && endLower.contains('e block')) {
+      return eToFCenterline.reversed.toList();
+    }
+
+    // 4. Project geometry coordinates
+    final pts = <Offset>[];
+    if (route.geometry.isNotEmpty) {
+      for (final coord in route.geometry) {
+        pts.add(projectGpsToNormalized(coord[0], coord[1]));
+      }
+    }
+
+    // 5. Fallback between start & destination building centroids
+    if (pts.length < 2) {
+      final startBld = campusBuildings.firstWhere(
+        (b) =>
+            startLower.contains(b.name.toLowerCase()) ||
+            (b.blockLetter.isNotEmpty &&
+                startLower.contains('${b.blockLetter.toLowerCase()} block')),
+        orElse: () => campusBuildings.last, // Main Gate
+      );
+      final endBld = campusBuildings.firstWhere(
+        (b) =>
+            endLower.contains(b.name.toLowerCase()) ||
+            (b.blockLetter.isNotEmpty &&
+                endLower.contains('${b.blockLetter.toLowerCase()} block')),
+        orElse: () => campusBuildings.first, // D Block
+      );
+
+      // Connect via central avenue corridor
+      return [
+        Offset(startBld.centerX, startBld.centerY),
+        const Offset(0.4666, 0.5995), // Central Fountain
+        Offset(endBld.centerX, endBld.centerY),
+      ];
+    }
+
+    return pts;
   }
 }
