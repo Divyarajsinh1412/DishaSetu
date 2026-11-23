@@ -89,6 +89,32 @@ export const CAMPUS_BLOCKS_INFO = {
     roomCategory: 'Classroom',
     departments: ['School of Management (SOM)', 'MBA Programs', 'Business Analytics'],
     status: 'published'
+  },
+  bld_h_block: {
+    buildingId: 'bld_h_block',
+    shortCode: 'PU-H-BLOCK',
+    name: 'H Block',
+    blockLetter: 'H',
+    category: 'Academic',
+    description: 'School of Electrical Engineering, Power Systems Lab, and Applied Sciences.',
+    totalFloors: 3,
+    roomType: 'Classroom',
+    roomCategory: 'Classroom',
+    departments: ['Electrical Engineering', 'Power Systems', 'Applied Sciences'],
+    status: 'published'
+  },
+  bld_adm_block: {
+    buildingId: 'bld_adm_block',
+    shortCode: 'PU-ADM-BLOCK',
+    name: 'Admission Block & Registrar Office',
+    blockLetter: 'A',
+    category: 'Administrative',
+    description: 'Central University Admissions, Registrar Office, Student Verification, and Academic Records.',
+    totalFloors: 2,
+    roomType: 'Office',
+    roomCategory: 'Office',
+    departments: ['University Admissions', 'Office of the Registrar', 'Student Document Verification'],
+    status: 'published'
   }
 };
 
@@ -257,6 +283,50 @@ const BLOCK_ROOM_NAMES = {
       'Corporate Governance Classroom 204',
       'FinTech & Financial Modeling Classroom 205',
       'Executive Leadership Classroom 206'
+    ]
+  },
+  H: {
+    0: [
+      'Electrical Machines Lab',
+      'Power Systems & Circuits Lab',
+      'Measurements & Instrumentation Studio',
+      'Renewable Energy & Solar Research Lab',
+      'Faculty Workstations Suite',
+      'Department Seminar Hall'
+    ],
+    1: [
+      'Control Systems Classroom 101',
+      'Digital Signal Processing Classroom 102',
+      'Power Electronics Classroom 103',
+      'High Voltage Engineering Classroom 104',
+      'Microprocessors & Embedded Classroom 105',
+      'Interactive Lecture Hall 106'
+    ],
+    2: [
+      'Smart Grid Technology Classroom 201',
+      'Electric Vehicle Systems Classroom 202',
+      'Applied Electromagnetics Classroom 203',
+      'Energy Management Classroom 204',
+      'Research Scholar Workstations 205',
+      'Conference & Defense Room 206'
+    ]
+  },
+  A: {
+    0: [
+      'Central Admissions Counter 01',
+      'Document Verification Desk 02',
+      'Registrar Reception Desk 03',
+      'Student Affairs Enquiry 04',
+      'Academic Records Section 05',
+      'Visitor Waiting Lounge 06'
+    ],
+    1: [
+      'Office of Dean of Admissions 101',
+      'Registrar Executive Suite 102',
+      'Admissions Operations War Room 103',
+      'Confidential Records Archive 104',
+      'Administrative Boardroom 105',
+      'Executive Committee Conference 106'
     ]
   }
 };
@@ -666,7 +736,9 @@ export const CAMPUS_ALL_FLOORS = [
   ...generateAllFloorsForBuilding('bld_f_block'),
   ...generateAllFloorsForBuilding('bld_l_block'),
   ...generateAllFloorsForBuilding('bld_n_block'),
-  ...generateAllFloorsForBuilding('bld_som_block')
+  ...generateAllFloorsForBuilding('bld_som_block'),
+  ...generateAllFloorsForBuilding('bld_h_block'),
+  ...generateAllFloorsForBuilding('bld_adm_block')
 ];
 
 export function resolveBuildingKey(buildingIdOrCode) {
@@ -676,7 +748,7 @@ export function resolveBuildingKey(buildingIdOrCode) {
   // Exact key match
   if (CAMPUS_BLOCKS_INFO[str]) return str;
 
-  // Search through all 6 blocks
+  // Search through all campus blocks
   for (const [key, meta] of Object.entries(CAMPUS_BLOCKS_INFO)) {
     const letter = meta.blockLetter.toLowerCase();
     if (
@@ -689,6 +761,8 @@ export function resolveBuildingKey(buildingIdOrCode) {
       str.includes(`${letter}_block`) ||
       str.includes(`${letter} block`) ||
       str.includes(`bld_${letter}`) ||
+      (letter === 'h' && (str.includes('electrical') || str.includes('h-block') || str.includes('h block'))) ||
+      (letter === 'a' && (str.includes('adm') || str.includes('admission') || str.includes('registrar'))) ||
       (letter === 'm' && (str.includes('som') || str.includes('mba'))) ||
       (letter === 'd' && str.includes('engineering')) ||
       (letter === 'e' && str.includes('computer science')) ||

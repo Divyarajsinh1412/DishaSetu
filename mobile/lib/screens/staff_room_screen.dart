@@ -517,7 +517,7 @@ class _StaffRoomScreenState extends State<StaffRoomScreen> {
 
     return Row(
       children: [
-        // Entry & Visitor Lounge (Width 1.5x)
+        // Entry & Visitor Lounge (Width 2 columns in 5-col architectural grid)
         Expanded(
           flex: 2,
           child: Container(
@@ -533,30 +533,98 @@ class _StaffRoomScreenState extends State<StaffRoomScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Row(
-                  children: [
-                    Text('↑', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black)),
-                    SizedBox(width: 4),
-                    Text('Entry', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.black87)),
-                  ],
-                ),
+                // Top: Potted plant in corner & lounge label
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(width: 5, height: 16, decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2))),
-                    const SizedBox(width: 4),
                     Container(
-                      width: 20,
+                      width: 10,
                       height: 10,
-                      decoration: BoxDecoration(color: const Color(0xFFFEF3C7), borderRadius: BorderRadius.circular(3), border: Border.all(color: const Color(0xFFF59E0B))),
-                      child: Center(child: Container(width: 4, height: 4, decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle))),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF10B981),
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                    const SizedBox(width: 4),
-                    Container(width: 5, height: 16, decoration: BoxDecoration(color: Colors.grey.shade400, borderRadius: BorderRadius.circular(2))),
+                    const Text(
+                      'Lounge',
+                      style: TextStyle(fontSize: 7.5, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold),
+                    ),
                   ],
                 ),
-                const Center(
-                  child: Text('Lounge', style: TextStyle(fontSize: 8, color: Colors.grey, fontWeight: FontWeight.bold)),
+                // Center Furniture: 3-Seater Sofa above, Armchairs + Table below
+                Column(
+                  children: [
+                    // Top 3-Seater Sofa
+                    Container(
+                      width: 44,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFCBD5E1),
+                        borderRadius: BorderRadius.circular(2),
+                        border: Border.all(color: const Color(0xFF94A3B8), width: 0.8),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    // Armchair - Coffee Table - Armchair
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFCBD5E1),
+                            borderRadius: BorderRadius.circular(2),
+                            border: Border.all(color: const Color(0xFF94A3B8), width: 0.8),
+                          ),
+                        ),
+                        const SizedBox(width: 3),
+                        Container(
+                          width: 20,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(2),
+                            border: Border.all(color: const Color(0xFFF59E0B), width: 0.8),
+                          ),
+                          child: Center(
+                            child: Container(
+                              width: 3.5,
+                              height: 3.5,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF10B981),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 3),
+                        Container(
+                          width: 6,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFCBD5E1),
+                            borderRadius: BorderRadius.circular(2),
+                            border: Border.all(color: const Color(0xFF94A3B8), width: 0.8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                // Bottom: Entry door swing with arrow
+                const Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Text('↑', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black)),
+                        SizedBox(width: 2),
+                        Text('Entry', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.black87)),
+                      ],
+                    ),
+                    Text('))', style: TextStyle(fontSize: 8, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold)),
+                  ],
                 ),
               ],
             ),

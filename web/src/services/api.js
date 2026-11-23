@@ -210,6 +210,51 @@ const FALLBACK_CAMPUS_DATA = {
       ],
       style: { color: '#c2410c', fillColor: '#f97316', weight: 2, opacity: 0.9, fillOpacity: 0.35 },
       metadata: { description: 'Paved two-wheeler parking lot with validated non-self-intersecting perimeter geometry.' }
+    },
+    {
+      featureId: 'feat_def_blocks',
+      name: 'DEF Blocks',
+      category: 'boundary',
+      geometryType: 'Polygon',
+      coordinates: [
+        [13.16828186104801, 77.53263433547887],
+        [13.168026534086, 77.53317107659311],
+        [13.16677606947738, 77.53263663130764],
+        [13.16651440674394, 77.53344099346141],
+        [13.1691612075576, 77.5345945482777],
+        [13.16969830413923, 77.53332483536148],
+        [13.16828186104801, 77.53263433547887]
+      ],
+      geoJSON: {
+        type: 'Polygon',
+        coordinates: [
+          [
+            [77.53263433547887, 13.16828186104801],
+            [77.53317107659311, 13.168026534086],
+            [77.53263663130764, 13.16677606947738],
+            [77.53344099346141, 13.16651440674394],
+            [77.5345945482777, 13.1691612075576],
+            [77.53332483536148, 13.16969830413923],
+            [77.53263433547887, 13.16828186104801]
+          ]
+        ]
+      },
+      style: {
+        color: '#FBC02D',
+        fillColor: '#FBC02D',
+        weight: 3.5,
+        opacity: 0.95,
+        fillOpacity: 0.25,
+        dashArray: '8, 5'
+      },
+      metadata: {
+        description: 'Exact surveyed boundary polygon for DEF Blocks complex extracted from Google Earth KML.',
+        placemarkName: 'DEF blocks',
+        kmlSource: 'Untitled map project(1).kml',
+        blocksIncluded: ['D Block', 'E Block', 'F Block']
+      },
+      verified: true,
+      status: 'published'
     }
   ],
   locations: [

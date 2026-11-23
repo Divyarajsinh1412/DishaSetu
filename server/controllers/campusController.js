@@ -1,5 +1,6 @@
 import { CampusService } from '../services/campusService.js';
 import { getDbStatus } from '../config/db.js';
+import CampusFeature from '../models/CampusFeature.js';
 
 export const getCampusOverview = async (req, res) => {
   try {
@@ -27,6 +28,95 @@ export const getAllFeatures = async (req, res) => {
     const { category } = req.query;
     const features = await CampusService.getFeatures(category);
     res.json({ success: true, count: features.length, data: features });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const createOrUpdateFeature = async (req, res) => {
+  try {
+    const {
+      featureId,
+      name,
+      category = 'boundary',
+      geometryType = 'Polygon',
+      coordinates,
+      style,
+      metadata,
+      verified = true,
+      status = 'published'
+    } = req.body;
+
+    if (!featureId || !name || !coordinates || !Array.isArray(coordinates)) {
+      return res.status(400).json({
+        success: false,
+        message: 'featureId, name, and coordinates array are required.'
+      });
+    }
+
+    // Normalise coordinates:
+    // Leaflet / display format: [ [lat, lng], ... ]
+    // Standard GeoJSON format: [ [lng, lat], ... ] inside outer ring
+    const latLngCoords = coordinates.map(pt => {
+      if (Array.isArray(pt)) {
+        if (pt[0] > 70 && pt[1] < 20) {
+          // was [lng, lat], convert to [lat, lng]
+          return [pt[1], pt[0]];
+        }
+        return [pt[0], pt[1]];
+      }
+      return pt;
+    });
+
+    const geoCoords = latLngCoords.map(([lat, lng]) => [lng, lat]);
+
+    const featureDoc = {
+      featureId,
+      name,
+      category,
+      geometryType,
+      coordinates: latLngCoords,
+      geoJSON: {
+        type: geometryType,
+        coordinates: geometryType === 'Polygon' ? [geoCoords] : geoCoords
+      },
+      style: {
+        color: style?.color || '#FBC02D',
+        fillColor: style?.fillColor || '#FBC02D',
+        weight: style?.weight || 3.5,
+        opacity: style?.opacity ?? 0.95,
+        fillOpacity: style?.fillOpacity ?? 0.25,
+        dashArray: style?.dashArray || null
+      },
+      metadata: metadata || {},
+      verified: verified !== false,
+      status: status || 'published'
+    };
+
+    const saved = await CampusFeature.findOneAndUpdate(
+      { featureId },
+      featureDoc,
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    CampusService.upsertFeatureInMemory(featureDoc);
+
+    res.status(200).json({
+      success: true,
+      message: `Feature '${name}' saved successfully in MongoDB Atlas.`,
+      data: saved
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const deleteFeature = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await CampusFeature.findOneAndDelete({ featureId: id });
+    CampusService.deleteFeatureInMemory(id);
+    res.json({ success: true, message: `Feature '${id}' deleted.` });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

@@ -32,6 +32,23 @@ class ApiService {
     return getOfficialMasterMapMarkersFallback();
   }
 
+  /// Fetch all geographic campus features & boundaries (e.g. DEF Blocks, Main Lawn, Corridors)
+  Future<List<Map<String, dynamic>>> fetchCampusFeatures() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$baseUrl/features'))
+          .timeout(const Duration(seconds: 4));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true && data['data'] != null) {
+          final list = data['data'] as List;
+          return list.map((item) => item as Map<String, dynamic>).toList();
+        }
+      }
+    } catch (_) {}
+    return [];
+  }
+
   /// Fetch all campus locations
   Future<List<CampusLocation>> fetchLocations() async {
     try {

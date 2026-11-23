@@ -337,6 +337,58 @@ export const E_TO_F_PATH_GEOMETRY = {
   activeInDemo: true
 };
 
+// 8. DEF BLOCKS COMPLEX BOUNDARY (Exact Surveyed KML Polygon)
+export const DEF_BLOCKS_GEOMETRY = {
+  id: 'feat_def_blocks',
+  name: 'DEF Blocks',
+  label: 'DEF BLOCKS BOUNDARY',
+  category: 'Boundary',
+  type: 'polygon',
+  sourceFile: 'Untitled map project(1).kml',
+  pointCount: 7,
+  uniqueVertexCount: 6,
+  isClosedRing: true,
+  coordinates: [
+    [13.16828186104801, 77.53263433547887],
+    [13.168026534086, 77.53317107659311],
+    [13.16677606947738, 77.53263663130764],
+    [13.16651440674394, 77.53344099346141],
+    [13.1691612075576, 77.5345945482777],
+    [13.16969830413923, 77.53332483536148],
+    [13.16828186104801, 77.53263433547887]
+  ],
+  rawPoints: [
+    [77.53263433547887, 13.16828186104801],
+    [77.53317107659311, 13.168026534086],
+    [77.53263663130764, 13.16677606947738],
+    [77.53344099346141, 13.16651440674394],
+    [77.5345945482777, 13.1691612075576],
+    [77.53332483536148, 13.16969830413923],
+    [77.53263433547887, 13.16828186104801]
+  ],
+  bounds: {
+    minLat: 13.16651440674394,
+    maxLat: 13.16969830413923,
+    minLng: 77.53263433547887,
+    maxLng: 77.5345945482777
+  },
+  gpsCenter: [13.16807639717536, 77.53330040341337],
+  svgCenter: [202.5, 995.0],
+  metrics: {
+    areaAcres: 10.19,
+    areaSqMeters: 41250,
+    perimeterMeters: 840
+  },
+  style: {
+    fillColor: 'rgba(251, 192, 45, 0.25)',
+    strokeColor: '#FBC02D',
+    strokeWidth: 3.5,
+    strokeDasharray: '8 5',
+    strokeOpacity: 0.95
+  },
+  activeInDemo: true
+};
+
 // Extensible Registry Array for future KML additions
 export const VERIFIED_CAMPUS_GEOMETRIES = [
   MAIN_LAWN_GEOMETRY,
@@ -347,7 +399,8 @@ export const VERIFIED_CAMPUS_GEOMETRIES = [
   F_BLOCK_GEOMETRY,
   L_BLOCK_GEOMETRY,
   D_TO_E_PATH_GEOMETRY,
-  E_TO_F_PATH_GEOMETRY
+  E_TO_F_PATH_GEOMETRY,
+  DEF_BLOCKS_GEOMETRY
 ];
 
 export function getActiveDemoGeometries() {

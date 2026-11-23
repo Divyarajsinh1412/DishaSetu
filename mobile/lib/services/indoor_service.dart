@@ -95,7 +95,7 @@ class IndoorService {
     final shortCode = 'PU-$bLetter-BLOCK';
     final buildingId = 'bld_${bLetter.toLowerCase()}_block';
 
-    final totalFloors = isEBlock ? 4 : 3;
+    final totalFloors = isEBlock ? 4 : (bLetter == 'A' ? 2 : 3);
     final List<Floor> floors = [];
 
     for (int floorNum = 0; floorNum < totalFloors; floorNum++) {
@@ -147,7 +147,7 @@ class IndoorService {
           final rName = _getRoomName(bLetter, floorNum, i);
 
           rooms.add(Room(
-            roomId: 'rm_e_${floorNum}$pad',
+            roomId: 'rm_e_$floorNum$pad',
             roomNumber: rNumber,
             name: rName,
             category: 'Classroom',
@@ -224,6 +224,8 @@ class IndoorService {
 
   static String _resolveBlockLetter(String idOrCode) {
     final s = idOrCode.toUpperCase();
+    if (s.contains('ADM') || s.contains('REGISTRAR')) return 'A';
+    if (s.contains('H') || s.contains('ELECTRICAL')) return 'H';
     if (s.contains('D') || s.contains('ENGG')) return 'D';
     if (s.contains('E') || s.contains('COMP')) return 'E';
     if (s.contains('F') || s.contains('INFO')) return 'F';
@@ -250,6 +252,8 @@ class IndoorService {
       case 'D': return 'Mechanical & Civil Engineering';
       case 'E': return 'Computer Science & Engineering';
       case 'F': return 'Information Science & AI';
+      case 'H': return 'School of Electrical Engineering';
+      case 'A': return 'University Admissions & Registrar Office';
       case 'L': return 'Basic Sciences & Humanities';
       case 'N': return 'School of Law (SOL)';
       case 'M': return 'School of Management (SOM)';
@@ -259,6 +263,15 @@ class IndoorService {
 
   static String _getRoomName(String blockLetter, int floor, int index) {
     final titles = {
+      'H': {
+        0: ['Electrical Machines Lab', 'Power Systems Lab', 'Measurements Studio', 'Renewable Energy Lab', 'Faculty Workstations', 'Seminar Hall'],
+        1: ['Control Systems 101', 'Digital Signal Processing 102', 'Power Electronics 103', 'High Voltage Engineering 104', 'Microprocessors 105', 'Lecture Hall 106'],
+        2: ['Smart Grid Tech 201', 'Electric Vehicle Systems 202', 'Applied Electromagnetics 203', 'Energy Management 204', 'Research Workstations 205', 'Conference Room 206'],
+      },
+      'A': {
+        0: ['Admissions Counter 01', 'Document Verification 02', 'Registrar Reception 03', 'Student Enquiry 04', 'Academic Records 05', 'Waiting Lounge 06'],
+        1: ['Dean Admissions 101', 'Registrar Suite 102', 'Operations War Room 103', 'Records Archive 104', 'Boardroom 105', 'Committee Conference 106'],
+      },
       'D': {
         0: ['Engineering Mechanics Lab', 'Robotics & Automation Studio', 'Materials Testing Lab', 'Fluid Mechanics Lab', 'CAD Studio', 'Manufacturing Tech Lab'],
         1: ['Thermodynamics Lab', 'Mechatronics Systems Lab', 'Kinematics Lab', 'Additive Manufacturing Lab', 'Sensors Lab', 'Automotive Lab'],

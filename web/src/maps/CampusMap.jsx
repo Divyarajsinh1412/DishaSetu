@@ -346,7 +346,9 @@ function GoogleMapsFixedControls({
   onSwitch3D,
   onSwitchImmersive,
   hasActiveRoute,
-  onClearRoute
+  onClearRoute,
+  showDefBlocks = true,
+  onToggleDefBlocks
 }) {
   const [isLayerDrawerOpen, setIsLayerDrawerOpen] = useState(false);
 
@@ -360,7 +362,7 @@ function GoogleMapsFixedControls({
       >
         <div className="relative">
           {isLayerDrawerOpen && (
-            <div className="absolute bottom-full left-0 mb-2 p-2 bg-white dark:bg-[#202124] rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-700/80 flex flex-col gap-1.5 w-44 animate-in fade-in zoom-in-95 duration-150">
+            <div className="absolute bottom-full left-0 mb-2 p-2 bg-white dark:bg-[#202124] rounded-2xl shadow-2xl border border-slate-200/90 dark:border-slate-700/80 flex flex-col gap-1.5 w-48 animate-in fade-in zoom-in-95 duration-150">
               <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 Map Types
               </div>
@@ -412,6 +414,30 @@ function GoogleMapsFixedControls({
                 <span>Dark Theme</span>
                 {mapType === 'dark' && <span className="w-2 h-2 rounded-full bg-blue-600"></span>}
               </button>
+
+              {/* Map Layers & Campus Boundaries Toggle */}
+              <div className="pt-2 mt-1 border-t border-slate-100 dark:border-slate-800">
+                <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Campus Layers
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { if (onToggleDefBlocks) onToggleDefBlocks(); }}
+                  className={`w-full p-2 rounded-xl text-left text-xs font-bold flex items-center justify-between transition-colors ${
+                    showDefBlocks
+                      ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400'
+                      : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-sm border-2 border-amber-500 bg-amber-400/40"></span>
+                    <span>DEF Blocks</span>
+                  </div>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-black tracking-wider ${showDefBlocks ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                    {showDefBlocks ? 'ON' : 'OFF'}
+                  </span>
+                </button>
+              </div>
             </div>
           )}
 
@@ -510,7 +536,9 @@ function LeafletMapControlsWrapper({
   onSwitch3D,
   onSwitchImmersive,
   hasActiveRoute,
-  onClearRoute
+  onClearRoute,
+  showDefBlocks,
+  onToggleDefBlocks
 }) {
   const map = useMap();
 
@@ -527,6 +555,8 @@ function LeafletMapControlsWrapper({
       onSwitchImmersive={onSwitchImmersive}
       hasActiveRoute={hasActiveRoute}
       onClearRoute={onClearRoute}
+      showDefBlocks={showDefBlocks}
+      onToggleDefBlocks={onToggleDefBlocks}
     />
   );
 }
@@ -572,6 +602,7 @@ export default function CampusMap({
   const [resetViewTrigger, setResetViewTrigger] = useState(0);
   const [userLocation, setUserLocation] = useState(propUserLocation || null);
   const [locationError, setLocationError] = useState(null);
+  const [showDefBlocks, setShowDefBlocks] = useState(true);
 
   // Sync external user location
   useEffect(() => {
@@ -889,22 +920,41 @@ export default function CampusMap({
 
           const isPolygon = feat.geometryType === 'Polygon' || (Array.isArray(feat.coordinates[0]) && Array.isArray(feat.coordinates[0][0]));
           const coords = feat.coordinates;
+          const isDefBlocks = feat.featureId === 'feat_def_blocks' || feat.name === 'DEF Blocks';
+
+          if (isDefBlocks && !showDefBlocks) return null;
 
           if (isPolygon) {
+            const strokeColor = isDefBlocks
+              ? (feat.style?.color || '#FBC02D')
+              : (feat.style?.color || (feat.category === 'Garden' ? '#1e8e3e' : feat.category === 'Parking' ? '#ea580c' : '#1a73e8'));
+            const fillColor = isDefBlocks
+              ? (feat.style?.fillColor || '#FBC02D')
+              : (feat.style?.fillColor || (feat.category === 'Garden' ? '#34a853' : feat.category === 'Parking' ? '#f97316' : '#4285f4'));
+            const strokeWidth = isDefBlocks ? (feat.style?.weight || 3.5) : (feat.style?.weight || 2);
+            const fillOpacity = isDefBlocks ? (feat.style?.fillOpacity ?? 0.25) : (feat.style?.fillOpacity ?? (feat.category === 'Garden' ? 0.3 : feat.category === 'Parking' ? 0.25 : 0.2));
+            const dashArray = isDefBlocks ? (feat.style?.dashArray || '8, 5') : (feat.style?.dashArray || null);
+
             return (
               <Polygon
                 key={feat.featureId || feat._id}
                 positions={coords}
                 pathOptions={{
-                  color: feat.category === 'Garden' ? '#1e8e3e' : feat.category === 'Parking' ? '#ea580c' : '#1a73e8',
-                  fillColor: feat.category === 'Garden' ? '#34a853' : feat.category === 'Parking' ? '#f97316' : '#4285f4',
-                  weight: 2,
-                  fillOpacity: feat.category === 'Garden' ? 0.3 : feat.category === 'Parking' ? 0.25 : 0.2
+                  color: strokeColor,
+                  fillColor: fillColor,
+                  weight: strokeWidth,
+                  fillOpacity: fillOpacity,
+                  dashArray: dashArray
                 }}
               >
                 <Tooltip sticky>
-                  <div className="font-bold text-xs">{feat.featureName || feat.name}</div>
-                  <div className="text-[10px] text-slate-500">{feat.description}</div>
+                  <div className={`font-bold text-xs ${isDefBlocks ? 'text-amber-500 font-extrabold flex items-center gap-1.5' : ''}`}>
+                    {isDefBlocks && <span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>}
+                    {feat.featureName || feat.name}
+                  </div>
+                  <div className="text-[10px] text-slate-500">
+                    {feat.metadata?.description || feat.description || (isDefBlocks ? 'Surveyed Academic Complex Boundary (D, E, F Blocks)' : '')}
+                  </div>
                 </Tooltip>
               </Polygon>
             );
@@ -1236,6 +1286,8 @@ export default function CampusMap({
           onSwitchImmersive={onSwitchImmersive}
           hasActiveRoute={Boolean(activeRoute)}
           onClearRoute={onClearRoute}
+          showDefBlocks={showDefBlocks}
+          onToggleDefBlocks={() => setShowDefBlocks(prev => !prev)}
         />
       </MapContainer>
 

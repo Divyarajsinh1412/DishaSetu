@@ -33,6 +33,9 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   Position? _currentGpsPosition;
   bool _isLoading = true;
   bool _useGpsMap = false;
+  bool _showDefBlocksLayer = true;
+  bool _showBuildingsLayer = true;
+  bool _showWalkingPathsLayer = true;
   String _activeCategory = 'all';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
@@ -163,6 +166,11 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
       _selectedMarker = loc;
     });
 
+    // If DEF Blocks boundary selected, show details card directly
+    if (loc.id == 'feat_def_blocks' || loc.category == 'boundary') {
+      return;
+    }
+
     // If it's an Academic building or block, immediately open the comprehensive floor & room browser
     if (loc.category == 'Academic' ||
         loc.name.toLowerCase().contains('block') ||
@@ -204,6 +212,160 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     );
   }
 
+  void _showLayersSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF0F172A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Row(
+                    children: [
+                      Icon(Icons.layers, color: Color(0xFF38BDF8), size: 22),
+                      SizedBox(width: 10),
+                      Text(
+                        'Campus Map Layers',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Toggle surveyed KML boundaries, buildings, and walking networks.',
+                    style: TextStyle(color: Colors.white60, fontSize: 12),
+                  ),
+                  const SizedBox(height: 16),
+                  // DEF Blocks Layer Toggle
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: _showDefBlocksLayer
+                            ? const Color(0xFFFBC02D).withValues(alpha: 0.5)
+                            : Colors.transparent,
+                      ),
+                    ),
+                    child: SwitchListTile(
+                      activeColor: const Color(0xFFFBC02D),
+                      title: const Text(
+                        'DEF Blocks Boundary',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Exact Surveyed Boundary • D, E, F Blocks Complex',
+                        style: TextStyle(color: Colors.white60, fontSize: 11),
+                      ),
+                      value: _showDefBlocksLayer,
+                      onChanged: (val) {
+                        setState(() => _showDefBlocksLayer = val);
+                        setSheetState(() {});
+                      },
+                    ),
+                  ),
+                  // Building Footprints
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: _showBuildingsLayer
+                            ? const Color(0xFF0284C7).withValues(alpha: 0.5)
+                            : Colors.transparent,
+                      ),
+                    ),
+                    child: SwitchListTile(
+                      activeColor: const Color(0xFF0284C7),
+                      title: const Text(
+                        'Building Footprints',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Academic Blocks (D, E, F, L, N, M), Offices & Facilities',
+                        style: TextStyle(color: Colors.white60, fontSize: 11),
+                      ),
+                      value: _showBuildingsLayer,
+                      onChanged: (val) {
+                        setState(() => _showBuildingsLayer = val);
+                        setSheetState(() {});
+                      },
+                    ),
+                  ),
+                  // Walking Paths & Networks
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: _showWalkingPathsLayer
+                            ? const Color(0xFF10B981).withValues(alpha: 0.5)
+                            : Colors.transparent,
+                      ),
+                    ),
+                    child: SwitchListTile(
+                      activeColor: const Color(0xFF10B981),
+                      title: const Text(
+                        'Walking Paths & Corridors',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: const Text(
+                        'Pedestrian Centerlines, Covered Walkways & Portals',
+                        style: TextStyle(color: Colors.white60, fontSize: 11),
+                      ),
+                      value: _showWalkingPathsLayer,
+                      onChanged: (val) {
+                        setState(() => _showWalkingPathsLayer = val);
+                        setSheetState(() {});
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildGpsMap() {
     return FlutterMap(
       mapController: _mapController,
@@ -215,6 +377,8 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
         onTap: (tapPosition, point) {
           // Check if tapped inside any surveyed polygon
           for (final poly in CampusGeometries.allPolygons) {
+            if (poly.id == 'feat_def_blocks' && !_showDefBlocksLayer) continue;
+            if (poly.id != 'feat_def_blocks' && !_showBuildingsLayer) continue;
             if (poly.contains(point)) {
               final loc = _markers.firstWhere(
                 (m) =>
@@ -227,6 +391,9 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                   category: poly.category,
                   latitude: poly.center.latitude,
                   longitude: poly.center.longitude,
+                  description: poly.id == 'feat_def_blocks'
+                      ? 'Exact surveyed boundary polygon for DEF Blocks complex extracted from Google Earth KML.'
+                      : null,
                 ),
               );
               _onBuildingSelected(loc);
@@ -255,38 +422,45 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
           userAgentPackageName: 'com.presidency.dishasetu',
         ),
-        // Surveyed KML Polygons
+        // Surveyed KML Polygons & Boundaries
         PolygonLayer(
-          polygons: CampusGeometries.kmlPolygons.map((poly) {
-            return Polygon(
-              points: poly.points,
-              color: Color(poly.colorHex),
-              borderColor: Color(poly.strokeColorHex),
-              borderStrokeWidth: 2.0,
-              isFilled: true,
-            );
-          }).toList(),
+          polygons: CampusGeometries.kmlPolygons
+              .where((poly) {
+                if (poly.id == 'feat_def_blocks') return _showDefBlocksLayer;
+                return _showBuildingsLayer;
+              })
+              .map((poly) {
+                final isDef = poly.id == 'feat_def_blocks';
+                return Polygon(
+                  points: poly.points,
+                  color: isDef ? const Color(0x40FBC02D) : Color(poly.colorHex),
+                  borderColor: isDef ? const Color(0xFFFBC02D) : Color(poly.strokeColorHex),
+                  borderStrokeWidth: isDef ? 3.5 : 2.0,
+                  isFilled: true,
+                );
+              }).toList(),
         ),
         // Walking paths
-        PolylineLayer(
-          polylines: [
-            ...CampusGeometries.allPaths.map((path) {
-              return Polyline(
-                points: path.points,
-                strokeWidth: 4.0,
-                color: Color(path.colorHex),
-              );
-            }),
-            if (_activeRoute != null && _activeRoute!.geometry.isNotEmpty)
-              Polyline(
-                points: _activeRoute!.geometry
-                    .map((pt) => ll.LatLng(pt[0], pt[1]))
-                    .toList(),
-                strokeWidth: 5.0,
-                color: const Color(0xFF10B981),
-              ),
-          ],
-        ),
+        if (_showWalkingPathsLayer)
+          PolylineLayer(
+            polylines: [
+              ...CampusGeometries.allPaths.map((path) {
+                return Polyline(
+                  points: path.points,
+                  strokeWidth: 4.0,
+                  color: Color(path.colorHex),
+                );
+              }),
+              if (_activeRoute != null && _activeRoute!.geometry.isNotEmpty)
+                Polyline(
+                  points: _activeRoute!.geometry
+                      .map((pt) => ll.LatLng(pt[0], pt[1]))
+                      .toList(),
+                  strokeWidth: 5.0,
+                  color: const Color(0xFF10B981),
+                ),
+            ],
+          ),
         // Marker Pins
         MarkerLayer(
           markers: _filteredMarkers.map((marker) {
@@ -489,6 +663,11 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
             onPressed: () => setState(() => _useGpsMap = !_useGpsMap),
           ),
           IconButton(
+            icon: const Icon(Icons.layers_outlined, color: Color(0xFFFBC02D)),
+            tooltip: 'Map Layers (DEF Blocks, Footprints, Paths)',
+            onPressed: _showLayersSheet,
+          ),
+          IconButton(
             icon: const Icon(Icons.directions, color: Color(0xFF38BDF8)),
             tooltip: 'Directions',
             onPressed: () => _showRoutePlanningDialog(),
@@ -620,7 +799,76 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                                 ),
                               ),
 
+                              // 1b. DEF Blocks Boundary Layer (Surveyed KML Boundary)
+                              if (_showDefBlocksLayer) ...[
+                                Builder(builder: (context) {
+                                  final isDefSelected = _selectedMarker?.id == 'feat_def_blocks';
+                                  // Bounds spanning D, E, F blocks: minX 0.125, maxX 0.280, minY 0.595, maxY 0.790
+                                  final left = 0.125 * mapWidth;
+                                  final top = 0.595 * mapHeight;
+                                  final width = 0.155 * mapWidth;
+                                  final height = 0.190 * mapHeight;
+
+                                  return Positioned(
+                                    left: left,
+                                    top: top,
+                                    width: width,
+                                    height: height,
+                                    child: GestureDetector(
+                                      behavior: HitTestBehavior.translucent,
+                                      onTap: () {
+                                        final loc = CampusLocation(
+                                          id: 'feat_def_blocks',
+                                          name: 'DEF Blocks',
+                                          label: 'DEF BLOCKS BOUNDARY',
+                                          category: 'boundary',
+                                          latitude: 13.168076,
+                                          longitude: 77.533300,
+                                          description:
+                                              'Exact surveyed boundary polygon for DEF Blocks complex extracted from Google Earth KML.',
+                                        );
+                                        _onBuildingSelected(loc);
+                                      },
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: isDefSelected
+                                              ? const Color(0x38FBC02D)
+                                              : const Color(0x18FBC02D),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: const Color(0xFFFBC02D),
+                                            width: isDefSelected ? 3.0 : 1.8,
+                                          ),
+                                        ),
+                                        child: Align(
+                                          alignment: Alignment.topRight,
+                                          child: Container(
+                                            margin: const EdgeInsets.all(4),
+                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF0F172A).withValues(alpha: 0.85),
+                                              borderRadius: BorderRadius.circular(4),
+                                              border: Border.all(color: const Color(0xFFFBC02D), width: 1),
+                                            ),
+                                            child: const Text(
+                                              'DEF BLOCKS',
+                                              style: TextStyle(
+                                                fontSize: 8,
+                                                fontWeight: FontWeight.w900,
+                                                color: Color(0xFFFDE68A),
+                                                letterSpacing: 0.5,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ],
+
                               // 2. Interactive Building Footprints Layer (Every building is directly clickable & highlightable)
+                              if (_showBuildingsLayer)
                               ...CampusGeometries.campusBuildings.map((b) {
                                 final isSelected = _selectedMarker?.id == b.id ||
                                     (_selectedMarker != null &&
@@ -825,6 +1073,8 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                       _buildFloatingMapButton(Icons.add, _zoomIn, 'Zoom In'),
                       const SizedBox(height: 8),
                       _buildFloatingMapButton(Icons.remove, _zoomOut, 'Zoom Out'),
+                      const SizedBox(height: 8),
+                      _buildFloatingMapButton(Icons.layers_outlined, _showLayersSheet, 'Map Layers'),
                       const SizedBox(height: 8),
                       _buildFloatingMapButton(Icons.crop_free, _resetMapFit, 'Fit Campus'),
                       const SizedBox(height: 8),

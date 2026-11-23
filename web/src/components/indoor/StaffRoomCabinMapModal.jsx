@@ -193,45 +193,73 @@ export default function StaffRoomCabinMapModal({
                 W A L K I N G &nbsp; A R E A
               </div>
 
-              {/* ROW 3: ENTRY & LOUNGE, SR-09, SR-10, DEAN OFFICE */}
-              <div className="grid grid-cols-12 gap-3 items-stretch">
+              {/* ROW 3: ENTRY & LOUNGE (COLS 1-2), SR-09 (COL 3), SR-10 (COL 4), DEAN OFFICE (COL 5) */}
+              <div className="grid grid-cols-5 gap-3 items-stretch">
                 
-                {/* Entry & Waiting Lounge (Cols 1-4) */}
-                <div className="col-span-4 bg-white border-2 border-slate-300 rounded-xl p-3 flex flex-col justify-between shadow-sm relative overflow-hidden">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-600 mb-2">
-                    <span className="text-base text-slate-900 font-extrabold">↑</span>
-                    <span>Entry</span>
-                  </div>
-
-                  {/* Lounge Sofas Illustration */}
-                  <div className="flex items-center justify-center gap-2 my-auto py-1">
-                    {/* Left Single Couch */}
-                    <div className="w-4 h-8 bg-slate-300 rounded border border-slate-400" />
-                    {/* Coffee Table */}
-                    <div className="w-12 h-6 bg-amber-200/80 rounded-md border border-amber-400 flex items-center justify-center">
-                      <div className="w-2 h-2 rounded-full bg-emerald-600" title="Plant" />
+                {/* Entry & Waiting Lounge (Spans Columns 1 and 2 matching Image reference) */}
+                <div className="col-span-2 bg-white border-2 border-slate-300 rounded-xl p-2.5 flex flex-col justify-between shadow-sm relative overflow-hidden h-28">
+                  {/* Top: Corner Potted Plant */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 border border-emerald-600 flex items-center justify-center text-[8px] text-white" title="Potted Plant">
+                        🌿
+                      </div>
                     </div>
-                    {/* Right Single Couch */}
-                    <div className="w-4 h-8 bg-slate-300 rounded border border-slate-400" />
+                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                      Visitor Lounge
+                    </div>
                   </div>
 
-                  <div className="text-[10px] text-slate-400 text-center font-medium mt-1">
-                    Visitor Waiting Lounge
+                  {/* Lounge Sofas + Coffee Table Illustration (Pixel-perfect to sketch) */}
+                  <div className="flex flex-col items-center justify-center my-auto">
+                    {/* Top 3-Seater Long Sofa */}
+                    <div className="w-24 h-4 bg-slate-300 rounded-t-md border border-slate-400 flex items-center justify-evenly shadow-inner mb-1">
+                      <div className="w-6 h-3 bg-slate-200/80 rounded-sm border-r border-slate-300" />
+                      <div className="w-6 h-3 bg-slate-200/80 rounded-sm border-r border-slate-300" />
+                      <div className="w-6 h-3 bg-slate-200/80 rounded-sm" />
+                    </div>
+
+                    {/* Middle: Left Armchair, Center Coffee Table with Plant, Right Armchair */}
+                    <div className="flex items-center justify-center gap-2">
+                      {/* Left Armchair */}
+                      <div className="w-4 h-6 bg-slate-300 rounded border border-slate-400 shadow-sm" />
+                      
+                      {/* Center Rectangular Coffee Table */}
+                      <div className="w-14 h-5 bg-amber-100/90 rounded border border-amber-400 flex items-center justify-center shadow-sm">
+                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-600 shadow-sm" title="Centerpiece Plant" />
+                      </div>
+
+                      {/* Right Armchair */}
+                      <div className="w-4 h-6 bg-slate-300 rounded border border-slate-400 shadow-sm" />
+                    </div>
+                  </div>
+
+                  {/* Bottom: Double Doors Entry with Arrow */}
+                  <div className="flex items-center justify-between pt-0.5 border-t border-slate-100">
+                    <div className="flex items-center gap-1 text-[11px] font-black text-slate-800">
+                      <span className="text-xs font-black text-slate-900">↑</span>
+                      <span>Entry</span>
+                    </div>
+                    {/* Double Door Swing CAD Graphic */}
+                    <div className="flex items-center gap-1 opacity-70">
+                      <div className="w-3.5 h-3 border-t-2 border-r-2 border-slate-500 rounded-tr-full" />
+                      <div className="w-3.5 h-3 border-t-2 border-l-2 border-slate-500 rounded-tl-full" />
+                    </div>
                   </div>
                 </div>
 
-                {/* SR-09 (Cols 5-6) */}
-                <div className="col-span-3">
+                {/* SR-09 (Col 3: directly under Walking Area) */}
+                <div className="col-span-1">
                   {row3.find(c => c.cabinId === 'SR-09') && renderCabinCard(row3.find(c => c.cabinId === 'SR-09'))}
                 </div>
 
-                {/* SR-10 (Cols 7-8) */}
-                <div className="col-span-3">
+                {/* SR-10 (Col 4: directly under SR-03) */}
+                <div className="col-span-1">
                   {row3.find(c => c.cabinId === 'SR-10') && renderCabinCard(row3.find(c => c.cabinId === 'SR-10'))}
                 </div>
 
-                {/* Dean Office (Cols 9-12) */}
-                <div className="col-span-2">
+                {/* Dean Office (Col 5: directly under SR-04) */}
+                <div className="col-span-1">
                   {row3.find(c => c.cabinId === 'DEAN-OFFICE') && renderCabinCard(row3.find(c => c.cabinId === 'DEAN-OFFICE'))}
                 </div>
               </div>
@@ -278,7 +306,7 @@ export default function StaffRoomCabinMapModal({
                 {/* Profile Header */}
                 <div className="flex items-center gap-3">
                   <img
-                    src={selectedFaculty.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'}
+                    src={selectedFaculty.avatar || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80'}
                     alt={selectedFaculty.name}
                     className="w-13 h-13 rounded-2xl object-cover border-2 border-slate-200 shadow-sm"
                   />

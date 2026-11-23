@@ -272,10 +272,33 @@ class CampusGeometries {
     ],
   );
 
+  // 7. DEF BLOCKS BOUNDARY (Exact Surveyed KML Polygon)
+  static final CampusPolygonGeometry defBlocks = CampusPolygonGeometry(
+    id: 'feat_def_blocks',
+    name: 'DEF Blocks',
+    label: 'DEF BLOCKS BOUNDARY',
+    category: 'boundary',
+    center: const LatLng(13.16807639717536, 77.53330040341337),
+    areaSqMeters: 41250.0,
+    perimeterMeters: 840.0,
+    colorHex: 0x40FBC02D, // matching KML PolyStyle 40ffffff / #FBC02D gold
+    strokeColorHex: 0xFFFBC02D, // matching KML LineStyle ff2dc0fb (RGB: #FBC02D)
+    points: const [
+      LatLng(13.16828186104801, 77.53263433547887),
+      LatLng(13.168026534086, 77.53317107659311),
+      LatLng(13.16677606947738, 77.53263663130764),
+      LatLng(13.16651440674394, 77.53344099346141),
+      LatLng(13.1691612075576, 77.5345945482777),
+      LatLng(13.16969830413923, 77.53332483536148),
+      LatLng(13.16828186104801, 77.53263433547887),
+    ],
+  );
+
   static const LatLng referenceCenter = LatLng(13.1709, 77.5363);
   static const double initialZoom = 17.5;
 
   static final List<CampusPolygonGeometry> allPolygons = [
+    defBlocks,
     mainLawn,
     admissionBlock,
     dBlock,
@@ -419,22 +442,40 @@ class CampusGeometries {
           'Basic Sciences & Humanities, Physics, Chemistry, and Mathematics departments.',
     ),
     BuildingBoundingBox(
-      id: 'bld_admissions',
-      name: 'Admissions & Admin Block (H Block)',
-      label: 'ADMISSIONS BLOCK',
+      id: 'bld_adm_block',
+      name: 'Admission Block & Registrar Office',
+      label: 'ADMISSION BLOCK',
+      shortCode: 'PU-ADM-BLOCK',
+      category: 'Administrative',
+      blockLetter: 'A',
+      minX: 0.280,
+      maxX: 0.380,
+      minY: 0.658,
+      maxY: 0.690,
+      centerX: 0.3300,
+      centerY: 0.6740,
+      latitude: 13.170450,
+      longitude: 77.536100,
+      description:
+          'Central University Admissions, Registrar Office, Student Verification, and Academic Records.',
+    ),
+    BuildingBoundingBox(
+      id: 'bld_h_block',
+      name: 'H Block',
+      label: 'H BLOCK',
       shortCode: 'PU-H-BLOCK',
       category: 'Academic',
       blockLetter: 'H',
       minX: 0.280,
       maxX: 0.380,
-      minY: 0.658,
-      maxY: 0.725,
-      centerX: 0.3285,
-      centerY: 0.6920,
-      latitude: 13.169116,
-      longitude: 77.534075,
+      minY: 0.691,
+      maxY: 0.726,
+      centerX: 0.3300,
+      centerY: 0.7085,
+      latitude: 13.170220,
+      longitude: 77.536100,
       description:
-          'Central Admissions Office, Student Affairs, and administrative services.',
+          'School of Electrical Engineering, Power Systems Lab, and Applied Sciences.',
     ),
     BuildingBoundingBox(
       id: 'bld_j_k_block',
