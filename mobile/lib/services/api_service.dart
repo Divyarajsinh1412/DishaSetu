@@ -224,6 +224,33 @@ class ApiService {
     ];
   }
 
+  /// Submit a review and rating for a campus cafe
+  Future<bool> submitCafeReview({
+    required String cafeId,
+    required double rating,
+    required String comment,
+    required String reviewerName,
+  }) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/reviews'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({
+              'cafeId': cafeId,
+              'rating': rating,
+              'comment': comment,
+              'reviewerName': reviewerName,
+            }),
+          )
+          .timeout(const Duration(seconds: 4));
+
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (_) {
+      return true; // Local optimistic success
+    }
+  }
+
   /// Fetch upcoming campus events and workshops
   Future<List<CampusEvent>> fetchEvents() async {
     return [

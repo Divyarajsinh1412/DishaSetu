@@ -7,6 +7,7 @@ import 'ai_guide_screen.dart';
 import 'panorama_tour_screen.dart';
 import 'digital_twin_screen.dart';
 import 'admin_dashboard_screen.dart';
+import 'indoor_navigation_screen.dart';
 import '../widgets/emergency_sos_sheet.dart';
 import '../widgets/issue_report_sheet.dart';
 import '../widgets/server_config_dialog.dart';
@@ -228,6 +229,15 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const DigitalTwinScreen()));
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.architecture, color: Color(0xFF10B981), size: 22),
+                  title: const Text('Indoor Navigation & Floors', style: TextStyle(color: Colors.white, fontSize: 13)),
+                  subtitle: const Text('2D Blueprints, Classrooms & Cabins', style: TextStyle(color: Colors.white60, fontSize: 11)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const IndoorNavigationScreen()));
                   },
                 ),
 

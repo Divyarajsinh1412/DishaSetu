@@ -10,6 +10,7 @@ import '../data/campus_geometries.dart';
 import '../widgets/building_bottom_sheet.dart';
 import '../widgets/navigation_guidance_bar.dart';
 import '../widgets/route_planning_sheet.dart';
+import 'indoor_navigation_screen.dart';
 
 const double kMapAspectRatio = 583.0 / 829.0;
 
@@ -241,7 +242,15 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   }
 
   void _showIndoorNavDialog(CampusLocation loc) {
-    _showIndoorMapDialog(loc);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => IndoorNavigationScreen(
+          initialBuilding: Building.fromCampusLocation(loc),
+          initialMode: 'blueprint',
+        ),
+      ),
+    );
   }
 
   List<CampusLocation> get _filteredMarkers {

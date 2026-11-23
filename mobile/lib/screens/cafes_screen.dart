@@ -16,6 +16,7 @@ class _CafesScreenState extends State<CafesScreen> {
   final ApiService _apiService = ApiService();
   List<Cafe> _cafes = [];
   bool _isLoading = true;
+  final Map<String, String> _activeTabs = {}; // cafeId -> 'menu' or 'reviews'
 
   @override
   void initState() {
@@ -30,6 +31,155 @@ class _CafesScreenState extends State<CafesScreen> {
       _cafes = list;
       _isLoading = false;
     });
+  }
+
+  void _showAddReviewDialog(Cafe cafe) {
+    double selectedRating = 5.0;
+    final nameCtrl = TextEditingController(text: 'Presidency Student');
+    final commentCtrl = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (modalCtx, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(modalCtx).viewInsets.bottom,
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF0F172A),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  border: Border(top: BorderSide(color: Color(0xFF334155), width: 1.5)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Review ${cafe.name}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white54, size: 20),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    const Text('Rating', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: List.generate(5, (index) {
+                        final starVal = index + 1.0;
+                        return IconButton(
+                          icon: Icon(
+                            selectedRating >= starVal ? Icons.star : Icons.star_border,
+                            color: const Color(0xFFFBBF24),
+                            size: 28,
+                          ),
+                          onPressed: () => setModalState(() => selectedRating = starVal),
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: nameCtrl,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      decoration: InputDecoration(
+                        labelText: 'Your Name / Dept',
+                        labelStyle: const TextStyle(color: Colors.white60, fontSize: 12),
+                        filled: true,
+                        fillColor: const Color(0xFF1E293B),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: commentCtrl,
+                      maxLines: 3,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      decoration: InputDecoration(
+                        labelText: 'Write your review...',
+                        hintText: 'How was the food, service, or coffee?',
+                        hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                        labelStyle: const TextStyle(color: Colors.white60, fontSize: 12),
+                        filled: true,
+                        fillColor: const Color(0xFF1E293B),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF10B981),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.send, size: 16),
+                        label: const Text('SUBMIT REVIEW', style: TextStyle(fontWeight: FontWeight.bold)),
+                        onPressed: () async {
+                          final comment = commentCtrl.text.trim();
+                          if (comment.isEmpty) return;
+
+                          Navigator.pop(ctx);
+                          final ok = await _apiService.submitCafeReview(
+                            cafeId: cafe.cafeId,
+                            rating: selectedRating,
+                            comment: comment,
+                            reviewerName: nameCtrl.text.trim(),
+                          );
+
+                          if (ok) {
+                            setState(() {
+                              cafe.reviews.insert(
+                                0,
+                                CafeReview(
+                                  reviewId: 'rev_${DateTime.now().millisecondsSinceEpoch}',
+                                  reviewerName: nameCtrl.text.trim(),
+                                  rating: selectedRating,
+                                  comment: comment,
+                                  createdAt: DateTime.now(),
+                                ),
+                              );
+                              _activeTabs[cafe.cafeId] = 'reviews';
+                            });
+
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  backgroundColor: Color(0xFF10B981),
+                                  content: Text('Thank you! Review published successfully.'),
+                                  duration: Duration(seconds: 3),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -58,6 +208,7 @@ class _CafesScreenState extends State<CafesScreen> {
               itemBuilder: (context, idx) {
                 final cafe = _cafes[idx];
                 final isHattiKaapi = cafe.code == 'PU-CAFE-D-BLOCK' || cafe.name.toLowerCase().contains('hatti');
+                final currentTab = _activeTabs[cafe.cafeId] ?? 'menu';
 
                 return Card(
                   color: const Color(0xFF131D31),
@@ -146,54 +297,156 @@ class _CafesScreenState extends State<CafesScreen> {
                           ],
                         ),
 
-                        const SizedBox(height: 14),
-                        const Divider(color: Color(0xFF1E293B)),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 12),
 
-                        // Popular Menu Highlights
-                        const Text(
-                          'FEATURED SPECIALTIES & MENU',
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.0,
-                            color: Colors.white54,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        ...cafe.menuItems.take(4).map((item) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 5),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: item.isVeg ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    item.name,
-                                    style: const TextStyle(fontSize: 13, color: Colors.white),
-                                  ),
-                                ),
-                                Text(
-                                  '₹${item.price.toStringAsFixed(0)}',
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF38BDF8),
-                                  ),
-                                ),
-                              ],
+                        // Section Tabs: Menu vs Reviews
+                        Row(
+                          children: [
+                            ChoiceChip(
+                              label: const Text('Menu Items'),
+                              selected: currentTab == 'menu',
+                              selectedColor: isHattiKaapi ? const Color(0xFFD97706) : const Color(0xFF2563EB),
+                              backgroundColor: const Color(0xFF1E293B),
+                              labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              onSelected: (val) {
+                                if (val) setState(() => _activeTabs[cafe.cafeId] = 'menu');
+                              },
                             ),
-                          );
-                        }),
+                            const SizedBox(width: 8),
+                            ChoiceChip(
+                              label: Text('Reviews (${cafe.reviews.length})'),
+                              selected: currentTab == 'reviews',
+                              selectedColor: const Color(0xFF10B981),
+                              backgroundColor: const Color(0xFF1E293B),
+                              labelStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              onSelected: (val) {
+                                if (val) setState(() => _activeTabs[cafe.cafeId] = 'reviews');
+                              },
+                            ),
+                            const Spacer(),
+                            TextButton.icon(
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                foregroundColor: const Color(0xFF38BDF8),
+                              ),
+                              icon: const Icon(Icons.rate_review, size: 14),
+                              label: const Text('Rate', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                              onPressed: () => _showAddReviewDialog(cafe),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 8),
+                        const Divider(color: Color(0xFF1E293B)),
+
+                        // Tab 1: Menu Items
+                        if (currentTab == 'menu') ...[
+                          ...cafe.menuItems.map((item) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 5),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: item.isVeg ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item.name,
+                                          style: const TextStyle(fontSize: 13, color: Colors.white),
+                                        ),
+                                        if (item.description.isNotEmpty)
+                                          Text(
+                                            item.description,
+                                            style: const TextStyle(fontSize: 10, color: Colors.white38),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    '₹${item.price.toStringAsFixed(0)}',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF38BDF8),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ],
+
+                        // Tab 2: Reviews List
+                        if (currentTab == 'reviews') ...[
+                          if (cafe.reviews.isEmpty)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              child: Text(
+                                'No reviews yet. Be the first to share your experience!',
+                                style: TextStyle(color: Colors.white54, fontSize: 12),
+                              ),
+                            )
+                          else
+                            ...cafe.reviews.map((r) {
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0F172A),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFF1E293B)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          r.reviewerName,
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        Row(
+                                          children: [
+                                            const Icon(Icons.star, color: Color(0xFFFBBF24), size: 12),
+                                            const SizedBox(width: 3),
+                                            Text(
+                                              r.rating.toStringAsFixed(1),
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      r.comment,
+                                      style: const TextStyle(fontSize: 11, color: Colors.white70),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                        ],
 
                         const SizedBox(height: 12),
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/building.dart';
 import '../models/floor.dart';
 import '../screens/staff_room_screen.dart';
+import '../screens/indoor_navigation_screen.dart';
 import '../services/api_service.dart';
 import '../services/indoor_service.dart';
 
@@ -203,6 +204,44 @@ class _BuildingBottomSheetState extends State<BuildingBottomSheet> {
                         ),
                       ),
                     ],
+                  ),
+                ),
+                Container(
+                  margin: const EdgeInsets.only(right: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFF334155)),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => IndoorNavigationScreen(
+                            initialBuilding: widget.building,
+                            initialFloor: _selectedFloorLevel,
+                            initialMode: 'blueprint',
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.architecture, color: Color(0xFF38BDF8), size: 14),
+                          SizedBox(width: 4),
+                          Text(
+                            'Blueprint',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF38BDF8)),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
                 IconButton(
