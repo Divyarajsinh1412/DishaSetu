@@ -100,7 +100,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     );
     setState(() {
       _activeRoute = route;
-      _selectedMarker = destination;
+      _selectedMarker = null;
       _isLoading = false;
     });
   }
@@ -120,7 +120,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
         );
         setState(() {
           _activeRoute = route;
-          _selectedMarker = dest;
+          _selectedMarker = null;
           _isLoading = false;
         });
       },
@@ -623,8 +623,8 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                     ),
                   ),
 
-                // Selected Location Bottom Card
-                if (_selectedMarker != null)
+                // Selected Location Bottom Card (Hidden during active navigation to keep route visible)
+                if (_selectedMarker != null && _activeRoute == null)
                   Positioned(
                     left: 16,
                     right: 16,

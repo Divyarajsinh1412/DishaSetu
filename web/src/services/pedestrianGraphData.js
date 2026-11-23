@@ -75,8 +75,8 @@ export const NAVIGATION_NODES = [
   },
   {
     nodeId: 'node_f_block_ent',
-    name: 'F Block (EEE Laboratories) Entrance Door',
-    coordinates: [13.1710300, 77.5360200],
+    name: 'F Block (Information Science & Technology) Entrance Door',
+    coordinates: [13.16883382361067, 77.53358288724588],
     nodeType: 'building_entrance',
     associatedLocationId: 'loc_f_block',
     isAccessible: true
@@ -91,8 +91,8 @@ export const NAVIGATION_NODES = [
   },
   {
     nodeId: 'node_e_block_ent',
-    name: 'E Block (CSE Department) Entrance Door',
-    coordinates: [13.1708400, 77.5359200],
+    name: 'E Block (Computer Science & Engineering) Entrance Door',
+    coordinates: [13.16922581043442, 77.53374838252056],
     nodeType: 'building_entrance',
     associatedLocationId: 'loc_e_block',
     isAccessible: true
@@ -614,6 +614,74 @@ export const WALKING_PATHS = [
     },
     pointCount: 72,
     notes: 'Actual surveyed walking path from Presidency University Main Gate to D Block imported from Google Earth KML.'
+  },
+  // 0A. VERIFIED KML SURVEYED ROUTE: D Block to E Block
+  {
+    pathId: 'path_kml_d_to_e_block',
+    name: 'D Block → E Block Walkway',
+    startNode: 'node_d_block_ent',
+    endNode: 'node_e_block_ent',
+    geometry: [
+      [13.16921961010325, 77.53374368525881],
+      [13.16916175269351, 77.53371476009588],
+      [13.16909272541975, 77.53368916371579],
+      [13.16905243962133, 77.53368308758547],
+      [13.16901930916995, 77.5336693526416],
+      [13.16897943341513, 77.5336527021713],
+      [13.16898258842619, 77.53361351579872],
+      [13.16899625259435, 77.53359127757469]
+    ],
+    distanceMeters: 35.7,
+    accessibility: true,
+    hasStairs: false,
+    hasRamp: true,
+    pathType: 'covered_walkway',
+    status: 'active',
+    active: true,
+    verificationStatus: 'Verified',
+    surfaceType: 'Paved Walkway & Tiles',
+    sourceFileName: 'block_D_to_E_path.kml',
+    source: 'Google Earth KML',
+    campus: 'Presidency University Bengaluru',
+    pointCount: 8,
+    notes: 'Actual surveyed walking path from D Block to E Block imported from Google Earth KML.'
+  },
+  // 0B. VERIFIED KML SURVEYED ROUTE: E Block to F Block
+  {
+    pathId: 'path_kml_e_to_f_block',
+    name: 'E Block → F Block Walkway',
+    startNode: 'node_e_block_ent',
+    endNode: 'node_f_block_ent',
+    geometry: [
+      [13.16922581043442, 77.53374838252056],
+      [13.16918960237059, 77.53373237009161],
+      [13.16915161956307, 77.53371744159026],
+      [13.16911474449877, 77.53369770168051],
+      [13.16908524173381, 77.53368679207321],
+      [13.16905426359634, 77.53367146613144],
+      [13.16902284816958, 77.53365996732241],
+      [13.16898658829452, 77.53364633665677],
+      [13.16894668893453, 77.53363211029597],
+      [13.16891988296132, 77.53362078253889],
+      [13.16889094539063, 77.53360697185322],
+      [13.16887181098381, 77.53359832121349],
+      [13.16884508719851, 77.53358601157329],
+      [13.16883382361067, 77.53358288724588]
+    ],
+    distanceMeters: 47.0,
+    accessibility: true,
+    hasStairs: false,
+    hasRamp: true,
+    pathType: 'covered_walkway',
+    status: 'active',
+    active: true,
+    verificationStatus: 'Verified',
+    surfaceType: 'Paved Walkway & Tiles',
+    sourceFileName: 'Block_E_to_F_path.kml',
+    source: 'Google Earth KML',
+    campus: 'Presidency University Bengaluru',
+    pointCount: 14,
+    notes: 'Actual surveyed walking path from E Block to F Block imported from Google Earth KML.'
   },
   // 1. Main Gate to Avenue Origin Plaza
   {

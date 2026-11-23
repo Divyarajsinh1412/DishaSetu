@@ -252,6 +252,106 @@ export async function seedKmlRoute() {
       console.log(`[KMLSeed] Successfully seeded & persisted "${parsedDToE.name}" (${parsedDToE.distanceMeters || 35.7}m) into MongoDB Atlas.`);
     }
 
+    // 6. Seed E Block → F Block Surveyed Pathway
+    const eToFKmlPath = path.join(__dirname, '../data/kml/Block_E_to_F_path.kml');
+    if (fs.existsSync(eToFKmlPath)) {
+      const eToFContent = fs.readFileSync(eToFKmlPath, 'utf8');
+      const parsedEToF = parseKml(eToFContent, 'Block_E_to_F_path.kml', {
+        name: 'E Block → F Block Walkway',
+        startNode: 'node_e_block_ent',
+        endNode: 'node_f_block_ent',
+        routeType: 'Walking'
+      });
+
+      // Ensure F Block Entrance Node exists with exact coordinates
+      const fNodeDoc = {
+        nodeId: 'node_f_block_ent',
+        name: 'F Block (Information Science & Technology) Entrance Door',
+        coordinates: {
+          lat: parsedEToF.coordinates[parsedEToF.coordinates.length - 1][0],
+          lng: parsedEToF.coordinates[parsedEToF.coordinates.length - 1][1]
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [
+            parsedEToF.coordinates[parsedEToF.coordinates.length - 1][1],
+            parsedEToF.coordinates[parsedEToF.coordinates.length - 1][0]
+          ]
+        },
+        nodeType: 'building_entrance',
+        associatedLocationId: 'loc_f_block',
+        isAccessible: true,
+        isActive: true
+      };
+
+      await NavigationNode.findOneAndUpdate(
+        { nodeId: 'node_f_block_ent' },
+        { $set: fNodeDoc },
+        { upsert: true, new: true }
+      ).catch(() => {});
+
+      const eToFPathId = 'path_kml_e_to_f_block';
+      const eToFPathPayload = {
+        pathId: eToFPathId,
+        name: parsedEToF.name,
+        geometry: parsedEToF.coordinates,
+        startNode: 'node_e_block_ent',
+        endNode: 'node_f_block_ent',
+        distanceMeters: parsedEToF.distanceMeters || 47.0,
+        estimatedWalkingMinutes: parsedEToF.estimatedWalkingMinutes || 0.6,
+        accessibility: true,
+        hasStairs: false,
+        hasRamp: true,
+        pathType: 'covered_walkway',
+        routeType: 'Walking',
+        verificationStatus: 'Verified',
+        status: 'active',
+        active: true,
+        surfaceType: 'Paved Walkway & Tiles',
+        sourceFileName: 'Block_E_to_F_path.kml',
+        source: 'Google Earth KML',
+        sourceType: 'kml_import',
+        campus: 'Presidency University Bengaluru',
+        pointCount: parsedEToF.pointCount,
+        notes: 'Actual surveyed walkway connecting E Block and F Block.'
+      };
+
+      await WalkingPath.findOneAndUpdate(
+        { pathId: eToFPathId },
+        { $set: eToFPathPayload },
+        { upsert: true, new: true }
+      );
+
+      const eToFRouteId = 'route_e_block_to_f_block';
+      const eToFRoutePayload = {
+        routeId: eToFRouteId,
+        name: 'E Block → F Block Walkway',
+        startLocation: 'E Block',
+        endLocation: 'F Block',
+        geometry: parsedEToF.coordinates,
+        distanceMeters: parsedEToF.distanceMeters || 47.0,
+        estimatedWalkingMinutes: parsedEToF.estimatedWalkingMinutes || 0.6,
+        routeType: 'pedestrian',
+        accessible: true,
+        verified: true,
+        sourceFileName: 'Block_E_to_F_path.kml',
+        source: 'Google Earth KML',
+        campus: 'Presidency University Bengaluru',
+        status: 'published'
+      };
+
+      await Route.findOneAndUpdate(
+        { routeId: eToFRouteId },
+        { $set: eToFRoutePayload },
+        { upsert: true, new: true }
+      ).catch(() => {});
+
+      if (CampusService && CampusService.syncKmlPathToMemory) {
+        CampusService.syncKmlPathToMemory(eToFPathPayload, eToFRoutePayload);
+      }
+      console.log(`[KMLSeed] Successfully seeded & persisted "${parsedEToF.name}" (${parsedEToF.distanceMeters || 47.0}m) into MongoDB Atlas.`);
+    }
+
     return savedPath;
   } catch (error) {
     console.error('[KMLSeed] Error seeding KML route:', error.message);

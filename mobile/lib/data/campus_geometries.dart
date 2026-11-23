@@ -220,8 +220,32 @@ class CampusGeometries {
     ],
   );
 
+  static final CampusPathGeometry eToFPath = CampusPathGeometry(
+    id: 'path_e_to_f',
+    name: 'E Block → F Block Walkway',
+    lengthMeters: 47.0,
+    colorHex: 0xFF0284C7,
+    points: const [
+      LatLng(13.16922581043442, 77.53374838252056),
+      LatLng(13.16918960237059, 77.53373237009161),
+      LatLng(13.16915161956307, 77.53371744159026),
+      LatLng(13.16911474449877, 77.53369770168051),
+      LatLng(13.16908524173381, 77.53368679207321),
+      LatLng(13.16905426359634, 77.53367146613144),
+      LatLng(13.16902284816958, 77.53365996732241),
+      LatLng(13.16898658829452, 77.53364633665677),
+      LatLng(13.16894668893453, 77.53363211029597),
+      LatLng(13.16891988296132, 77.53362078253889),
+      LatLng(13.16889094539063, 77.53360697185322),
+      LatLng(13.16887181098381, 77.53359832121349),
+      LatLng(13.16884508719851, 77.53358601157329),
+      LatLng(13.16883382361067, 77.53358288724588),
+    ],
+  );
+
   static final List<CampusPathGeometry> allPaths = [
     mainGateToDBlock,
     dToEPath,
+    eToFPath,
   ];
 }

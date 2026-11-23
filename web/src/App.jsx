@@ -330,6 +330,8 @@ export default function App() {
   // Handle start walking navigation to any campus location / building or pre-calculated route
   const handleStartNavigation = (destination) => {
     if (!destination) return;
+    setSelectedBuildingForPopup(null);
+    setSelectedLocation(null);
     if (destination.routeId || (destination.geometry && destination.distanceMeters)) {
       setActiveRoute(destination);
       return;
@@ -360,7 +362,7 @@ export default function App() {
 
   // Universal Building Popup & Indoor Navigation Handlers
   const handleOpenBuildingPopup = useCallback((bld) => {
-    if (!bld) return;
+    if (!bld || activeRoute) return;
     const match = buildings.find(b =>
       b.shortCode === bld.shortCode ||
       b.buildingId === bld.buildingId ||
@@ -574,7 +576,7 @@ export default function App() {
       {/* =================================================================== */}
       {/* 4. GOOGLE MAPS PLACE DETAILS CARD (Left Docked on Desktop)          */}
       {/* =================================================================== */}
-      {selectedLocation && (
+      {selectedLocation && !activeRoute && (
         <PlaceDetailsCard
           location={selectedLocation}
           onClose={() => setSelectedLocation(null)}
@@ -671,7 +673,7 @@ export default function App() {
 
       {/* Building Popup Modal */}
       <BuildingPopupModal
-        isOpen={Boolean(selectedBuildingForPopup)}
+        isOpen={Boolean(selectedBuildingForPopup) && !activeRoute}
         building={selectedBuildingForPopup}
         onClose={() => setSelectedBuildingForPopup(null)}
         onOpenIndoorMap={handleOpenIndoorMap}
@@ -684,6 +686,8 @@ export default function App() {
         isOpen={isRoutePlanningOpen}
         onClose={() => setIsRoutePlanningOpen(false)}
         onStartNavigation={(route) => {
+          setSelectedBuildingForPopup(null);
+          setSelectedLocation(null);
           setActiveRoute(route);
           if (viewMode !== 'master' && viewMode !== '3d' && viewMode !== 'map') {
             setViewMode('map');

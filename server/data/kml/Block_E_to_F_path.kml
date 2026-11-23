@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:ex="http://earth.google.com/kml/ext">
+<Document id="document">
+	<ex:extension>base64;CooBCoEBCn8KAggBEnkKdwokCiAKAwjQDxoHCNLtZRD_ASEAAAAAAADwPykAAAAAAAAAABgAEg8KCAitgO8HEP8BEKAfGAAaGgoHCP___wcQQBIICK2A7wcQ_wEYoB8gACgAIgkIARIFCP___wcqFwgBEggI____BxD_ARkAAAAAAADwPyAAEgQIARAA</ex:extension>
+	<name>Untitled map project</name>
+	<gx:CascadingStyle kml:id="__managed_style_03F465271E433AA7EE1E_highlight">
+		<ex:extension>base64;EgIYAQ</ex:extension>
+		<Style>
+			<IconStyle>
+				<scale>1.2</scale>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>4</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+				<displayMode>hide</displayMode>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<gx:CascadingStyle kml:id="__managed_style_03F465271E433AA7EE1E_normal">
+		<ex:extension>base64;EgIYAQ</ex:extension>
+		<Style>
+			<IconStyle>
+				<Icon>
+					<href>https://earth.google.com/earth/document/icon?color=1976d2&amp;id=2000&amp;scale=4</href>
+				</Icon>
+				<hotSpot x="64" y="128" xunits="pixels" yunits="insetPixels"/>
+			</IconStyle>
+			<LabelStyle>
+			</LabelStyle>
+			<LineStyle>
+				<color>ff2dc0fb</color>
+				<width>2.66667</width>
+			</LineStyle>
+			<PolyStyle>
+				<color>40ffffff</color>
+			</PolyStyle>
+			<BalloonStyle>
+				<displayMode>hide</displayMode>
+			</BalloonStyle>
+		</Style>
+	</gx:CascadingStyle>
+	<StyleMap id="__managed_style_03F465271E433AA7EE1E">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#__managed_style_03F465271E433AA7EE1E_normal</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#__managed_style_03F465271E433AA7EE1E_highlight</styleUrl>
+		</Pair>
+	</StyleMap>
+	<Placemark id="07ACF0215B433AA7EDEC">
+		<name>Block E to F path</name>
+		<LookAt>
+			<longitude>77.53345824218356</longitude>
+			<latitude>13.16904730836284</latitude>
+			<altitude>922.7501254995321</altitude>
+			<heading>352.4940070898861</heading>
+			<tilt>0</tilt>
+			<gx:fovy>35</gx:fovy>
+			<range>150.8163724916267</range>
+			<altitudeMode>absolute</altitudeMode>
+		</LookAt>
+		<styleUrl>#__managed_style_03F465271E433AA7EE1E</styleUrl>
+		<LineString>
+			<coordinates>
+				77.53374838252056,13.16922581043442,0 77.53373237009161,13.16918960237059,0 77.53371744159026,13.16915161956307,0 77.53369770168051,13.16911474449877,0 77.53368679207321,13.16908524173381,0 77.53367146613144,13.16905426359634,0 77.53365996732241,13.16902284816958,0 77.53364633665677,13.16898658829452,0 77.53363211029597,13.16894668893453,0 77.53362078253889,13.16891988296132,0 77.53360697185322,13.16889094539063,0 77.53359832121349,13.16887181098381,0 77.53358601157329,13.16884508719851,0 77.53358288724588,13.16883382361067,0 
+			</coordinates>
+		</LineString>
+	</Placemark>
+</Document>
+</kml>

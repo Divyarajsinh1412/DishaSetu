@@ -1067,6 +1067,27 @@ export const MASTER_CAMPUS_FEATURES = [
     longitude: 77.53366,
     distanceMeters: 35.7,
     status: 'Verified'
+  },
+  {
+    featureId: 'feat_path_e_to_f',
+    featureName: 'E Block → F Block Walkway',
+    code: 'PU-PATH-E-F',
+    category: 'Pathway',
+    type: 'polyline',
+    normalizedX: 0.2040,
+    normalizedY: 0.6550,
+    pathCoordinates: [
+      [0.2040, 0.6975],
+      [0.2040, 0.6750],
+      [0.2040, 0.6550],
+      [0.2040, 0.6350]
+    ],
+    description: 'Surveyed academic corridor connecting E Block (Computer Science) to F Block (Information Science & Technology).',
+    departments: ['Academic Quad Corridor', 'E Block Portal', 'F Block Portal'],
+    latitude: 13.16904,
+    longitude: 77.53366,
+    distanceMeters: 47.0,
+    status: 'Verified'
   }
 ];
 
