@@ -134,21 +134,23 @@ class ApiService {
     final sLower = start.toLowerCase();
     final dLower = destination.toLowerCase();
 
-    // 1. D Block to E Block Walkway
+    // 1. D Block <-> E Block Walkway (Verified KML)
     if ((sLower.contains('d_block') || sLower.contains('d block')) &&
         (dLower.contains('e_block') || dLower.contains('e block'))) {
+      final geom = CampusGeometries.dToEPath.points.map((p) => [p.latitude, p.longitude]).toList();
       return NavigationRoute(
-        routeId: 'route_d_to_e',
+        routeId: 'route_d_block_to_e_block',
         startName: 'D Block (Engineering Labs)',
         endName: 'E Block (CSE Department)',
+        startNodeId: 'node_d_block_ent',
+        endNodeId: 'node_e_block_ent',
+        startCoordinates: geom.first,
+        endCoordinates: geom.last,
+        nodeSequence: ['node_d_block_ent', 'node_e_block_ent'],
         distanceMeters: 36,
         estimatedWalkingMinutes: 1,
         accessible: true,
-        geometry: [
-          [13.171560, 77.535800],
-          [13.170800, 77.535000],
-          [13.169241, 77.533204],
-        ],
+        geometry: geom,
         waypoints: [
           RouteWaypoint(
             stepIndex: 1,
@@ -170,32 +172,60 @@ class ApiService {
       );
     }
 
-    // 2. E Block to F Block Walkway (Verified KML)
+    if ((sLower.contains('e_block') || sLower.contains('e block')) &&
+        (dLower.contains('d_block') || dLower.contains('d block'))) {
+      final geom = CampusGeometries.dToEPath.points.reversed.map((p) => [p.latitude, p.longitude]).toList();
+      return NavigationRoute(
+        routeId: 'route_e_block_to_d_block',
+        startName: 'E Block (CSE Department)',
+        endName: 'D Block (Engineering Labs)',
+        startNodeId: 'node_e_block_ent',
+        endNodeId: 'node_d_block_ent',
+        startCoordinates: geom.first,
+        endCoordinates: geom.last,
+        nodeSequence: ['node_e_block_ent', 'node_d_block_ent'],
+        distanceMeters: 36,
+        estimatedWalkingMinutes: 1,
+        accessible: true,
+        geometry: geom,
+        waypoints: [
+          RouteWaypoint(
+            stepIndex: 1,
+            instruction: 'Depart from E Block entrance heading north along covered corridor.',
+            distanceMeters: 18,
+            bearing: 0,
+            turnType: 'depart',
+            landmark: 'E Block North Portal',
+          ),
+          RouteWaypoint(
+            stepIndex: 2,
+            instruction: 'Arrive at D Block main entrance.',
+            distanceMeters: 18,
+            bearing: 0,
+            turnType: 'arrive',
+            landmark: 'D Block Quadrangle',
+          ),
+        ],
+      );
+    }
+
+    // 2. E Block <-> F Block Walkway (Verified KML)
     if ((sLower.contains('e_block') || sLower.contains('e block')) &&
         (dLower.contains('f_block') || dLower.contains('f block'))) {
+      final geom = CampusGeometries.eToFPath.points.map((p) => [p.latitude, p.longitude]).toList();
       return NavigationRoute(
-        routeId: 'route_e_to_f',
+        routeId: 'route_e_block_to_f_block',
         startName: 'E Block (CSE Department)',
         endName: 'F Block (ISE Department)',
+        startNodeId: 'node_e_block_ent',
+        endNodeId: 'node_f_block_ent',
+        startCoordinates: geom.first,
+        endCoordinates: geom.last,
+        nodeSequence: ['node_e_block_ent', 'node_f_block_ent'],
         distanceMeters: 47,
         estimatedWalkingMinutes: 1,
         accessible: true,
-        geometry: [
-          [13.16922581043442, 77.53374838252056],
-          [13.16918960237059, 77.53373237009161],
-          [13.16915161956307, 77.53371744159026],
-          [13.16911474449877, 77.53369770168051],
-          [13.16908524173381, 77.53368679207321],
-          [13.16905426359634, 77.53367146613144],
-          [13.16902284816958, 77.53365996732241],
-          [13.16898658829452, 77.53364633665677],
-          [13.16894668893453, 77.53363211029597],
-          [13.16891988296132, 77.53362078253889],
-          [13.16889094539063, 77.53360697185322],
-          [13.16887181098381, 77.53359832121349],
-          [13.16884508719851, 77.53358601157329],
-          [13.16883382361067, 77.53358288724588],
-        ],
+        geometry: geom,
         waypoints: [
           RouteWaypoint(
             stepIndex: 1,
@@ -217,26 +247,157 @@ class ApiService {
       );
     }
 
-    // 3. Default route from Main Gate to requested building / destination
+    if ((sLower.contains('f_block') || sLower.contains('f block')) &&
+        (dLower.contains('e_block') || dLower.contains('e block'))) {
+      final geom = CampusGeometries.eToFPath.points.reversed.map((p) => [p.latitude, p.longitude]).toList();
+      return NavigationRoute(
+        routeId: 'route_f_block_to_e_block',
+        startName: 'F Block (ISE Department)',
+        endName: 'E Block (CSE Department)',
+        startNodeId: 'node_f_block_ent',
+        endNodeId: 'node_e_block_ent',
+        startCoordinates: geom.first,
+        endCoordinates: geom.last,
+        nodeSequence: ['node_f_block_ent', 'node_e_block_ent'],
+        distanceMeters: 47,
+        estimatedWalkingMinutes: 1,
+        accessible: true,
+        geometry: geom,
+        waypoints: [
+          RouteWaypoint(
+            stepIndex: 1,
+            instruction: 'Exit F Block and head north along covered walkway.',
+            distanceMeters: 24,
+            bearing: 15,
+            turnType: 'depart',
+            landmark: 'F Block North Exit',
+          ),
+          RouteWaypoint(
+            stepIndex: 2,
+            instruction: 'Arrive at E Block CSE main entrance.',
+            distanceMeters: 23,
+            bearing: 15,
+            turnType: 'arrive',
+            landmark: 'E Block Entrance Portico',
+          ),
+        ],
+      );
+    }
+
+    // 3. Main Gate <-> HR Block / H Block (Exact 22 Surveyed KML Points)
+    if (dLower.contains('hr') || dLower.contains('h_block') || dLower.contains('h block')) {
+      final geom = CampusGeometries.mainGateToHrBlock.points.map((p) => [p.latitude, p.longitude]).toList();
+      return NavigationRoute(
+        routeId: 'route_main_gate_to_hr_block',
+        startName: 'Presidency University – Main Gate',
+        endName: 'HR Block (Administrative Headquarters)',
+        startNodeId: 'node_main_gate',
+        endNodeId: 'node_hr_block_ent',
+        startCoordinates: geom.first,
+        endCoordinates: geom.last,
+        nodeSequence: ['node_main_gate', 'node_hr_block_ent'],
+        distanceMeters: 348,
+        estimatedWalkingMinutes: 4,
+        accessible: true,
+        geometry: geom,
+        waypoints: [
+          RouteWaypoint(
+            stepIndex: 1,
+            instruction: 'Depart from Main Gate South toward the Central Tree Divider along main paved avenue.',
+            distanceMeters: 140,
+            bearing: 182,
+            turnType: 'depart',
+            landmark: 'Main Gate Arrival Portal',
+          ),
+          RouteWaypoint(
+            stepIndex: 2,
+            instruction: 'Proceed past Bus Boarding Bay and Central Fountain Roundabout.',
+            distanceMeters: 120,
+            bearing: 195,
+            turnType: 'straight',
+            landmark: 'Central Fountain Roundabout',
+          ),
+          RouteWaypoint(
+            stepIndex: 3,
+            instruction: 'Arrive at HR Block & Administrative Plaza entrance.',
+            distanceMeters: 88,
+            bearing: 205,
+            turnType: 'arrive',
+            landmark: 'HR Block Entrance Door',
+          ),
+        ],
+      );
+    }
+
+    // 4. Main Gate <-> D Block (Exact 72 Surveyed KML Points)
+    if (dLower.contains('d_block') || dLower.contains('d block')) {
+      final geom = CampusGeometries.mainGateToDBlock.points.map((p) => [p.latitude, p.longitude]).toList();
+      return NavigationRoute(
+        routeId: 'route_main_gate_to_d_block',
+        startName: 'Presidency University – Main Gate',
+        endName: 'D Block (Engineering Labs)',
+        startNodeId: 'node_main_gate',
+        endNodeId: 'node_d_block_ent',
+        startCoordinates: geom.first,
+        endCoordinates: geom.last,
+        nodeSequence: ['node_main_gate', 'node_d_block_ent'],
+        distanceMeters: 423,
+        estimatedWalkingMinutes: 5,
+        accessible: true,
+        geometry: geom,
+        waypoints: [
+          RouteWaypoint(
+            stepIndex: 1,
+            instruction: 'Depart from Main Gate South along main paved avenue.',
+            distanceMeters: 65,
+            bearing: 180,
+            turnType: 'depart',
+            landmark: 'Main Gate Arrival Portal',
+          ),
+          RouteWaypoint(
+            stepIndex: 2,
+            instruction: 'Walk along the paved scenic corridor adjacent to the Main Lawn.',
+            distanceMeters: 140,
+            bearing: 182,
+            turnType: 'straight',
+            landmark: 'Main Lawn Central Green',
+          ),
+          RouteWaypoint(
+            stepIndex: 3,
+            instruction: 'Pass the Central Fountain Roundabout and turn right toward D Block walkway.',
+            distanceMeters: 110,
+            bearing: 250,
+            turnType: 'turn-right',
+            landmark: 'Central Fountain Roundabout',
+          ),
+          RouteWaypoint(
+            stepIndex: 4,
+            instruction: 'Arrive at D Block Mechanical & Civil Engineering entrance.',
+            distanceMeters: 108,
+            bearing: 200,
+            turnType: 'arrive',
+            landmark: 'D Block Entrance Portico',
+          ),
+        ],
+      );
+    }
+
+    // 5. Default route to requested destination using verified avenue corridor
     final String destTitle = destination.replaceAll('bld_', '').replaceAll('_', ' ').toUpperCase();
+    final geom = CampusGeometries.mainGateToDBlock.points.map((p) => [p.latitude, p.longitude]).toList();
     return NavigationRoute(
       routeId: 'route_main_gate_to_dest',
       startName: 'Presidency University – Main Gate',
       endName: destTitle.isNotEmpty ? destTitle : 'D Block (Engineering Labs)',
+      startNodeId: 'node_main_gate',
+      endNodeId: 'node_dest_ent',
+      startCoordinates: geom.first,
+      endCoordinates: geom.last,
+      nodeSequence: ['node_main_gate', 'node_d_block_ent'],
       distanceMeters: 423,
-      estimatedWalkingMinutes: 4,
+      estimatedWalkingMinutes: 5,
       accessible: true,
-      geometry: [
-        [13.1717995, 77.5361915],
-        [13.1716861, 77.5361922],
-        [13.1713404, 77.5362505],
-        [13.1712020, 77.5360316],
-        [13.1710208, 77.5360690],
-        [13.1709093, 77.5357768],
-        [13.1708210, 77.5359618],
-        [13.1705630, 77.5355730],
-        [13.1705500, 77.5356100],
-      ],
+      geometry: geom,
       waypoints: [
         RouteWaypoint(
           stepIndex: 1,

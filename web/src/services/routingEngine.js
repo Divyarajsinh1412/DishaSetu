@@ -55,6 +55,15 @@ export class ClientRoutingEngine {
   resolveNode(target, fallbackCoords = null, accessibleOnly = false) {
     if (!target && !fallbackCoords) return null;
 
+    // 0. Coordinate string match e.g. "13.1717995,77.5361915"
+    if (typeof target === 'string' && target.includes(',')) {
+      const parts = target.split(',').map(p => parseFloat(p.trim()));
+      if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+        const nearest = this.findNearestNode(parts[0], parts[1], accessibleOnly);
+        if (nearest) return nearest;
+      }
+    }
+
     if (typeof target === 'string' && this.nodeMap.has(target)) {
       return this.nodeMap.get(target);
     }
@@ -104,8 +113,16 @@ export class ClientRoutingEngine {
         const n = this.nodeMap.get('node_main_gate');
         if (n) return n;
       }
-      if (lower.includes('hr_block') || lower.includes('hr-block') || lower.includes('hr block') || lower.includes('hr blocks') || lower === 'hr' || lower === 'pu-hr-block' || lower.includes('h_block') || lower.includes('h-block') || lower === 'h block' || lower === 'pu-h-block') {
-        const n = this.nodeMap.get('node_hr_block_ent') || this.nodeMap.get('node_h_block_ent');
+      if (lower.includes('hr_block') || lower.includes('hr-block') || lower.includes('hr block') || lower.includes('hr blocks') || lower === 'hr' || lower === 'pu-hr-block') {
+        const n = this.nodeMap.get('node_hr_block_ent');
+        if (n) return n;
+      }
+      if (lower.includes('h_block') || lower.includes('h-block') || lower === 'h block' || lower === 'pu-h-block' || lower === 'bld_h_block' || lower === 'loc_h_block') {
+        const n = this.nodeMap.get('node_h_block_ent');
+        if (n) return n;
+      }
+      if (lower.includes('admission') || lower.includes('registrar') || lower === 'bld_admission_register') {
+        const n = this.nodeMap.get('node_h_block_ent');
         if (n) return n;
       }
       if (lower.includes('cafe') || lower.includes('hatti') || lower.includes('pu-cafe')) {

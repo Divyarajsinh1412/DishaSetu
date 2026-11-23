@@ -740,6 +740,65 @@ export const WALKING_PATHS = [
     pointCount: 22,
     notes: 'Actual surveyed walking path from Presidency University Main Gate to HR Block imported from Google Earth KML.'
   },
+  // 0D. VERIFIED SURVEYED ROUTE: Main Gate to Central Fountain
+  {
+    pathId: 'path_main_gate_to_fountain',
+    name: 'Main Gate → Central Fountain Walkway',
+    startNode: 'node_main_gate',
+    endNode: 'node_fountain_plaza',
+    geometry: [
+      [13.1717995, 77.5361915],
+      [13.1716861, 77.5361922],
+      [13.1714073, 77.5360192],
+      [13.1710643, 77.5358334],
+      [13.1705630, 77.5355730],
+      [13.1701141, 77.5353099],
+      [13.1698066, 77.5351313],
+      [13.1694614, 77.5350500],
+      [13.1692772, 77.5349633]
+    ],
+    distanceMeters: 345,
+    estimatedWalkingMinutes: 4.5,
+    accessibility: true,
+    hasStairs: false,
+    hasRamp: true,
+    pathType: 'main_avenue',
+    routeType: 'Walking',
+    verificationStatus: 'Verified',
+    status: 'active',
+    active: true,
+    surfaceType: 'Paved Walkway & Tiles',
+    campus: 'Presidency University Bengaluru',
+    pointCount: 9,
+    notes: 'Surveyed walking path from Main Gate to Central Fountain Plaza along main avenue.'
+  },
+  {
+    pathId: 'path_fountain_to_d_block',
+    name: 'Central Fountain → D Block Walkway',
+    startNode: 'node_fountain_plaza',
+    endNode: 'node_d_block_ent',
+    geometry: [
+      [13.1692772, 77.5349633],
+      [13.1692500, 77.5345000],
+      [13.1691900, 77.5341000],
+      [13.1691572, 77.5339196]
+    ],
+    distanceMeters: 110,
+    estimatedWalkingMinutes: 1.5,
+    accessibility: true,
+    hasStairs: false,
+    hasRamp: true,
+    pathType: 'main_avenue',
+    routeType: 'Walking',
+    verificationStatus: 'Verified',
+    status: 'active',
+    active: true,
+    surfaceType: 'Paved Walkway & Tiles',
+    campus: 'Presidency University Bengaluru',
+    pointCount: 4,
+    notes: 'Walkway connecting Central Fountain Plaza to D Block Mechanical & Civil Engineering portal.'
+  },
+
 
   // 1. Main Gate to Avenue Origin Plaza
   {

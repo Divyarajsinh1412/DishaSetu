@@ -316,22 +316,95 @@ class CampusGeometries {
     lengthMeters: 423.0,
     colorHex: 0xFF0284C7,
     points: const [
-      LatLng(13.172900, 77.536900),
-      LatLng(13.172600, 77.536700),
-      LatLng(13.172200, 77.536400),
-      LatLng(13.171880, 77.536120),
+      LatLng(13.17174576988432, 77.53609409799955),
+      LatLng(13.17169863045853, 77.53608210855332),
+      LatLng(13.1716383910603, 77.53605042839274),
+      LatLng(13.17159359517197, 77.53604282665427),
+      LatLng(13.17155101268326, 77.53603556812003),
+      LatLng(13.17150754216009, 77.5360266924011),
+      LatLng(13.17147941299077, 77.53602121419446),
+      LatLng(13.17144588088828, 77.53601171550024),
+      LatLng(13.17141548831614, 77.53600297805718),
+      LatLng(13.17137149118117, 77.53598567076828),
+      LatLng(13.17133931695116, 77.53596697295295),
+      LatLng(13.17129818385298, 77.53595081617756),
+      LatLng(13.17126896775573, 77.5359411946154),
+      LatLng(13.17123972989239, 77.53592854020138),
+      LatLng(13.17121308196014, 77.53592266244777),
+      LatLng(13.17116699802034, 77.53589854624452),
+      LatLng(13.1711155427013, 77.53586947061237),
+      LatLng(13.17106666095199, 77.53584975560692),
+      LatLng(13.17101448049524, 77.53581892871577),
+      LatLng(13.17096051921789, 77.53579461787281),
+      LatLng(13.17090689078972, 77.53576844077367),
+      LatLng(13.17086562762542, 77.53574429064513),
+      LatLng(13.17081162128503, 77.5357160467174),
+      LatLng(13.17077800877276, 77.53569572249197),
+      LatLng(13.17074490791287, 77.53567244764086),
+      LatLng(13.17070499547361, 77.53564837922956),
+      LatLng(13.17065386094593, 77.53561271930327),
+      LatLng(13.17060860411526, 77.53558093956185),
+      LatLng(13.17054935948529, 77.53555036633993),
+      LatLng(13.17050113223478, 77.5355247736367),
+      LatLng(13.17045012729626, 77.53549435194522),
+      LatLng(13.17041064690491, 77.53547015697703),
+      LatLng(13.17036640154106, 77.5354482317468),
+      LatLng(13.17031826377981, 77.53541890680094),
+      LatLng(13.17027002008206, 77.53539640838453),
+      LatLng(13.17023498177819, 77.53537430972969),
+      LatLng(13.1701820732767, 77.53534727991693),
+      LatLng(13.17013954577857, 77.535323185103),
+      LatLng(13.17009937034263, 77.5353022563515),
+      LatLng(13.170051369734, 77.53527533003101),
+      LatLng(13.17000868061955, 77.53524802486159),
+      LatLng(13.16997249936164, 77.53523380553656),
+      LatLng(13.16993464625497, 77.53521593309777),
+      LatLng(13.16988366156734, 77.53518247499464),
+      LatLng(13.169870695201, 77.53516452941227),
+      LatLng(13.16983919235103, 77.53512610343617),
+      LatLng(13.16981046335518, 77.53508194930586),
+      LatLng(13.16984171658533, 77.53499372472088),
+      LatLng(13.16987083894686, 77.53492970791183),
+      LatLng(13.16986296632206, 77.53486744885356),
+      LatLng(13.16979586272434, 77.53479484326571),
+      LatLng(13.16972675792108, 77.53474772529633),
+      LatLng(13.16964474898791, 77.53471726692706),
+      LatLng(13.16957497737892, 77.5346907315059),
+      LatLng(13.1694851705393, 77.53465797397705),
+      LatLng(13.16940533551286, 77.53463137716737),
+      LatLng(13.16933242293897, 77.53460062340486),
+      LatLng(13.16925010470841, 77.53458177362035),
+      LatLng(13.16918752404643, 77.53453792902008),
+      LatLng(13.16915625214984, 77.53448600665828),
+      LatLng(13.16915107133306, 77.5344453900895),
+      LatLng(13.16913915771938, 77.53437656453819),
+      LatLng(13.16912708583898, 77.53433825948261),
+      LatLng(13.16911315488541, 77.53428686284192),
+      LatLng(13.16911541318982, 77.53424813807851),
+      LatLng(13.16911466856421, 77.53419928510363),
+      LatLng(13.16911420430902, 77.53414280804282),
+      LatLng(13.16913034561081, 77.53407626682362),
+      LatLng(13.1691503981058, 77.53402067342786),
+      LatLng(13.1691532256497, 77.53397599366181),
+      LatLng(13.16915320163163, 77.53394490986271),
+      LatLng(13.16915723332783, 77.53391962930635),
     ],
   );
 
   static final CampusPathGeometry dToEPath = CampusPathGeometry(
     id: 'path_d_to_e',
     name: 'D Block → E Block Walkway',
-    lengthMeters: 36.0,
+    lengthMeters: 35.7,
     colorHex: 0xFF10B981,
     points: const [
-      LatLng(13.171560, 77.535800),
-      LatLng(13.170800, 77.535000),
-      LatLng(13.169241, 77.533204),
+      LatLng(13.16921961010325, 77.53374368525881),
+      LatLng(13.16916175269351, 77.53371476009588),
+      LatLng(13.16909272541975, 77.53368916371579),
+      LatLng(13.16905243962133, 77.53368308758547),
+      LatLng(13.16901930916995, 77.5336693526416),
+      LatLng(13.16897943341513, 77.5336527021713),
+      LatLng(13.16898258842619, 77.53361351579872),
+      LatLng(13.16899625259435, 77.53359127757469),
     ],
   );
 
@@ -896,6 +969,23 @@ class CampusGeometries {
     Offset(0.4350, 0.6800), // HR Block / Plaza Entrance
   ];
 
+  static const List<Offset> mainToHCenterline = [
+    Offset(0.5740, 0.2405), // Main Gate
+    Offset(0.5760, 0.2518),
+    Offset(0.5790, 0.2637),
+    Offset(0.5800, 0.2778),
+    Offset(0.5760, 0.2954),
+    Offset(0.5660, 0.3200), // Along west of Main Lawn
+    Offset(0.5530, 0.3481),
+    Offset(0.5400, 0.3762),
+    Offset(0.5280, 0.4044),
+    Offset(0.5000, 0.4600),
+    Offset(0.4600, 0.5400),
+    Offset(0.4100, 0.6200),
+    Offset(0.3650, 0.6800), // Turn into H Block Avenue
+    Offset(0.3350, 0.7050), // H Block Entrance Door
+  ];
+
   /// Convert GPS Coordinates (lat, lng) to normalized Master Map Offset (0..1, 0..1)
   /// using the calibrated affine transformation from Web MasterCampusMap.jsx
   static Offset projectGpsToNormalized(double lat, double lng) {
@@ -956,33 +1046,67 @@ class CampusGeometries {
       return eToFCenterline.reversed.toList();
     }
 
-    // 4. Surveyed Main Gate <-> HR Block / H Block
+    // 4A. Surveyed Main Gate <-> H Block (School of EE / Direct Campus Schematic Block)
+    final isHBlockEnd = (endLower.contains('h block') ||
+            endLower.contains('pu-h-block') ||
+            route.routeId.contains('h_block')) &&
+        !endLower.contains('hr block') &&
+        !endLower.contains('hr blocks');
+    if (isMainGateStart && isHBlockEnd) {
+      return mainToHCenterline;
+    }
+    final isHBlockStart = (startLower.contains('h block') ||
+            startLower.contains('pu-h-block') ||
+            route.routeId.contains('h_block')) &&
+        !startLower.contains('hr block') &&
+        !startLower.contains('hr blocks');
+    if (isHBlockStart && endLower.contains('main gate')) {
+      return mainToHCenterline.reversed.toList();
+    }
+
+    // 4B. Surveyed Main Gate <-> HR Block / Plaza
     final isHrBlockEnd = endLower.contains('hr block') ||
         endLower.contains('hr blocks') ||
-        endLower.contains('h block') ||
-        route.routeId.contains('hr_block') ||
-        route.routeId.contains('h_block');
+        endLower.contains('pu-hr-block') ||
+        route.routeId.contains('hr_block');
     if (isMainGateStart && isHrBlockEnd) {
       return mainToHrCenterline;
     }
     final isHrBlockStart = startLower.contains('hr block') ||
         startLower.contains('hr blocks') ||
-        startLower.contains('h block') ||
-        route.routeId.contains('hr_block') ||
-        route.routeId.contains('h_block');
+        startLower.contains('pu-hr-block') ||
+        route.routeId.contains('hr_block');
     if (isHrBlockStart && endLower.contains('main gate')) {
       return mainToHrCenterline.reversed.toList();
     }
 
-    // 5. Project geometry coordinates
+    // 5. Surveyed Main Gate <-> Central Fountain
+    final isFountainEnd = endLower.contains('fountain') || route.routeId.contains('fountain');
+    if (isMainGateStart && isFountainEnd) {
+      return mainToDCenterline.sublist(0, 16);
+    }
+    if (startLower.contains('fountain') && endLower.contains('main gate')) {
+      return mainToDCenterline.sublist(0, 16).reversed.toList();
+    }
+
+    // 6. Project from nodeSequence if available (Exact match with Web MasterCampusMap.jsx)
     final pts = <Offset>[];
-    if (route.geometry.isNotEmpty) {
+    if (route.nodeSequence.isNotEmpty) {
+      for (int i = 0; i < route.nodeSequence.length; i++) {
+        final nodeId = route.nodeSequence[i];
+        if (nodeNormalizedCoords.containsKey(nodeId)) {
+          pts.add(nodeNormalizedCoords[nodeId]!);
+        } else if (i < route.geometry.length) {
+          pts.add(projectGpsToNormalized(route.geometry[i][0], route.geometry[i][1]));
+        }
+      }
+    } else if (route.geometry.isNotEmpty) {
       for (final coord in route.geometry) {
         pts.add(projectGpsToNormalized(coord[0], coord[1]));
       }
     }
 
-    // 5. Fallback between start & destination building centroids
+    // 7. Fallback between start & destination building centroids
     if (pts.length < 2) {
       final startBld = campusBuildings.firstWhere(
         (b) =>
@@ -1008,5 +1132,25 @@ class CampusGeometries {
     }
 
     return pts;
+  }
+
+  /// Get normalized starting point Offset on the Master Campus Map
+  static Offset getStartNormalizedPoint(NavigationRoute route) {
+    final projected = projectRouteToNormalized(route);
+    if (projected.isNotEmpty) return projected.first;
+    if (route.startLatitude != null && route.startLongitude != null) {
+      return projectGpsToNormalized(route.startLatitude!, route.startLongitude!);
+    }
+    return const Offset(0.5740, 0.2405); // Default to Main Gate
+  }
+
+  /// Get normalized destination point Offset on the Master Campus Map
+  static Offset getEndNormalizedPoint(NavigationRoute route) {
+    final projected = projectRouteToNormalized(route);
+    if (projected.isNotEmpty) return projected.last;
+    if (route.endLatitude != null && route.endLongitude != null) {
+      return projectGpsToNormalized(route.endLatitude!, route.endLongitude!);
+    }
+    return const Offset(0.2450, 0.6428); // Default to D Block
   }
 }

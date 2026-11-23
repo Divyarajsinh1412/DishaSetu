@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as ll;
@@ -117,6 +118,40 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     _transformController.value = matrix;
   }
 
+  void _autoFitActiveRoute(NavigationRoute route) {
+    if (_useGpsMap) {
+      if (route.geometry.length >= 2) {
+        final bounds = ll.LatLngBounds.fromPoints(
+          route.geometry.map((pt) => ll.LatLng(pt[0], pt[1])).toList(),
+        );
+        _mapController.fitCamera(
+          CameraFit.bounds(
+            bounds: bounds,
+            padding: const EdgeInsets.only(top: 140, bottom: 230, left: 60, right: 60),
+          ),
+        );
+      }
+    } else {
+      final normPoints = CampusGeometries.projectRouteToNormalized(route);
+      if (normPoints.length >= 2) {
+        final xs = normPoints.map((p) => p.dx).toList();
+        final ys = normPoints.map((p) => p.dy).toList();
+        final minX = xs.reduce(math.min);
+        final maxX = xs.reduce(math.max);
+        final minY = ys.reduce(math.min);
+        final maxY = ys.reduce(math.max);
+        final midX = (minX + maxX) / 2;
+        final midY = (minY + maxY) / 2;
+
+        const targetScale = 1.65;
+        final matrix = Matrix4.identity()
+          ..scale(targetScale, targetScale)
+          ..translate(-(midX - 0.5) * 400, -(midY - 0.5) * 568);
+        _transformController.value = matrix;
+      }
+    }
+  }
+
   Future<void> _startNavigationTo(CampusLocation destination) async {
     setState(() => _isLoading = true);
     final startIdentifier = _currentGpsPosition != null
@@ -126,11 +161,29 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
       start: startIdentifier,
       destination: destination.shortCode ?? destination.id,
     );
+
+    if (route == null || route.geometry.length < 2) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFE11D48),
+            content: Text(
+              'Unable to calculate walking route to ${destination.name}. Please ensure destination is connected to campus walking paths.',
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+          ),
+        );
+      }
+      setState(() => _isLoading = false);
+      return;
+    }
+
     setState(() {
       _activeRoute = route;
       _selectedMarker = destination;
       _isLoading = false;
     });
+    _autoFitActiveRoute(route);
   }
 
   Future<void> _startRoomNavigation(CampusLocation destination, Room room) async {
@@ -142,11 +195,30 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
       start: startIdentifier,
       destination: destination.shortCode ?? destination.id,
     );
+
+    if (route == null || route.geometry.length < 2) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFFE11D48),
+            content: Text(
+              'Unable to calculate walking route to ${room.roomNumber} (${destination.name}).',
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+          ),
+        );
+      }
+      setState(() => _isLoading = false);
+      return;
+    }
+
     setState(() {
       _activeRoute = route;
       _selectedMarker = destination;
       _isLoading = false;
     });
+    _autoFitActiveRoute(route);
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -203,11 +275,29 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
           destination: dest.shortCode ?? dest.id,
           accessibleOnly: accessible,
         );
+
+        if (route == null || route.geometry.length < 2) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                backgroundColor: const Color(0xFFE11D48),
+                content: Text(
+                  'Unable to calculate walking route from ${start.name} to ${dest.name}.',
+                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+              ),
+            );
+          }
+          setState(() => _isLoading = false);
+          return;
+        }
+
         setState(() {
           _activeRoute = route;
           _selectedMarker = dest;
           _isLoading = false;
         });
+        _autoFitActiveRoute(route);
       },
     );
   }
@@ -451,58 +541,215 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                   color: Color(path.colorHex),
                 );
               }),
-              if (_activeRoute != null && _activeRoute!.geometry.isNotEmpty)
-                Polyline(
-                  points: _activeRoute!.geometry
-                      .map((pt) => ll.LatLng(pt[0], pt[1]))
-                      .toList(),
-                  strokeWidth: 5.0,
-                  color: const Color(0xFF10B981),
-                ),
             ],
           ),
-        // Marker Pins
+        // Active Navigation Route Polyline Layer (Always visible during active navigation)
+        if (_activeRoute != null && _activeRoute!.geometry.isNotEmpty)
+          PolylineLayer(
+            polylines: [
+              // Outer glow line
+              Polyline(
+                points: _activeRoute!.geometry
+                    .map((pt) => ll.LatLng(pt[0], pt[1]))
+                    .toList(),
+                strokeWidth: 9.0,
+                color: const Color(0x6010B981),
+              ),
+              // Inner solid emerald line
+              Polyline(
+                points: _activeRoute!.geometry
+                    .map((pt) => ll.LatLng(pt[0], pt[1]))
+                    .toList(),
+                strokeWidth: 5.0,
+                color: const Color(0xFF10B981),
+              ),
+            ],
+          ),
+        // Marker Pins Layer
         MarkerLayer(
-          markers: _filteredMarkers.map((marker) {
-            final isSelected = _selectedMarker?.id == marker.id;
-            final color = _getCategoryColor(marker.category);
-            final icon = _getCategoryIcon(marker.category);
+          markers: [
+            // 1. Campus building and facility markers
+            ..._filteredMarkers.map((marker) {
+              final isSelected = _selectedMarker?.id == marker.id;
+              final isDimmed = _activeRoute != null && !isSelected;
+              final color = _getCategoryColor(marker.category);
+              final icon = _getCategoryIcon(marker.category);
 
-            return Marker(
-              point: ll.LatLng(marker.latitude, marker.longitude),
-              width: isSelected ? 38 : 30,
-              height: isSelected ? 38 : 30,
-              child: GestureDetector(
-                onTap: () {
-                  _onBuildingSelected(marker);
-                },
+              return Marker(
+                point: ll.LatLng(marker.latitude, marker.longitude),
+                width: isSelected ? 38 : 30,
+                height: isSelected ? 38 : 30,
+                child: GestureDetector(
+                  onTap: () {
+                    _onBuildingSelected(marker);
+                  },
+                  child: Opacity(
+                    opacity: isDimmed ? 0.45 : 1.0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white,
+                          width: isSelected ? 3 : 2,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: isSelected
+                                ? color.withOpacity(0.8)
+                                : Colors.black45,
+                            blurRadius: isSelected ? 12 : 4,
+                            spreadRadius: isSelected ? 3 : 0,
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        icon,
+                        size: isSelected ? 18 : 14,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+            // 2. Dedicated START Marker (🟢 START)
+            if (_activeRoute != null &&
+                _activeRoute!.startLatitude != null &&
+                _activeRoute!.startLongitude != null)
+              Marker(
+                point: ll.LatLng(
+                  _activeRoute!.startLatitude!,
+                  _activeRoute!.startLongitude!,
+                ),
+                width: 140,
+                height: 72,
+                alignment: Alignment.topCenter,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF064E3B), // Dark Emerald
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF34D399), width: 1.5),
+                        boxShadow: const [
+                          BoxShadow(color: Colors.black54, blurRadius: 6, offset: Offset(0, 2)),
+                        ],
+                      ),
+                      child: Text(
+                        '🟢 START · ${_activeRoute!.startName}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFFA7F3D0),
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF059669),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2.5),
+                        boxShadow: const [
+                          BoxShadow(color: Color(0x8010B981), blurRadius: 10, spreadRadius: 3),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'A',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.black, fontSize: 13),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            // 3. Dedicated DESTINATION Marker (🔴 DESTINATION)
+            if (_activeRoute != null &&
+                _activeRoute!.endLatitude != null &&
+                _activeRoute!.endLongitude != null)
+              Marker(
+                point: ll.LatLng(
+                  _activeRoute!.endLatitude!,
+                  _activeRoute!.endLongitude!,
+                ),
+                width: 160,
+                height: 72,
+                alignment: Alignment.topCenter,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF881337), // Dark Rose
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFB7185), width: 1.5),
+                        boxShadow: const [
+                          BoxShadow(color: Colors.black54, blurRadius: 6, offset: Offset(0, 2)),
+                        ],
+                      ),
+                      child: Text(
+                        '🔴 DESTINATION · ${_activeRoute!.endName}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFFFECDD3),
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE11D48),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2.5),
+                        boxShadow: const [
+                          BoxShadow(color: Color(0x80E11D48), blurRadius: 10, spreadRadius: 3),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Text(
+                          'B',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.black, fontSize: 13),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            // 4. Current GPS location marker
+            if (_currentGpsPosition != null)
+              Marker(
+                point: ll.LatLng(
+                  _currentGpsPosition!.latitude,
+                  _currentGpsPosition!.longitude,
+                ),
+                width: 26,
+                height: 26,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: color,
+                    color: const Color(0xFF38BDF8),
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white,
-                      width: isSelected ? 3 : 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: isSelected
-                            ? color.withOpacity(0.8)
-                            : Colors.black45,
-                        blurRadius: isSelected ? 12 : 4,
-                        spreadRadius: isSelected ? 3 : 0,
-                      ),
+                    border: Border.all(color: Colors.white, width: 2.5),
+                    boxShadow: const [
+                      BoxShadow(color: Color(0x8038BDF8), blurRadius: 8, spreadRadius: 2),
                     ],
-                  ),
-                  child: Icon(
-                    icon,
-                    size: isSelected ? 18 : 14,
-                    color: Colors.white,
                   ),
                 ),
               ),
-            );
-          }).toList(),
+          ],
         ),
       ],
     );
@@ -1003,10 +1250,137 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                                       ),
                                     ),
                                   ),
-                                );
-                              }),
+                                );                              }),
 
-                              // 6. User Live GPS Pin on Master Map
+                              // 6. Dedicated START and DESTINATION Markers on Master Map
+                              if (_activeRoute != null) ...[
+                                Builder(builder: (context) {
+                                  final startNorm = CampusGeometries.getStartNormalizedPoint(_activeRoute!);
+                                  final endNorm = CampusGeometries.getEndNormalizedPoint(_activeRoute!);
+                                  final startX = startNorm.dx * mapWidth;
+                                  final startY = startNorm.dy * mapHeight;
+                                  final endX = endNorm.dx * mapWidth;
+                                  final endY = endNorm.dy * mapHeight;
+
+                                  return Stack(
+                                    clipBehavior: Clip.none,
+                                    children: [
+                                      // 🟢 START Marker (Layer 6)
+                                      Positioned(
+                                        left: startX - 70,
+                                        top: startY - 62,
+                                        width: 140,
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF064E3B), // Dark Emerald
+                                                borderRadius: BorderRadius.circular(12),
+                                                border: Border.all(color: const Color(0xFF34D399), width: 1.5),
+                                                boxShadow: const [
+                                                  BoxShadow(color: Colors.black54, blurRadius: 6, offset: Offset(0, 2)),
+                                                ],
+                                              ),
+                                              child: Text(
+                                                '🟢 START · ${_activeRoute!.startName}',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  color: Color(0xFFA7F3D0),
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 3),
+                                            Container(
+                                              width: 32,
+                                              height: 32,
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF059669),
+                                                shape: BoxShape.circle,
+                                                border: Border.all(color: Colors.white, width: 2.5),
+                                                boxShadow: const [
+                                                  BoxShadow(color: Color(0x8010B981), blurRadius: 10, spreadRadius: 3),
+                                                ],
+                                              ),
+                                              child: const Center(
+                                                child: Text(
+                                                  'A',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.black,
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      // 🔴 DESTINATION Marker (Layer 7)
+                                      Positioned(
+                                        left: endX - 80,
+                                        top: endY - 62,
+                                        width: 160,
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF881337), // Dark Rose
+                                                borderRadius: BorderRadius.circular(12),
+                                                border: Border.all(color: const Color(0xFFFB7185), width: 1.5),
+                                                boxShadow: const [
+                                                  BoxShadow(color: Colors.black54, blurRadius: 6, offset: Offset(0, 2)),
+                                                ],
+                                              ),
+                                              child: Text(
+                                                '🔴 DESTINATION · ${_activeRoute!.endName}',
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  color: Color(0xFFFECDD3),
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 3),
+                                            Container(
+                                              width: 32,
+                                              height: 32,
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFE11D48),
+                                                shape: BoxShape.circle,
+                                                border: Border.all(color: Colors.white, width: 2.5),
+                                                boxShadow: const [
+                                                  BoxShadow(color: Color(0x80E11D48), blurRadius: 10, spreadRadius: 3),
+                                                ],
+                                              ),
+                                              child: const Center(
+                                                child: Text(
+                                                  'B',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.black,
+                                                    fontSize: 13,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                }),
+                              ],
+
+                              // 8. User Live GPS Pin on Master Map
                               if (_currentGpsPosition != null) ...[
                                 Builder(builder: (context) {
                                   final norm = CampusGeometries.projectGpsToNormalized(
@@ -1067,7 +1441,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                 // Floating Zoom & Fit Controls (Right side)
                 Positioned(
                   right: 16,
-                  bottom: _selectedMarker != null ? 220 : 30,
+                  bottom: (_activeRoute != null || _selectedMarker != null) ? 190 : 30,
                   child: Column(
                     children: [
                       _buildFloatingMapButton(Icons.add, _zoomIn, 'Zoom In'),
@@ -1138,6 +1512,15 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                     ),
                   ),
 
+                                // Active Navigation Control Card
+                if (_activeRoute != null)
+                  Positioned(
+                    left: 16,
+                    right: 16,
+                    bottom: 20,
+                    child: _buildActiveNavigationBottomCard(_activeRoute!),
+                  ),
+
                 // Selected Location Bottom Card (Hidden during active navigation to keep route visible)
                 if (_selectedMarker != null && _activeRoute == null)
                   Positioned(
@@ -1148,6 +1531,115 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                   ),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  Widget _buildActiveNavigationBottomCard(NavigationRoute route) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A).withOpacity(0.96),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF334155)),
+        boxShadow: const [
+          BoxShadow(color: Colors.black54, blurRadius: 16, offset: Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.directions_walk, color: Color(0xFF10B981), size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${route.distanceMeters} meters · ~${route.estimatedWalkingMinutes} min walk',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${route.startName} → ${route.endName}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.center_focus_strong, color: Color(0xFF38BDF8)),
+                tooltip: 'Fit Route',
+                onPressed: () => _autoFitActiveRoute(route),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.white70),
+                tooltip: 'Stop Navigation',
+                onPressed: () {
+                  setState(() => _activeRoute = null);
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () => _autoFitActiveRoute(route),
+                  icon: const Icon(Icons.my_location, size: 16),
+                  label: const Text('Recenter Route'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1E293B),
+                    foregroundColor: const Color(0xFF38BDF8),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      side: const BorderSide(color: Color(0xFF334155)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() => _activeRoute = null);
+                  },
+                  icon: const Icon(Icons.stop_circle_outlined, size: 16),
+                  label: const Text('Stop Navigation'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE11D48),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
