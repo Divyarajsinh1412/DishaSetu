@@ -1067,66 +1067,81 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                               if (_showDefBlocksLayer) ...[
                                 Builder(builder: (context) {
                                   final isDefSelected = _selectedMarker?.id == 'feat_def_blocks';
-                                  // Bounds spanning D, E, F blocks: minX 0.125, maxX 0.280, minY 0.595, maxY 0.790
-                                  final left = 0.125 * mapWidth;
-                                  final top = 0.595 * mapHeight;
-                                  final width = 0.155 * mapWidth;
-                                  final height = 0.190 * mapHeight;
+                                  // Bounds spanning D, E, F blocks cleanly: minX 0.115, maxX 0.280, minY 0.590, maxY 0.815
+                                  final left = 0.115 * mapWidth;
+                                  final top = 0.590 * mapHeight;
+                                  final width = 0.165 * mapWidth;
+                                  final height = 0.225 * mapHeight;
 
-                                  return Positioned(
-                                    left: left,
-                                    top: top,
-                                    width: width,
-                                    height: height,
-                                    child: GestureDetector(
-                                      behavior: HitTestBehavior.translucent,
-                                      onTap: () {
-                                        final loc = CampusLocation(
-                                          id: 'feat_def_blocks',
-                                          name: 'DEF Blocks',
-                                          label: 'DEF BLOCKS BOUNDARY',
-                                          category: 'boundary',
-                                          latitude: 13.168076,
-                                          longitude: 77.533300,
-                                          description:
-                                              'Exact surveyed boundary polygon for DEF Blocks complex extracted from Google Earth KML.',
-                                        );
-                                        _onBuildingSelected(loc);
-                                      },
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: isDefSelected
-                                              ? const Color(0x38FBC02D)
-                                              : const Color(0x18FBC02D),
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(
-                                            color: const Color(0xFFFBC02D),
-                                            width: isDefSelected ? 3.0 : 1.8,
-                                          ),
-                                        ),
-                                        child: Align(
-                                          alignment: Alignment.topRight,
+                                  return Stack(
+                                    clipBehavior: Clip.none,
+                                    children: [
+                                      // Clean outline boundary box (Transparent fill so D, E, F blocks remain 100% visible)
+                                      Positioned(
+                                        left: left,
+                                        top: top,
+                                        width: width,
+                                        height: height,
+                                        child: GestureDetector(
+                                          behavior: HitTestBehavior.translucent,
+                                          onTap: () {
+                                            final loc = CampusLocation(
+                                              id: 'feat_def_blocks',
+                                              name: 'DEF Blocks',
+                                              label: 'DEF BLOCKS BOUNDARY',
+                                              category: 'boundary',
+                                              latitude: 13.168076,
+                                              longitude: 77.533300,
+                                              description:
+                                                  'Exact surveyed boundary polygon for DEF Blocks complex extracted from Google Earth KML.',
+                                            );
+                                            _onBuildingSelected(loc);
+                                          },
                                           child: Container(
-                                            margin: const EdgeInsets.all(4),
-                                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFF0F172A).withValues(alpha: 0.85),
-                                              borderRadius: BorderRadius.circular(4),
-                                              border: Border.all(color: const Color(0xFFFBC02D), width: 1),
-                                            ),
-                                            child: const Text(
-                                              'DEF BLOCKS',
-                                              style: TextStyle(
-                                                fontSize: 8,
-                                                fontWeight: FontWeight.w900,
-                                                color: Color(0xFFFDE68A),
-                                                letterSpacing: 0.5,
+                                              color: isDefSelected
+                                                  ? const Color(0x28FBC02D)
+                                                  : const Color(0x08FBC02D),
+                                              borderRadius: BorderRadius.circular(16),
+                                              border: Border.all(
+                                                color: const Color(0xFFFBC02D),
+                                                width: isDefSelected ? 2.5 : 1.6,
                                               ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                    ),
+
+                                      // Unobtrusive Top Boundary Tag (Never wraps, never obscures D or E block)
+                                      Positioned(
+                                        left: left + 10,
+                                        top: top - 9,
+                                        child: IgnorePointer(
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF0F172A),
+                                              borderRadius: BorderRadius.circular(4),
+                                              border: Border.all(color: const Color(0xFFFBC02D), width: 1),
+                                              boxShadow: const [
+                                                BoxShadow(color: Colors.black54, blurRadius: 4),
+                                              ],
+                                            ),
+                                            child: const Text(
+                                              'DEF BLOCKS COMPLEX',
+                                              maxLines: 1,
+                                              softWrap: false,
+                                              style: TextStyle(
+                                                fontSize: 8,
+                                                fontWeight: FontWeight.w900,
+                                                color: Color(0xFFFDE68A),
+                                                letterSpacing: 0.6,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   );
                                 }),
                               ],
