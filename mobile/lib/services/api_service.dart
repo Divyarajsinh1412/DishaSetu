@@ -9,6 +9,7 @@ import '../models/cafe.dart';
 import '../models/campus_event.dart';
 import '../models/campus_issue.dart';
 import '../models/staff_room.dart';
+import '../data/campus_geometries.dart';
 import 'indoor_service.dart';
 
 class ApiService {

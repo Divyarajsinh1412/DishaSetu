@@ -121,7 +121,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   void _autoFitActiveRoute(NavigationRoute route) {
     if (_useGpsMap) {
       if (route.geometry.length >= 2) {
-        final bounds = ll.LatLngBounds.fromPoints(
+        final bounds = LatLngBounds.fromPoints(
           route.geometry.map((pt) => ll.LatLng(pt[0], pt[1])).toList(),
         );
         _mapController.fitCamera(
@@ -661,7 +661,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                       child: const Center(
                         child: Text(
                           'A',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.black, fontSize: 13),
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13),
                         ),
                       ),
                     ),
@@ -719,7 +719,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                       child: const Center(
                         child: Text(
                           'B',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.black, fontSize: 13),
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13),
                         ),
                       ),
                     ),
@@ -1328,7 +1328,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                                                   'A',
                                                   style: TextStyle(
                                                     color: Colors.white,
-                                                    fontWeight: FontWeight.black,
+                                                    fontWeight: FontWeight.w900,
                                                     fontSize: 13,
                                                   ),
                                                 ),
@@ -1383,7 +1383,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                                                   'B',
                                                   style: TextStyle(
                                                     color: Colors.white,
-                                                    fontWeight: FontWeight.black,
+                                                    fontWeight: FontWeight.w900,
                                                     fontSize: 13,
                                                   ),
                                                 ),
