@@ -759,13 +759,33 @@ export default function MasterCampusMap({
     focusCoordinate(0.5695, 0.2449, 2.3);
   }, [focusCoordinate]);
 
-  const handleFocusMyLocation = useCallback(() => {
-    if (userLocation && userLocation.latitude && userLocation.longitude) {
-      focusCoordinate(0.5695, 0.2449, 2.3);
-    } else {
-      handleFocusMainGate();
+  // Calculate user normalized coordinate on Master Campus Map
+  const userMapPos = useMemo(() => {
+    const lat = userLocation?.lat || userLocation?.latitude;
+    const lng = userLocation?.lng || userLocation?.longitude;
+    if (lat && lng) {
+      const minLat = 13.1688;
+      const maxLat = 13.1720;
+      const minLng = 77.5352;
+      const maxLng = 77.5372;
+      const clampedLat = Math.max(minLat, Math.min(maxLat, lat));
+      const clampedLng = Math.max(minLng, Math.min(maxLng, lng));
+      const normY = 0.22 + (maxLat - clampedLat) / (maxLat - minLat) * (0.93 - 0.22);
+      const normX = 0.18 + (clampedLng - minLng) / (maxLng - minLng) * (0.76 - 0.18);
+      return {
+        x: Math.max(0.08, Math.min(0.92, normX)),
+        y: Math.max(0.08, Math.min(0.92, normY)),
+        hasFix: true,
+        accuracy: userLocation.accuracy || 10
+      };
     }
-  }, [userLocation, handleFocusMainGate, focusCoordinate]);
+    // Default campus reference position (Entrance Plaza / Main Gate)
+    return { x: 0.5695, y: 0.2449, hasFix: false, accuracy: null };
+  }, [userLocation]);
+
+  const handleFocusMyLocation = useCallback(() => {
+    focusCoordinate(userMapPos.x, userMapPos.y, 2.3);
+  }, [userMapPos, focusCoordinate]);
 
   const handleFocusQuad = useCallback(() => {
     focusCoordinate(0.235, 0.72, 2.5);
@@ -1836,22 +1856,33 @@ export default function MasterCampusMap({
             );
           })}
 
-          {/* User GPS Live Location Pin */}
-          {userLocation && (
-            <div
-              style={{
-                left: '56.95%',
-                top: '24.49%',
-                transform: `translate(-50%, -50%) scale(${1 / scale}) rotate(${-rotation}deg)`,
-                transformOrigin: 'center center'
-              }}
-              className="absolute z-30 pointer-events-none"
-            >
-              <div className="w-5 h-5 rounded-full bg-sky-500 ring-4 ring-sky-300/40 animate-pulse flex items-center justify-center shadow-lg shadow-sky-500/50">
-                <div className="w-2 h-2 rounded-full bg-white" />
+          {/* User Live Location Pin & Callout on Master Map */}
+          <div
+            style={{
+              left: `${(userMapPos.x * 100).toFixed(2)}%`,
+              top: `${(userMapPos.y * 100).toFixed(2)}%`,
+              transform: `translate(-50%, -50%) scale(${1 / scale}) rotate(${-rotation}deg)`,
+              transformOrigin: 'center center'
+            }}
+            className="absolute z-35 cursor-pointer pointer-events-auto flex flex-col items-center"
+            onClick={handleFocusMyLocation}
+            title="📍 Your Current Location · Click to center view"
+          >
+            {/* Floating Callout Badge */}
+            <div className="mb-1.5 px-2.5 py-0.5 rounded-full bg-slate-950/95 border border-sky-400/90 text-[9px] font-black tracking-wider text-sky-200 shadow-xl flex items-center gap-1.5 whitespace-nowrap">
+              <span className={`w-1.5 h-1.5 rounded-full ${userMapPos.hasFix ? 'bg-emerald-400 animate-ping' : 'bg-sky-400'}`} />
+              <span>{userMapPos.hasFix ? `YOU ARE HERE · ±${Math.round(userMapPos.accuracy)}m` : 'YOU ARE HERE'}</span>
+            </div>
+
+            {/* Glowing Beacon & Animated Halos */}
+            <div className="relative w-7 h-7 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full bg-sky-400/30 animate-ping" />
+              <div className="absolute inset-0.5 rounded-full bg-sky-500/20 border border-sky-400/50" />
+              <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-sky-600 to-sky-400 ring-2 ring-white flex items-center justify-center shadow-lg shadow-sky-500/60 z-10">
+                <div className="w-1.5 h-1.5 rounded-full bg-white" />
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
 

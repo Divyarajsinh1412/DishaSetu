@@ -32,6 +32,8 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   CampusLocation? _selectedMarker;
   NavigationRoute? _activeRoute;
   Position? _currentGpsPosition;
+  bool _hasLiveGpsFix = false;
+  StreamSubscription<Position>? _positionStreamSub;
   bool _isLoading = true;
   bool _useGpsMap = false;
   bool _showDefBlocksLayer = false;
@@ -40,6 +42,10 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   String _activeCategory = 'all';
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+
+  double get _userLatitude => _currentGpsPosition?.latitude ?? 13.1717995;
+  double get _userLongitude => _currentGpsPosition?.longitude ?? 77.5361915;
+  double get _userAccuracy => _currentGpsPosition?.accuracy ?? 8.0;
 
   final List<String> _categories = [
     'all',
@@ -59,13 +65,33 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     super.initState();
     _loadMapMarkers();
     _fetchUserLocation();
+    _startLiveLocationTracking();
   }
 
   @override
   void dispose() {
+    _positionStreamSub?.cancel();
     _transformController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _startLiveLocationTracking() {
+    try {
+      const settings = LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 2,
+      );
+      _positionStreamSub = Geolocator.getPositionStream(locationSettings: settings)
+          .listen((Position position) {
+        if (mounted) {
+          setState(() {
+            _currentGpsPosition = position;
+            _hasLiveGpsFix = true;
+          });
+        }
+      }, onError: (_) {});
+    } catch (_) {}
   }
 
   Future<void> _fetchUserLocation() async {
@@ -79,11 +105,28 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
           desiredAccuracy: LocationAccuracy.high,
           timeLimit: const Duration(seconds: 4),
         );
-        setState(() {
-          _currentGpsPosition = pos;
-        });
+        if (mounted) {
+          setState(() {
+            _currentGpsPosition = pos;
+            _hasLiveGpsFix = true;
+          });
+        }
       }
     } catch (_) {}
+  }
+
+  void _focusUserLocation() {
+    final lat = _userLatitude;
+    final lng = _userLongitude;
+    if (_useGpsMap) {
+      _mapController.move(ll.LatLng(lat, lng), 18.5);
+    } else {
+      final norm = CampusGeometries.projectGpsToNormalized(lat, lng);
+      final matrix = Matrix4.identity()
+        ..scale(2.2, 2.2)
+        ..translate(-(norm.dx - 0.5) * 400, -(norm.dy - 0.5) * 568);
+      _transformController.value = matrix;
+    }
   }
 
   Future<void> _loadMapMarkers() async {
@@ -267,6 +310,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
       context: context,
       locations: _markers,
       initialDestination: initialDest,
+      currentPosition: _currentGpsPosition,
       onRouteConfirmed: (route) {
         setState(() {
           _activeRoute = route;
@@ -726,26 +770,61 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                   ],
                 ),
               ),
-            // 4. Current GPS location marker
-            if (_currentGpsPosition != null)
-              Marker(
-                point: ll.LatLng(
-                  _currentGpsPosition!.latitude,
-                  _currentGpsPosition!.longitude,
-                ),
-                width: 26,
-                height: 26,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF38BDF8),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2.5),
-                    boxShadow: const [
-                      BoxShadow(color: Color(0x8038BDF8), blurRadius: 8, spreadRadius: 2),
-                    ],
+            // 4. Current GPS Location Marker with Callout (Layer 7)
+            Marker(
+              point: ll.LatLng(_userLatitude, _userLongitude),
+              width: 140,
+              height: 60,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F172A).withOpacity(0.92),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF38BDF8), width: 1.2),
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black54, blurRadius: 4),
+                      ],
+                    ),
+                    child: Text(
+                      _hasLiveGpsFix
+                          ? '📍 YOU ARE HERE · ±${_userAccuracy.toStringAsFixed(0)}m'
+                          : '📍 YOU ARE HERE (Campus)',
+                      style: const TextStyle(
+                        color: Color(0xFF38BDF8),
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 3),
+                  Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0284C7),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2.5),
+                      boxShadow: const [
+                        BoxShadow(color: Color(0x8038BDF8), blurRadius: 10, spreadRadius: 3),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+            ),
           ],
         ),
       ],
@@ -1329,38 +1408,125 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                                 }),
                               ],
 
-                              // 8. User Live GPS Pin on Master Map
-                              if (_currentGpsPosition != null) ...[
-                                Builder(builder: (context) {
-                                  final norm = CampusGeometries.projectGpsToNormalized(
-                                    _currentGpsPosition!.latitude,
-                                    _currentGpsPosition!.longitude,
-                                  );
-                                  return Positioned(
-                                    left: norm.dx * mapWidth - 10,
-                                    top: norm.dy * mapHeight - 10,
-                                    child: Container(
-                                      width: 20,
-                                      height: 20,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF0284C7),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(color: Colors.white, width: 2.5),
-                                        boxShadow: const [
-                                          BoxShadow(
-                                            color: Color(0xFF38BDF8),
-                                            blurRadius: 10,
-                                            spreadRadius: 2,
+                              // 8. User Live Location Marker & "YOU ARE HERE" Callout
+                              Builder(builder: (context) {
+                                final norm = CampusGeometries.projectGpsToNormalized(
+                                  _userLatitude,
+                                  _userLongitude,
+                                );
+                                final posX = norm.dx * mapWidth;
+                                final posY = norm.dy * mapHeight;
+
+                                return Positioned(
+                                  left: posX - 60,
+                                  top: posY - 54,
+                                  width: 120,
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () {
+                                      _focusUserLocation();
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          backgroundColor: const Color(0xFF0284C7),
+                                          content: Text(
+                                            _hasLiveGpsFix
+                                                ? '📍 Live GPS Location (±${_userAccuracy.toStringAsFixed(1)}m accuracy)'
+                                                : '📍 Current Location: Entrance Plaza (Campus Ref)',
+                                            style: const TextStyle(fontWeight: FontWeight.bold),
                                           ),
-                                        ],
-                                      ),
-                                      child: const Center(
-                                        child: Icon(Icons.my_location, size: 10, color: Colors.white),
-                                      ),
+                                          duration: const Duration(seconds: 2),
+                                        ),
+                                      );
+                                    },
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        // Floating Callout Badge
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF0F172A).withOpacity(0.95),
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(color: const Color(0xFF38BDF8), width: 1.4),
+                                            boxShadow: const [
+                                              BoxShadow(color: Colors.black54, blurRadius: 6, offset: Offset(0, 2)),
+                                            ],
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                width: 6,
+                                                height: 6,
+                                                decoration: BoxDecoration(
+                                                  color: _hasLiveGpsFix ? const Color(0xFF10B981) : const Color(0xFF38BDF8),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                _hasLiveGpsFix
+                                                    ? 'YOU ARE HERE · ±${_userAccuracy.toStringAsFixed(0)}m'
+                                                    : 'YOU ARE HERE',
+                                                style: const TextStyle(
+                                                  color: Color(0xFFBAE6FD),
+                                                  fontSize: 8.5,
+                                                  fontWeight: FontWeight.w900,
+                                                  letterSpacing: 0.3,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 3),
+                                        // Radar Pulse Halo & Pin
+                                        Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            Container(
+                                              width: 34,
+                                              height: 34,
+                                              decoration: BoxDecoration(
+                                                color: const Color(0x330284C7),
+                                                shape: BoxShape.circle,
+                                                border: Border.all(color: const Color(0x6638BDF8), width: 1.5),
+                                              ),
+                                            ),
+                                            Container(
+                                              width: 22,
+                                              height: 22,
+                                              decoration: BoxDecoration(
+                                                gradient: const RadialGradient(
+                                                  colors: [Color(0xFF38BDF8), Color(0xFF0284C7)],
+                                                ),
+                                                shape: BoxShape.circle,
+                                                border: Border.all(color: Colors.white, width: 2.5),
+                                                boxShadow: const [
+                                                  BoxShadow(
+                                                    color: Color(0x990284C7),
+                                                    blurRadius: 10,
+                                                    spreadRadius: 2,
+                                                  ),
+                                                ],
+                                              ),
+                                              child: const Center(
+                                                child: Container(
+                                                  width: 6,
+                                                  height: 6,
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
                                     ),
-                                  );
-                                }),
-                              ],
+                                  ),
+                                );
+                              }),
 
                               // 7. Default Entrance/Gate GPS Reference Indicator
                               Positioned(
@@ -1407,25 +1573,20 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                         Icons.my_location,
                         () async {
                           await _fetchUserLocation();
-                          if (_currentGpsPosition != null) {
-                            if (_useGpsMap) {
-                              _mapController.move(
-                                ll.LatLng(_currentGpsPosition!.latitude, _currentGpsPosition!.longitude),
-                                18.0,
-                              );
-                            }
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  backgroundColor: const Color(0xFF0284C7),
-                                  content: Text(
-                                    'GPS Location: ±${_currentGpsPosition!.accuracy.toStringAsFixed(1)}m accuracy',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  duration: const Duration(seconds: 2),
+                          _focusUserLocation();
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                backgroundColor: const Color(0xFF0284C7),
+                                content: Text(
+                                  _hasLiveGpsFix
+                                      ? '📍 Centered on Live GPS (±${_userAccuracy.toStringAsFixed(1)}m accuracy)'
+                                      : '📍 Centered on Current Location: Entrance Plaza (Campus)',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
                                 ),
-                              );
-                            }
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
                           }
                         },
                         'My Location',

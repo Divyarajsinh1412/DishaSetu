@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import '../models/campus_location.dart';
 import '../models/navigation_route.dart';
 import '../services/api_service.dart';
@@ -24,6 +25,16 @@ class CampusWayfindingPlace {
 
 /// Comprehensive catalog of 60 verified campus wayfinding locations
 const List<CampusWayfindingPlace> kCampusWayfindingPlaces = [
+  // 0. Live Current GPS Location
+  CampusWayfindingPlace(
+    id: 'current_location',
+    code: 'LIVE GPS',
+    name: 'Your Current Location (Live GPS)',
+    category: 'GPS',
+    group: 'Current Location',
+    icon: Icons.my_location,
+  ),
+
   // 1. Gates & Entry Points
   CampusWayfindingPlace(
     id: 'node_main_gate',
@@ -523,6 +534,7 @@ class RoutePlanningSheet extends StatefulWidget {
   final List<CampusLocation> locations;
   final CampusLocation? initialStart;
   final dynamic initialDestination;
+  final Position? currentPosition;
   final Function(NavigationRoute route) onRouteConfirmed;
 
   const RoutePlanningSheet({
@@ -530,6 +542,7 @@ class RoutePlanningSheet extends StatefulWidget {
     required this.locations,
     this.initialStart,
     this.initialDestination,
+    this.currentPosition,
     required this.onRouteConfirmed,
   });
 
@@ -538,6 +551,7 @@ class RoutePlanningSheet extends StatefulWidget {
     List<CampusLocation> locations = const [],
     CampusLocation? initialStart,
     dynamic initialDestination,
+    Position? currentPosition,
     required Function(NavigationRoute route) onRouteConfirmed,
   }) {
     return showModalBottomSheet(
@@ -549,6 +563,7 @@ class RoutePlanningSheet extends StatefulWidget {
         locations: locations,
         initialStart: initialStart,
         initialDestination: initialDestination,
+        currentPosition: currentPosition,
         onRouteConfirmed: onRouteConfirmed,
       ),
     );
@@ -638,10 +653,17 @@ class _RoutePlanningSheetState extends State<RoutePlanningSheet> {
     });
 
     try {
+      List<double>? startCoords;
+      if (_startPlace.id == 'current_location') {
+        final lat = widget.currentPosition?.latitude ?? 13.1717995;
+        final lng = widget.currentPosition?.longitude ?? 77.5361915;
+        startCoords = [lat, lng];
+      }
       final route = await _apiService.calculateRoute(
         start: _startPlace.code.isNotEmpty ? _startPlace.code : _startPlace.id,
         destination: _destPlace.code.isNotEmpty ? _destPlace.code : _destPlace.id,
         accessibleOnly: _accessibleOnly,
+        startCoords: startCoords,
       );
 
       if (mounted) {

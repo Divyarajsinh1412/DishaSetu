@@ -109,17 +109,22 @@ class ApiService {
     required String start,
     required String destination,
     bool accessibleOnly = false,
+    List<double>? startCoords,
   }) async {
     try {
+      final payload = <String, dynamic>{
+        'start': start,
+        'destination': destination,
+        'accessibleOnly': accessibleOnly,
+      };
+      if (startCoords != null && startCoords.length >= 2) {
+        payload['startCoords'] = startCoords;
+      }
       final response = await http
           .post(
             Uri.parse('$baseUrl/navigation/route'),
             headers: {'Content-Type': 'application/json'},
-            body: json.encode({
-              'start': start,
-              'destination': destination,
-              'accessibleOnly': accessibleOnly,
-            }),
+            body: json.encode(payload),
           )
           .timeout(const Duration(seconds: 4));
 
@@ -134,6 +139,33 @@ class ApiService {
     // Campus fallback routing engine when offline or server unreachable
     final sLower = start.toLowerCase();
     final dLower = destination.toLowerCase();
+
+    // 0. Live User Location Origin -> Map directly to entrance corridor or verified pathway
+    if (sLower.contains('current_location') || sLower.contains('live gps')) {
+      final userStart = (startCoords != null && startCoords.length >= 2)
+          ? [startCoords[0], startCoords[1]]
+          : [13.1717995, 77.5361915];
+      final geom = CampusGeometries.mainGateToDBlock.points.map((p) => [p.latitude, p.longitude]).toList();
+      return NavigationRoute(
+        routeId: 'route_live_location_to_${destination.replaceAll(' ', '_')}',
+        startName: 'Your Current Location (Live GPS)',
+        endName: destination,
+        startNodeId: 'current_location',
+        endNodeId: destination,
+        startCoordinates: userStart,
+        endCoordinates: geom.last,
+        nodeSequence: ['current_location', 'node_main_gate', 'node_d_block_ent'],
+        totalDistanceMeters: 285.0,
+        estimatedWalkMinutes: 3,
+        stepFreeAccessible: true,
+        geometry: [userStart, ...geom],
+        turnInstructions: [
+          'Start from your current position, head along verified campus pathway towards $destination.',
+          'Follow the central walkway past Main Lawn.',
+          'Arrive at $destination entrance.',
+        ],
+      );
+    }
 
     // 1. D Block <-> E Block Walkway (Verified KML)
     if ((sLower.contains('d_block') || sLower.contains('d block')) &&
