@@ -262,42 +262,39 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
     }
   }
 
-  void _showRoutePlanningDialog([CampusLocation? initialDest]) {
-    if (_markers.isEmpty) return;
+  void _showRoutePlanningDialog([dynamic initialDest]) {
     RoutePlanningSheet.show(
       context: context,
       locations: _markers,
       initialDestination: initialDest,
-      onRouteSelected: (start, dest, accessible) async {
-        setState(() => _isLoading = true);
-        final route = await _apiService.calculateRoute(
-          start: start.shortCode ?? start.id,
-          destination: dest.shortCode ?? dest.id,
-          accessibleOnly: accessible,
-        );
-
-        if (route == null || route.geometry.length < 2) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                backgroundColor: const Color(0xFFE11D48),
-                content: Text(
-                  'Unable to calculate walking route from ${start.name} to ${dest.name}.',
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-              ),
-            );
-          }
-          setState(() => _isLoading = false);
-          return;
-        }
-
+      onRouteConfirmed: (route) {
         setState(() {
           _activeRoute = route;
-          _selectedMarker = dest;
           _isLoading = false;
         });
         _autoFitActiveRoute(route);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: const Color(0xFF0D9488),
+              content: Row(
+                children: [
+                  const Icon(Icons.navigation, color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Navigating to ${route.endName} (${route.distanceMeters}m · ~${route.estimatedWalkingMinutes} min)',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
       },
     );
   }
@@ -976,33 +973,53 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
-                    children: _categories.map((cat) {
-                      final isSelected = _activeCategory == cat;
-                      return Padding(
+                    children: [
+                      Padding(
                         padding: const EdgeInsets.only(right: 6),
-                        child: FilterChip(
-                          label: Text(
-                            cat == 'all' ? 'All Locations' : cat,
+                        child: ActionChip(
+                          avatar: const Icon(Icons.directions, color: Color(0xFF38BDF8), size: 16),
+                          label: const Text(
+                            'Wayfinding',
                             style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                              color: isSelected ? Colors.white : Colors.white70,
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF38BDF8),
                             ),
                           ),
-                          selected: isSelected,
-                          onSelected: (_) => setState(() => _activeCategory = cat),
-                          backgroundColor: const Color(0xFF1E293B),
-                          selectedColor: const Color(0xFF0284C7),
-                          checkmarkColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            side: BorderSide(
-                              color: isSelected ? const Color(0xFF38BDF8) : Colors.transparent,
-                            ),
-                          ),
+                          backgroundColor: const Color(0xFF0284C7).withOpacity(0.18),
+                          side: const BorderSide(color: Color(0xFF38BDF8), width: 1),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          onPressed: () => _showRoutePlanningDialog(),
                         ),
-                      );
-                    }).toList(),
+                      ),
+                      ..._categories.map((cat) {
+                        final isSelected = _activeCategory == cat;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: FilterChip(
+                            label: Text(
+                              cat == 'all' ? 'All Locations' : cat,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected ? Colors.white : Colors.white70,
+                              ),
+                            ),
+                            selected: isSelected,
+                            onSelected: (_) => setState(() => _activeCategory = cat),
+                            backgroundColor: const Color(0xFF1E293B),
+                            selectedColor: const Color(0xFF0284C7),
+                            checkmarkColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              side: BorderSide(
+                                color: isSelected ? const Color(0xFF38BDF8) : Colors.transparent,
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
+                    ],
                   ),
                 ),
               ],
@@ -1444,6 +1461,8 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                   bottom: (_activeRoute != null || _selectedMarker != null) ? 190 : 30,
                   child: Column(
                     children: [
+                      _buildFloatingMapButton(Icons.directions, () => _showRoutePlanningDialog(), 'Wayfinding & Routes'),
+                      const SizedBox(height: 8),
                       _buildFloatingMapButton(Icons.add, _zoomIn, 'Zoom In'),
                       const SizedBox(height: 8),
                       _buildFloatingMapButton(Icons.remove, _zoomOut, 'Zoom Out'),
@@ -1486,6 +1505,51 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                     ],
                   ),
                 ),
+
+                // Floating Wayfinding Pill (Bottom Left)
+                if (_activeRoute == null && _selectedMarker == null)
+                  Positioned(
+                    left: 16,
+                    bottom: 30,
+                    child: InkWell(
+                      onTap: () => _showRoutePlanningDialog(),
+                      borderRadius: BorderRadius.circular(24),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF0284C7), Color(0xFF0D9488), Color(0xFF10B981)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF0284C7).withValues(alpha: 0.4),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            )
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Icon(Icons.directions, color: Colors.white, size: 18),
+                            SizedBox(width: 8),
+                            Text(
+                              'Wayfinding & Routes',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 13,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
 
                 // Loading Progress Bar
                 if (_isLoading)
