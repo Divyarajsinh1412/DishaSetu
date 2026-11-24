@@ -34,7 +34,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
   Position? _currentGpsPosition;
   bool _isLoading = true;
   bool _useGpsMap = false;
-  bool _showDefBlocksLayer = true;
+  bool _showDefBlocksLayer = false;
   bool _showBuildingsLayer = true;
   bool _showWalkingPathsLayer = true;
   String _activeCategory = 'all';
@@ -1062,53 +1062,6 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                                   },
                                 ),
                               ),
-
-                              // 1b. DEF Blocks Boundary Layer (Clean perimeter outline without any obscuring text)
-                              if (_showDefBlocksLayer) ...[
-                                Builder(builder: (context) {
-                                  final isDefSelected = _selectedMarker?.id == 'feat_def_blocks';
-                                  // Bounds spanning D, E, F blocks cleanly: minX 0.115, maxX 0.280, minY 0.590, maxY 0.815
-                                  final left = 0.115 * mapWidth;
-                                  final top = 0.590 * mapHeight;
-                                  final width = 0.165 * mapWidth;
-                                  final height = 0.225 * mapHeight;
-
-                                  return Positioned(
-                                    left: left,
-                                    top: top,
-                                    width: width,
-                                    height: height,
-                                    child: GestureDetector(
-                                      behavior: HitTestBehavior.translucent,
-                                      onTap: () {
-                                        final loc = CampusLocation(
-                                          id: 'feat_def_blocks',
-                                          name: 'DEF Blocks',
-                                          label: 'DEF BLOCKS BOUNDARY',
-                                          category: 'boundary',
-                                          latitude: 13.168076,
-                                          longitude: 77.533300,
-                                          description:
-                                              'Exact surveyed boundary polygon for DEF Blocks complex extracted from Google Earth KML.',
-                                        );
-                                        _onBuildingSelected(loc);
-                                      },
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: isDefSelected
-                                              ? const Color(0x24FBC02D)
-                                              : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(16),
-                                          border: Border.all(
-                                            color: const Color(0xFFFBC02D),
-                                            width: isDefSelected ? 2.5 : 1.6,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }),
-                              ],
 
                               // 2. Interactive Building Footprints Layer (Every building is directly clickable & highlightable)
                               if (_showBuildingsLayer)
