@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -811,11 +812,11 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                         BoxShadow(color: Color(0x8038BDF8), blurRadius: 10, spreadRadius: 3),
                       ],
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Container(
                         width: 7,
                         height: 7,
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
                         ),
@@ -1509,7 +1510,7 @@ class _CampusMapScreenState extends State<CampusMapScreen> {
                                                   ),
                                                 ],
                                               ),
-                                              child: const Center(
+                                              child: Center(
                                                 child: Container(
                                                   width: 6,
                                                   height: 6,
