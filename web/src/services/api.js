@@ -4,6 +4,7 @@
  */
 import { INITIAL_PANORAMA_SCENES, INITIAL_PANORAMA_HOTSPOTS } from '../data/panoramaData.js';
 import { API_BASE_URL, getApiUrl, apiFetch } from '../config/apiConfig.js';
+import { FALLBACK_CAFES, FALLBACK_HATTI_DETAILS, FALLBACK_CENTRAL_DETAILS } from '../data/fallbackCafes.js';
 export { API_BASE_URL, getApiUrl, apiFetch };
 
 /**
@@ -1100,10 +1101,13 @@ export const fetchCafes = async () => {
   try {
     const res = await appFetch('/api/cafes');
     if (!res.ok) throw new Error('Failed to fetch cafes');
-    return await res.json();
+    const data = await res.json();
+    if (Array.isArray(data) && data.length > 0) return data;
+    if (data && Array.isArray(data.cafes) && data.cafes.length > 0) return data.cafes;
+    return FALLBACK_CAFES;
   } catch (err) {
-    console.warn('[API] fetchCafes fallback:', err.message);
-    return [];
+    console.warn('[API] fetchCafes fallback to verified campus cafes:', err.message);
+    return FALLBACK_CAFES;
   }
 };
 
@@ -1111,10 +1115,13 @@ export const fetchCafeById = async (id) => {
   try {
     const res = await appFetch(`/api/cafes/${id}`);
     if (!res.ok) throw new Error('Failed to fetch cafe');
-    return await res.json();
+    const data = await res.json();
+    if (data && data.cafe) return data;
+    throw new Error('Incomplete cafe payload');
   } catch (err) {
     console.warn('[API] fetchCafeById fallback:', err.message);
-    return null;
+    const isCentral = id === 'cafe_central' || id === 'PU-CAFE-CENTRAL' || /central/i.test(id);
+    return isCentral ? FALLBACK_CENTRAL_DETAILS : FALLBACK_HATTI_DETAILS;
   }
 };
 

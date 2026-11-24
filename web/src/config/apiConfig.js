@@ -13,13 +13,20 @@ const envApiUrl = typeof import.meta !== 'undefined' && import.meta.env
  */
 export const API_BASE_URL = (() => {
   if (typeof window !== 'undefined' && window.location) {
-    // When running locally on Vite dev server (port 5173) or local backend (port 5000),
-    // use relative path so requests go through local Vite proxy or local server
+    // 1. When running on Vite dev server (port 5173) or local backend (port 5000),
+    // use relative path so requests go through local Vite proxy or direct local server
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
       if (envApiUrl && (envApiUrl.includes('localhost') || envApiUrl.includes('127.0.0.1'))) {
         return envApiUrl.replace(/\/+$/, '');
       }
       return '';
+    }
+
+    // 2. When loaded in browser on any deployed host (e.g. dishasetu-jx7l.onrender.com or custom domain),
+    // always use window.location.origin to guarantee same-origin requests to the live backend server.
+    // This avoids cross-domain CORS blocks, DNS errors, or subdomain typos.
+    if (window.location.origin) {
+      return window.location.origin;
     }
   }
 
@@ -27,14 +34,8 @@ export const API_BASE_URL = (() => {
     return envApiUrl.replace(/\/+$/, '');
   }
 
-  if (typeof window !== 'undefined' && window.location) {
-    if (window.location.origin) {
-      return window.location.origin;
-    }
-  }
-
   // Fallback to official deployed Render backend
-  return 'https://dishasetu-jx71.onrender.com';
+  return 'https://dishasetu-jx7l.onrender.com';
 })();
 
 export const VITE_API_BASE_URL = API_BASE_URL;
